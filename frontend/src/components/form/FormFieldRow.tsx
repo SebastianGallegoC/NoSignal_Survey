@@ -6,7 +6,7 @@ import {
   inputKindForField,
   triOptions,
 } from "@/config/formFieldMeta";
-import { fieldSelectOptions } from "@/config/formSelectOptions";
+import { fieldSelectOptions, isSearchableSelectField } from "@/config/formSelectOptions";
 import {
   sanitizeCoordManualInput,
   validateCoordLatLonField,
@@ -17,6 +17,7 @@ import {
 } from "@/lib/telefonoNormalize";
 import type { FormFieldKey, FormValues } from "@/types/formFields";
 
+import { PlainSelect } from "./PlainSelect";
 import { SearchableSelect, type SelectOption } from "./SearchableSelect";
 
 const inputClass =
@@ -177,8 +178,19 @@ export const FormFieldRow = ({
 
   if (kind === "select") {
     const options = fieldSelectOptions[name] ?? SELECT_FALLBACK;
+    if (isSearchableSelectField(name)) {
+      return (
+        <SearchableSelect
+          name={name}
+          control={control}
+          options={options}
+          label={label}
+          error={error}
+        />
+      );
+    }
     return (
-      <SearchableSelect
+      <PlainSelect
         name={name}
         control={control}
         options={options}

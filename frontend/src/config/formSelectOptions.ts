@@ -31,3 +31,10 @@ export const fieldSelectOptions: Partial<Record<FormFieldKey, SelectOption[]>> =
   resultado_validacion: buildOptions(resultado_validacion_options),
   medio_transporte: buildOptions(medio_transporte_options),
 };
+
+/** Selectores con listas largas que requieren búsqueda por texto. */
+export const SEARCHABLE_SELECT_FIELDS = new Set<FormFieldKey>(["municipio"]);
+
+export function isSearchableSelectField(field: FormFieldKey): boolean {
+  return SEARCHABLE_SELECT_FIELDS.has(field);
+}
