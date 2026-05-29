@@ -1,20 +1,19 @@
 import { Button } from "@/components/ui/button";
-import type { VisitaNumero } from "@/services/db";
+import { registroFotoLabel } from "@/config/registroFotografico";
+import type { RegistroFotoSlot } from "@/config/registroFotografico";
 
 type Props = {
   open: boolean;
   nombreArchivo: string;
-  visita?: VisitaNumero;
+  slot?: RegistroFotoSlot;
   onCancel: () => void;
   onConfirm: () => void;
 };
 
-const visitaLabel = (v?: VisitaNumero) => (v ? `visita ${v}` : "sin visita asignada");
-
 export const RemoveFotoConfirmModal = ({
   open,
   nombreArchivo,
-  visita,
+  slot,
   onCancel,
   onConfirm,
 }: Props) => {
@@ -23,6 +22,7 @@ export const RemoveFotoConfirmModal = ({
   }
 
   const displayName = nombreArchivo.trim() || "esta foto";
+  const slotLabel = slot != null ? registroFotoLabel(slot) : "registro fotográfico";
 
   return (
     <div
@@ -50,7 +50,7 @@ export const RemoveFotoConfirmModal = ({
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-slate-600">
           Se quitará <span className="font-medium text-slate-800">{displayName}</span>{" "}
-          ({visitaLabel(visita)}). Esta acción no se puede deshacer.
+          de <span className="font-medium text-slate-800">{slotLabel}</span>. Esta acción no se puede deshacer.
         </p>
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>

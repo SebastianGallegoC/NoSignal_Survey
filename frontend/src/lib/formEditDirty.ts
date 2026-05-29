@@ -44,7 +44,7 @@ export function fotosEqualForEdit(a: FotoForm[], b: FotoForm[]): boolean {
     if (left.data !== right.data) {
       return false;
     }
-    if (left.visita !== right.visita) {
+    if (left.slot !== right.slot) {
       return false;
     }
   }

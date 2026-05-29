@@ -37,7 +37,7 @@ describe("hasFormularioEditChanges", () => {
         {
           nombre_archivo: "a.jpg",
           data: "data:image/jpeg;base64,AA==",
-          visita: 1,
+          slot: 1,
         },
       ],
     });
@@ -51,7 +51,7 @@ describe("hasFormularioEditChanges", () => {
         {
           nombre_archivo: "a.jpg",
           data: "data:1",
-          visita: 2,
+          slot: 2,
         },
       ],
       modoCoordenadas: "manual",
@@ -69,7 +69,7 @@ describe("hasFormularioEditChanges", () => {
     const foto = {
       nombre_archivo: "a.jpg",
       data: "data:1",
-      visita: 1 as const,
+      slot: 1 as const,
     };
     const base = baseline({ fotos: [foto] });
     const current = baseline({ fotos: [] });
@@ -116,14 +116,14 @@ describe("formValuesEqualForEdit", () => {
 });
 
 describe("fotosEqualForEdit", () => {
-  it("distingue visita", () => {
+  it("distingue slot", () => {
     const foto = {
       nombre_archivo: "a.jpg",
       data: "data:1",
-      visita: 1 as const,
+      slot: 1 as const,
     };
     expect(
-      fotosEqualForEdit([foto], [{ ...foto, visita: 4 }]),
+      fotosEqualForEdit([foto], [{ ...foto, slot: 4 }]),
     ).toBe(false);
   });
 
@@ -131,7 +131,7 @@ describe("fotosEqualForEdit", () => {
     const a = {
       nombre_archivo: "a.jpg",
       data: "data:1",
-      visita: 1 as const,
+      slot: 1 as const,
     };
     const b = { ...a, nombre_archivo: "b.jpg" };
     expect(fotosEqualForEdit([a], [b])).toBe(false);
@@ -141,12 +141,12 @@ describe("fotosEqualForEdit", () => {
     const f1 = {
       nombre_archivo: "1.jpg",
       data: "data:1",
-      visita: 1 as const,
+      slot: 1 as const,
     };
     const f2 = {
       nombre_archivo: "2.jpg",
       data: "data:2",
-      visita: 2 as const,
+      slot: 2 as const,
     };
     expect(fotosEqualForEdit([f1, f2], [f2, f1])).toBe(false);
   });

@@ -1,20 +1,21 @@
 import { useCallback } from 'react';
 import type { ChangeEvent, MutableRefObject } from 'react';
 
-import { useCameraCapture } from '@/hooks/useCameraCapture';
+import type { RegistroFotoSlot } from '@/config/registroFotografico';
 import {
-  FORM_PHOTO_LIMIT_MESSAGE,
-  isAtFormPhotoLimit,
-  MAX_FORM_PHOTOS,
+  defaultNombreArchivoRegistroFoto,
+  upsertFotoEnSlot,
+  quitarFotoDeSlot,
 } from '@/lib/formPhotoLimits';
 import { compressImageFile, fileToDataUrl } from '@/services/imageCompression';
-import type { VisitaNumero } from '@/lib/visitaNumero';
 import type { FotoForm } from '@/services/db';
+import { useCameraCapture } from '@/hooks/useCameraCapture';
 
 type Args = {
   fotos: FotoForm[];
   setFotos: (value: FotoForm[] | ((prev: FotoForm[]) => FotoForm[])) => void;
-  visitaFotoSeleccionada: VisitaNumero | null;
+  activeSlot: RegistroFotoSlot | null;
+  setActiveSlot: (slot: RegistroFotoSlot | null) => void;
   setBanner: (value: string | null) => void;
 };
 
@@ -23,76 +24,51 @@ type UsePhotoCaptureResult = {
   captureFlash: boolean;
   captureBadge: boolean;
   cameraVideoRef: MutableRefObject<HTMLVideoElement | null>;
-  openCamera: () => void;
+  openCameraForSlot: (slot: RegistroFotoSlot) => void;
   stopCamera: () => void;
   captureFromCamera: () => Promise<void>;
-  onFotosChange: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
-  quitarFoto: (index: number) => void;
+  onFotoFileForSlot: (
+    slot: RegistroFotoSlot,
+    event: ChangeEvent<HTMLInputElement>,
+  ) => Promise<void>;
+  quitarFotoSlot: (slot: RegistroFotoSlot) => void;
 };
 
 export const usePhotoCapture = ({
-  fotos,
   setFotos,
-  visitaFotoSeleccionada,
+  activeSlot,
+  setActiveSlot,
   setBanner,
 }: Args): UsePhotoCaptureResult => {
-  const processIncomingFiles = useCallback(
-    async (files: File[], visita: VisitaNumero, saveToDevice = false) => {
-      if (!files.length) {
-        return;
-      }
-      if (isAtFormPhotoLimit(fotos.length)) {
-        setBanner(FORM_PHOTO_LIMIT_MESSAGE);
-        return;
-      }
+  const setFotoEnSlot = useCallback(
+    async (slot: RegistroFotoSlot, file: File) => {
       setBanner(null);
-      const combined = [...fotos];
-      let limitReached = false;
-      for (const file of files) {
-        if (combined.length >= MAX_FORM_PHOTOS) {
-          limitReached = true;
-          break;
-        }
-        try {
-          const compressed = await compressImageFile(file);
-          const data = await fileToDataUrl(compressed);
-          const nombre =
-            compressed.name.replace(/[^\w.-]+/g, '_') ||
-            `foto_${combined.length + 1}.jpg`;
-          combined.push({ nombre_archivo: nombre, data, visita });
-          if (saveToDevice) {
-            const downloadUrl = URL.createObjectURL(compressed);
-            const anchor = document.createElement('a');
-            anchor.href = downloadUrl;
-            anchor.download = nombre;
-            anchor.click();
-            URL.revokeObjectURL(downloadUrl);
-          }
-        } catch {
-          setBanner(
-            'No se pudo procesar una de las imágenes. Probá con otra foto.',
-          );
-        }
+      try {
+        const compressed = await compressImageFile(file);
+        const data = await fileToDataUrl(compressed);
+        const nombre =
+          compressed.name.replace(/[^\w.-]+/g, '_') ||
+          defaultNombreArchivoRegistroFoto(slot);
+        setFotos((prev) =>
+          upsertFotoEnSlot(prev, slot, { nombre_archivo: nombre, data }),
+        );
+      } catch {
+        setBanner('No se pudo procesar la imagen. Probá con otra foto.');
       }
-      if (limitReached) {
-        setBanner(FORM_PHOTO_LIMIT_MESSAGE);
-      }
-      setFotos(combined);
     },
-    [fotos, setBanner, setFotos],
+    [setBanner, setFotos],
   );
 
-  const onFotosChange = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files ?? []);
+  const onFotoFileForSlot = useCallback(
+    async (slot: RegistroFotoSlot, event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
       event.target.value = '';
-      if (!visitaFotoSeleccionada) {
-        setBanner('Seleccioná visita 1, 2, 3 o 4 antes de cargar fotos.');
+      if (!file) {
         return;
       }
-      await processIncomingFiles(files, visitaFotoSeleccionada, false);
+      await setFotoEnSlot(slot, file);
     },
-    [processIncomingFiles, setBanner, visitaFotoSeleccionada],
+    [setFotoEnSlot],
   );
 
   const {
@@ -105,30 +81,30 @@ export const usePhotoCapture = ({
     captureFromCamera,
   } = useCameraCapture({
     onCapturedFile: async (file) => {
-      if (!visitaFotoSeleccionada) {
-        setBanner('Seleccioná visita 1, 2, 3 o 4 antes de tomar fotos.');
+      if (activeSlot == null) {
+        setBanner('Seleccioná un campo de registro fotográfico antes de tomar la foto.');
         return;
       }
-      await processIncomingFiles([file], visitaFotoSeleccionada, false);
+      await setFotoEnSlot(activeSlot, file);
     },
     setBanner,
-    canCapture: () => !isAtFormPhotoLimit(fotos.length),
-    onCaptureBlocked: () => setBanner(FORM_PHOTO_LIMIT_MESSAGE),
+    canCapture: () => activeSlot != null,
+    onCaptureBlocked: () =>
+      setBanner('Seleccioná un campo de registro fotográfico antes de tomar la foto.'),
   });
 
-  const openCameraWithLimit = useCallback(() => {
-    if (isAtFormPhotoLimit(fotos.length)) {
-      setBanner(FORM_PHOTO_LIMIT_MESSAGE);
+  const openCameraForSlot = useCallback(
+    (slot: RegistroFotoSlot) => {
+      setActiveSlot(slot);
+      setBanner(null);
       openCamera();
-      return;
-    }
-    setBanner(null);
-    openCamera();
-  }, [fotos.length, openCamera, setBanner]);
+    },
+    [openCamera, setActiveSlot, setBanner],
+  );
 
-  const quitarFoto = useCallback(
-    (index: number) => {
-      setFotos((prev) => prev.filter((_, i) => i !== index));
+  const quitarFotoSlot = useCallback(
+    (slot: RegistroFotoSlot) => {
+      setFotos((prev) => quitarFotoDeSlot(prev, slot));
     },
     [setFotos],
   );
@@ -138,10 +114,10 @@ export const usePhotoCapture = ({
     captureFlash,
     captureBadge,
     cameraVideoRef,
-    openCamera: openCameraWithLimit,
+    openCameraForSlot,
     stopCamera,
     captureFromCamera,
-    onFotosChange,
-    quitarFoto,
+    onFotoFileForSlot,
+    quitarFotoSlot,
   };
 };

@@ -1,19 +1,27 @@
 import { describe, expect, it } from "vitest";
 
+import type { RegistroFotoSlot } from "@/config/registroFotografico";
 import type { OfflineForm } from "./db";
 import { validateFormPayload, isNetworkLikeError, isHttpServerError } from "./sync";
+
+const registroFotosCompletas = () =>
+  ([1, 2, 3, 4, 5, 6] as RegistroFotoSlot[]).map((slot) => ({
+    nombre_archivo: `f${slot}.jpg`,
+    data: "data:image/jpeg;base64,abc",
+    slot,
+  }));
 
 const baseForm = (): OfflineForm => ({
   id_formulario: "f-1",
   fecha_hora: "2026-05-04T12:00:00Z",
   gps: { latitud: 1.23, longitud: -76.5, precision: 4 },
   datos_formulario: {},
-  fotos: [],
+  fotos: registroFotosCompletas(),
   estado_sincronizacion: "PENDIENTE",
 });
 
 describe("validateFormPayload", () => {
-  it("acepta payload válido", () => {
+  it("acepta payload válido con 6 fotos", () => {
     const errors = validateFormPayload(baseForm());
     expect(errors).toEqual([]);
   });
@@ -32,21 +40,28 @@ describe("validateFormPayload", () => {
     expect(errors).toContain("gps_precision");
   });
 
-  it("marca error cuando excede el máximo de fotos", () => {
+  it("marca error cuando faltan fotos del registro", () => {
     const form = baseForm();
-    form.fotos = new Array(16).fill(0).map((_, i) => ({
-      nombre_archivo: `f${i}.jpg`,
-      data: "data:image/jpeg;base64,abc",
-    }));
+    form.fotos = [];
     const errors = validateFormPayload(form);
     expect(errors).toContain("fotos_count");
   });
 
-  it("marca error cuando una foto no tiene visita asociada", () => {
+  it("marca error cuando excede el máximo de fotos", () => {
     const form = baseForm();
-    form.fotos = [{ nombre_archivo: "f1.jpg", data: "data:image/jpeg;base64,abc" }];
+    form.fotos = [
+      ...registroFotosCompletas(),
+      { nombre_archivo: "extra.jpg", data: "data:image/jpeg;base64,abc", slot: 1 },
+    ];
     const errors = validateFormPayload(form);
-    expect(errors).toContain("fotos_visita_required");
+    expect(errors).toContain("fotos_count");
+  });
+
+  it("marca error cuando falta algún slot obligatorio", () => {
+    const form = baseForm();
+    form.fotos = [{ nombre_archivo: "f1.jpg", data: "data:image/jpeg;base64,abc", slot: 1 }];
+    const errors = validateFormPayload(form);
+    expect(errors).toContain("fotos_slot_required");
   });
 });
 

@@ -12,7 +12,11 @@ import {
   triOptions,
 } from "@/config/formFieldMeta";
 import { fieldSelectOptions } from "@/config/formSelectOptions";
-import { parseVisitaNumero } from "@/lib/visitaNumero";
+import {
+  isRegistroFotoSlot,
+  REGISTRO_FOTO_SLOTS,
+  registroFotoLabel,
+} from "@/config/registroFotografico";
 import { displayCuentaConCocinaValue } from "@/lib/cuentaConCocina";
 import type { FormFieldKey } from "@/types/formFields";
 
@@ -52,6 +56,8 @@ export interface FormularioSnapshot {
     path?: string;
     serverFormId?: string;
     serverIndex?: number;
+    slot?: 1 | 2 | 3 | 4 | 5 | 6;
+    /** Legacy; se normaliza a slot al mostrar. */
     visita?: 1 | 2 | 3 | 4;
   }>;
 }
@@ -104,12 +110,15 @@ export const FormularioRespuestaReadOnly = ({
   snapshot: FormularioSnapshot;
 }) => {
   const { datos_formulario: datos, gps, fotos = [] } = snapshot;
-  const visitaDeFoto = (f: (typeof fotos)[number]) => parseVisitaNumero(f.visita);
-  const fotosVisita1 = fotos.filter((f) => visitaDeFoto(f) === 1);
-  const fotosVisita2 = fotos.filter((f) => visitaDeFoto(f) === 2);
-  const fotosVisita3 = fotos.filter((f) => visitaDeFoto(f) === 3);
-  const fotosVisita4 = fotos.filter((f) => visitaDeFoto(f) === 4);
-  const fotosSinVisita = fotos.filter((f) => visitaDeFoto(f) == null);
+  const slotDeFoto = (f: (typeof fotos)[number]) => {
+    if (isRegistroFotoSlot(f.slot)) {
+      return f.slot;
+    }
+    if (f.visita === 1 || f.visita === 2 || f.visita === 3 || f.visita === 4) {
+      return f.visita as 1 | 2 | 3 | 4;
+    }
+    return null;
+  };
   const [previewFoto, setPreviewFoto] = useState<ImagePreview | null>(null);
   const [remoteSrcMap, setRemoteSrcMap] = useState<
     Record<string, string | null>
@@ -171,25 +180,22 @@ export const FormularioRespuestaReadOnly = ({
       {fotos.length > 0 ? (
         <section className="rounded-xl border border-slate-200 bg-white p-4">
           <h3 className="text-sm font-semibold text-slate-900">
-            Fotos ({fotos.length})
+            Registro fotográfico ({fotos.length})
           </h3>
-          {[
-            { title: "Visita 1", items: fotosVisita1 },
-            { title: "Visita 2", items: fotosVisita2 },
-            { title: "Visita 3", items: fotosVisita3 },
-            { title: "Visita 4", items: fotosVisita4 },
-            { title: "Sin visita registrada", items: fotosSinVisita },
-          ]
-            .filter((group) => group.items.length > 0)
-            .map((group) => (
-              <div key={group.title} className="mt-4">
+          {REGISTRO_FOTO_SLOTS.map(({ slot, label }) => {
+            const items = fotos.filter((f) => slotDeFoto(f) === slot);
+            if (items.length === 0) {
+              return null;
+            }
+            return (
+              <div key={slot} className="mt-4">
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                  {group.title} ({group.items.length})
+                  {label} ({items.length})
                 </h4>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                  {group.items.map((f, idx) => (
+                  {items.map((f, idx) => (
                     <button
-                      key={`${group.title}-${f.nombre_archivo}-${idx}`}
+                      key={`${slot}-${f.nombre_archivo}-${idx}`}
                       type="button"
                       onClick={() => {
                         if (f.data) {
@@ -199,7 +205,7 @@ export const FormularioRespuestaReadOnly = ({
                           });
                           return;
                         }
-                        const photoKey = `${group.title}-${f.nombre_archivo}-${idx}`;
+                        const photoKey = `${slot}-${f.nombre_archivo}-${idx}`;
                         const remoteSrc = remoteSrcMap[photoKey];
                         if (remoteSrc) {
                           openPreview({
@@ -214,7 +220,7 @@ export const FormularioRespuestaReadOnly = ({
                         {f.data ? (
                           <img
                             src={f.data}
-                            alt={f.nombre_archivo}
+                            alt={registroFotoLabel(slot)}
                             className="aspect-square w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
                             loading="lazy"
                           />
@@ -222,11 +228,11 @@ export const FormularioRespuestaReadOnly = ({
                           <FotoServidorAutenticada
                             formId={f.serverFormId}
                             photoIndex={f.serverIndex}
-                            alt={f.nombre_archivo}
+                            alt={registroFotoLabel(slot)}
                             loadDeferred={f.serverIndex > 0}
                             onSrcChange={(src) =>
                               resolveRemoteSrc(
-                                `${group.title}-${f.nombre_archivo}-${idx}`,
+                                `${slot}-${f.nombre_archivo}-${idx}`,
                                 src,
                               )
                             }
@@ -253,7 +259,8 @@ export const FormularioRespuestaReadOnly = ({
                   ))}
                 </div>
               </div>
-            ))}
+            );
+          })}
         </section>
       ) : null}
 

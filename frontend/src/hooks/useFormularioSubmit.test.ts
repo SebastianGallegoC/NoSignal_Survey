@@ -6,6 +6,7 @@ import {
   getSectionsWithErrors,
 } from "@/hooks/useFormularioSubmit";
 import { GPS_PLACEHOLDER_WHEN_NOT_CAPTURED } from "@/constants/gpsConfig";
+import type { FotoForm } from "@/services/db";
 import { REQUIRED_FIELDS, type FormValues } from "@/types/formFields";
 
 const buildEmptyValues = (): FormValues => {
@@ -18,7 +19,7 @@ const basePayloadArgs = (overrides: Partial<Parameters<typeof buildOfflinePayloa
   formId: "form-123",
   originalFechaHora: null,
   gps: { latitud: 4.1, longitud: -74.1, precision: 9.9 } as const,
-  fotos: [] as { nombre_archivo: string; data: string }[],
+  fotos: [] as FotoForm[],
   ...overrides,
 });
 
@@ -54,7 +55,7 @@ describe("useFormularioSubmit helpers", () => {
     const payload = buildOfflinePayload(
       basePayloadArgs({
         values,
-        fotos: [{ nombre_archivo: "f1.jpg", data: "data:image/jpg;base64,AA==" }],
+        fotos: [{ nombre_archivo: "f1.jpg", data: "data:image/jpg;base64,AA==", slot: 1 }],
       }),
     );
 

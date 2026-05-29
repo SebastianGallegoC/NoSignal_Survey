@@ -1,15 +1,17 @@
 import Dexie, { type Table } from 'dexie';
 
+import type { RegistroFotoSlot } from '@/config/registroFotografico';
 import { stripGmsKeysFromDatos } from '@/lib/stripGmsFromDatos';
 
 export type SyncStatus = 'PENDIENTE' | 'SINCRONIZANDO' | 'ERROR';
-import type { VisitaNumero } from "@/lib/visitaNumero";
 
-export type { VisitaNumero };
+export type { RegistroFotoSlot };
 export type FotoForm = {
   nombre_archivo: string;
   data: string;
-  visita?: VisitaNumero;
+  slot: RegistroFotoSlot;
+  /** Legacy Huertas / registros antiguos; se normaliza a slot al cargar. */
+  visita?: 1 | 2 | 3 | 4;
 };
 
 export type ModoCoordenadasForm = 'automatico' | 'manual';

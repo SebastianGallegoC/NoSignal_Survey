@@ -37,7 +37,7 @@ describe("RemoveFotoConfirmModal", () => {
         <RemoveFotoConfirmModal
           open
           nombreArchivo="campo.jpg"
-          visita={4}
+          slot={4}
           onCancel={onCancel}
           onConfirm={onConfirm}
         />,
@@ -45,7 +45,7 @@ describe("RemoveFotoConfirmModal", () => {
     });
 
     expect(container.textContent).toContain("campo.jpg");
-    expect(container.textContent).toContain("visita 4");
+    expect(container.textContent).toContain("Foto 4");
 
     const buttons = Array.from(container.querySelectorAll("button"));
     const cancelBtn = buttons.find((b) => b.textContent === "Cancelar");

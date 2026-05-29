@@ -9,7 +9,7 @@ import {
   idSuffix,
 } from '@/debug/agentSessionLog';
 
-import { isVisitaNumero } from '@/lib/visitaNumero';
+import { isRegistroFotoSlot } from '@/config/registroFotografico';
 
 import type { OfflineForm } from './db';
 
@@ -24,7 +24,7 @@ type ApiFormPayload = {
     precision: number;
   };
   datos_formulario: Record<string, unknown>;
-  fotos: Array<{ nombre_archivo: string; data: string; visita?: 1 | 2 | 3 | 4 | null }>;
+  fotos: Array<{ nombre_archivo: string; data: string; slot: 1 | 2 | 3 | 4 | 5 | 6 }>;
 };
 
 /** Normaliza imágenes para el validador del API (prefijo data:image/…). */
@@ -58,7 +58,7 @@ function payloadForApi(form: OfflineForm): ApiFormPayload {
     fotos: form.fotos.map((f) => ({
       nombre_archivo: f.nombre_archivo,
       data: ensureFotoDataUrl(f.data),
-      visita: isVisitaNumero(f.visita) ? f.visita : null,
+      slot: isRegistroFotoSlot(f.slot) ? f.slot : 1,
     })),
   };
   if (fechaAct !== form.fecha_hora) {

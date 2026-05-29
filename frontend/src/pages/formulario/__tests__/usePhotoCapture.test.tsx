@@ -2,7 +2,7 @@ import { act, type ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi, afterEach } from "vitest";
 
-import { FORM_PHOTO_LIMIT_MESSAGE } from "@/lib/formPhotoLimits";
+import type { RegistroFotoSlot } from "@/config/registroFotografico";
 import type { FotoForm } from "@/services/db";
 import { usePhotoCapture } from "@/pages/formulario/usePhotoCapture";
 
@@ -46,11 +46,6 @@ const cameraMocks = vi.hoisted(() => {
         };
       },
     ),
-    triggerCapture: async (file: File) => {
-      if (onCapturedFile) {
-        await onCapturedFile(file);
-      }
-    },
   };
 });
 
@@ -63,7 +58,8 @@ type HookHandlers = ReturnType<typeof usePhotoCapture>;
 
 type HarnessProps = {
   fotos: FotoForm[];
-  visitaFotoSeleccionada: 1 | 2 | 3 | null;
+  activeSlot: RegistroFotoSlot | null;
+  setActiveSlot: (slot: RegistroFotoSlot | null) => void;
   setFotos: (value: FotoForm[] | ((prev: FotoForm[]) => FotoForm[])) => void;
   setBanner: (value: string | null) => void;
   onReady: (handlers: HookHandlers) => void;
@@ -73,7 +69,8 @@ const Harness = (props: HarnessProps) => {
   const handlers = usePhotoCapture({
     fotos: props.fotos,
     setFotos: props.setFotos,
-    visitaFotoSeleccionada: props.visitaFotoSeleccionada,
+    activeSlot: props.activeSlot,
+    setActiveSlot: props.setActiveSlot,
     setBanner: props.setBanner,
   });
   props.onReady(handlers);
@@ -85,9 +82,10 @@ describe("usePhotoCapture", () => {
     vi.clearAllMocks();
   });
 
-  it("advierte si no hay visita seleccionada", async () => {
+  it("asigna foto al slot indicado", async () => {
     const setBanner = vi.fn();
     const setFotos = vi.fn();
+    const setActiveSlot = vi.fn();
     const container = document.createElement("div");
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -97,7 +95,8 @@ describe("usePhotoCapture", () => {
       root.render(
         <Harness
           fotos={[]}
-          visitaFotoSeleccionada={null}
+          activeSlot={1}
+          setActiveSlot={setActiveSlot}
           setFotos={setFotos}
           setBanner={setBanner}
           onReady={(h) => {
@@ -109,15 +108,92 @@ describe("usePhotoCapture", () => {
 
     const file = new File(["abc"], "foto.jpg", { type: "image/jpeg" });
     await act(async () => {
-      await handlers?.onFotosChange({
+      await handlers?.onFotoFileForSlot(1, {
         target: { files: [file], value: "x" },
       } as unknown as ChangeEvent<HTMLInputElement>);
+    });
+
+    expect(compressionMocks.compressImageFile).toHaveBeenCalledTimes(1);
+    expect(setFotos).toHaveBeenCalledTimes(1);
+    const updater = setFotos.mock.calls[0]?.[0];
+    const next = (updater as (prev: FotoForm[]) => FotoForm[])([]);
+    expect(next[0]?.slot).toBe(1);
+    expect(next[0]?.nombre_archivo).toBe("foto.jpg");
+
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("captura desde cámara en el slot activo", async () => {
+    const setBanner = vi.fn();
+    const setFotos = vi.fn();
+    const setActiveSlot = vi.fn();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    let handlers: HookHandlers | null = null;
+
+    await act(async () => {
+      root.render(
+        <Harness
+          fotos={[]}
+          activeSlot={2}
+          setActiveSlot={setActiveSlot}
+          setFotos={setFotos}
+          setBanner={setBanner}
+          onReady={(h) => {
+            handlers = h;
+          }}
+        />,
+      );
+    });
+
+    await act(async () => {
+      await handlers?.captureFromCamera();
+    });
+
+    expect(compressionMocks.compressImageFile).toHaveBeenCalledTimes(1);
+    expect(setFotos).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("advierte si no hay slot activo al capturar", async () => {
+    const setBanner = vi.fn();
+    const setFotos = vi.fn();
+    const setActiveSlot = vi.fn();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    let handlers: HookHandlers | null = null;
+
+    await act(async () => {
+      root.render(
+        <Harness
+          fotos={[]}
+          activeSlot={null}
+          setActiveSlot={setActiveSlot}
+          setFotos={setFotos}
+          setBanner={setBanner}
+          onReady={(h) => {
+            handlers = h;
+          }}
+        />,
+      );
+    });
+
+    await act(async () => {
+      await handlers?.captureFromCamera();
     });
 
     expect(setBanner).toHaveBeenCalledWith(
-      "Seleccioná visita 1, 2, 3 o 4 antes de cargar fotos.",
+      "Seleccioná un campo de registro fotográfico antes de tomar la foto.",
     );
-    expect(compressionMocks.compressImageFile).not.toHaveBeenCalled();
     expect(setFotos).not.toHaveBeenCalled();
 
     act(() => {
@@ -126,143 +202,26 @@ describe("usePhotoCapture", () => {
     container.remove();
   });
 
-  it("agrega fotos cuando hay visita seleccionada", async () => {
+  it("quitarFotoSlot elimina solo el slot indicado", async () => {
     const setBanner = vi.fn();
     const setFotos = vi.fn();
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-    let handlers: HookHandlers | null = null;
-
-    await act(async () => {
-      root.render(
-        <Harness
-          fotos={[]}
-          visitaFotoSeleccionada={1}
-          setFotos={setFotos}
-          setBanner={setBanner}
-          onReady={(h) => {
-            handlers = h;
-          }}
-        />,
-      );
-    });
-
-    const file = new File(["abc"], "foto.jpg", { type: "image/jpeg" });
-    await act(async () => {
-      await handlers?.onFotosChange({
-        target: { files: [file], value: "x" },
-      } as unknown as ChangeEvent<HTMLInputElement>);
-    });
-
-    expect(compressionMocks.compressImageFile).toHaveBeenCalledTimes(1);
-    expect(compressionMocks.fileToDataUrl).toHaveBeenCalledTimes(1);
-    expect(setFotos).toHaveBeenCalledTimes(1);
-    const payload = setFotos.mock.calls[0]?.[0] as FotoForm[];
-    expect(payload[0]?.nombre_archivo).toBe("foto.jpg");
-    expect(payload[0]?.visita).toBe(1);
-
-    act(() => {
-      root.unmount();
-    });
-    container.remove();
-  });
-
-  it("captura desde camara cuando hay visita seleccionada", async () => {
-    const setBanner = vi.fn();
-    const setFotos = vi.fn();
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-    let handlers: HookHandlers | null = null;
-
-    await act(async () => {
-      root.render(
-        <Harness
-          fotos={[]}
-          visitaFotoSeleccionada={2}
-          setFotos={setFotos}
-          setBanner={setBanner}
-          onReady={(h) => {
-            handlers = h;
-          }}
-        />,
-      );
-    });
-
-    await act(async () => {
-      await handlers?.captureFromCamera();
-    });
-
-    expect(compressionMocks.compressImageFile).toHaveBeenCalledTimes(1);
-    expect(setFotos).toHaveBeenCalledTimes(1);
-
-    act(() => {
-      root.unmount();
-    });
-    container.remove();
-  });
-
-  it("no agrega fotos desde cámara al alcanzar el límite de 15", async () => {
-    const setBanner = vi.fn();
-    const setFotos = vi.fn();
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-    let handlers: HookHandlers | null = null;
-
-    const fotosMax: FotoForm[] = Array.from({ length: 15 }, (_, i) => ({
-      nombre_archivo: `f${i}.jpg`,
-      data: "data:image/jpeg;base64,AA==",
-      visita: 1 as const,
-    }));
-
-    await act(async () => {
-      root.render(
-        <Harness
-          fotos={fotosMax}
-          visitaFotoSeleccionada={1}
-          setFotos={setFotos}
-          setBanner={setBanner}
-          onReady={(h) => {
-            handlers = h;
-          }}
-        />,
-      );
-    });
-
-    await act(async () => {
-      await handlers?.captureFromCamera();
-    });
-
-    expect(setBanner).toHaveBeenCalledWith(FORM_PHOTO_LIMIT_MESSAGE);
-    expect(compressionMocks.compressImageFile).not.toHaveBeenCalled();
-    expect(setFotos).not.toHaveBeenCalled();
-
-    act(() => {
-      root.unmount();
-    });
-    container.remove();
-  });
-
-  it("quitarFoto elimina la foto en el índice indicado", async () => {
-    const setBanner = vi.fn();
-    const setFotos = vi.fn();
+    const setActiveSlot = vi.fn();
     const container = document.createElement("div");
     document.body.appendChild(container);
     const root = createRoot(container);
     let handlers: HookHandlers | null = null;
 
     const fotosIniciales: FotoForm[] = [
-      { nombre_archivo: "a.jpg", data: "data:1", visita: 1 },
-      { nombre_archivo: "b.jpg", data: "data:2", visita: 1 },
+      { nombre_archivo: "a.jpg", data: "data:1", slot: 1 },
+      { nombre_archivo: "b.jpg", data: "data:2", slot: 2 },
     ];
 
     await act(async () => {
       root.render(
         <Harness
           fotos={fotosIniciales}
-          visitaFotoSeleccionada={1}
+          activeSlot={1}
+          setActiveSlot={setActiveSlot}
           setFotos={setFotos}
           setBanner={setBanner}
           onReady={(h) => {
@@ -273,15 +232,14 @@ describe("usePhotoCapture", () => {
     });
 
     act(() => {
-      handlers?.quitarFoto(0);
+      handlers?.quitarFotoSlot(1);
     });
 
     expect(setFotos).toHaveBeenCalledTimes(1);
     const updater = setFotos.mock.calls[0]?.[0];
-    expect(typeof updater).toBe("function");
     const next = (updater as (prev: FotoForm[]) => FotoForm[])(fotosIniciales);
     expect(next).toHaveLength(1);
-    expect(next[0]?.nombre_archivo).toBe("b.jpg");
+    expect(next[0]?.slot).toBe(2);
 
     act(() => {
       root.unmount();

@@ -145,9 +145,9 @@ describe("formHistory — beneficiario", () => {
     expect(normalizeTextoBusqueda("  José  ")).toBe("jose");
   });
 
-  it("mapServerFotos incluye visita cuando el API devuelve objetos { path, visita }", () => {
+  it("mapServerFotos incluye slot cuando el API devuelve objetos { path, slot }", () => {
     const out = mapServerFotos("fid", [
-      { path: "uploads/x/foto_1.jpg", visita: 2 },
+      { path: "uploads/x/foto_1.jpg", slot: 2 },
       "uploads/y/foto_2.jpg",
     ]);
     expect(out).toHaveLength(2);
@@ -155,18 +155,18 @@ describe("formHistory — beneficiario", () => {
     const b = out[1];
     expect(a).toBeDefined();
     expect(b).toBeDefined();
-    expect(a!.visita).toBe(2);
+    expect(a!.slot).toBe(2);
     expect(a!.path).toContain("foto_1.jpg");
-    expect(b!.visita).toBeUndefined();
+    expect(b!.slot).toBeUndefined();
   });
 
-  it("mapServerFotos preserva visita 4 (string o número)", () => {
+  it("mapServerFotos normaliza visita legacy a slot", () => {
     const out = mapServerFotos("fid", [
       { path: "uploads/x/foto_4.jpg", visita: 4 },
       { path: "uploads/x/foto_4b.jpg", visita: "4" },
     ]);
-    expect(out[0]?.visita).toBe(4);
-    expect(out[1]?.visita).toBe(4);
+    expect(out[0]?.slot).toBe(4);
+    expect(out[1]?.slot).toBe(4);
   });
 
   it("getBeneficiarioDisplayName lee precargaSolo", () => {

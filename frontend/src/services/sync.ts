@@ -5,8 +5,14 @@ import { MAX_GPS_ACCURACY_METERS } from '@/constants/gpsConfig';
 
 const RETENTION_DAYS = 6;
 const BACKOFF_STEPS_MS = [30_000, 60_000, 5 * 60_000, 15 * 60_000, 30 * 60_000];
-const MIN_PHOTOS = 0;
-const MAX_PHOTOS = 15;
+import {
+  isRegistroFotoSlot,
+  REGISTRO_FOTO_SLOT_NUMBERS,
+} from "@/config/registroFotografico";
+import {
+  MAX_FORM_PHOTOS,
+  REQUIRED_FORM_PHOTOS,
+} from "@/lib/formPhotoLimits";
 
 /**
  * Detecta si un error es un error HTTP 5xx del **servidor**.
@@ -69,16 +75,24 @@ export const validateFormPayload = (form: OfflineForm): string[] => {
   ) {
     errors.push('gps_precision');
   }
-  if (!Array.isArray(form.fotos) || form.fotos.length < MIN_PHOTOS || form.fotos.length > MAX_PHOTOS) {
+  if (
+    !Array.isArray(form.fotos) ||
+    form.fotos.length < REQUIRED_FORM_PHOTOS ||
+    form.fotos.length > MAX_FORM_PHOTOS
+  ) {
     errors.push('fotos_count');
   }
-  if (
-    Array.isArray(form.fotos) &&
-    form.fotos.some(
-      (f) => f.visita !== 1 && f.visita !== 2 && f.visita !== 3 && f.visita !== 4,
-    )
-  ) {
-    errors.push('fotos_visita_required');
+  if (Array.isArray(form.fotos)) {
+    const slots = new Set(
+      form.fotos
+        .map((f) => f.slot)
+        .filter((slot): slot is (typeof REGISTRO_FOTO_SLOT_NUMBERS)[number] =>
+          isRegistroFotoSlot(slot),
+        ),
+    );
+    if (slots.size !== REQUIRED_FORM_PHOTOS) {
+      errors.push('fotos_slot_required');
+    }
   }
 
   return errors;

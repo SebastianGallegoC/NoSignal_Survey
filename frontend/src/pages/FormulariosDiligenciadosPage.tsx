@@ -13,7 +13,7 @@ import { ConfirmDeleteFormModal } from "@/components/ConfirmDeleteFormModal";
 import type { FormularioSnapshot } from "@/components/form/FormularioRespuestaReadOnly";
 import { Button } from "@/components/ui/button";
 import { ACCESS_TOKEN_KEY } from "@/lib/authStorage";
-import { isVisitaNumero } from "@/lib/visitaNumero";
+import { isRegistroFotoSlot } from "@/config/registroFotografico";
 import {
   formatDateTimeNoSeconds,
   formatISODateTimeForDisplay,
@@ -54,7 +54,7 @@ import {
   DETAIL_SOURCE_COLOR,
   DETAIL_SOURCE_LABEL,
   estadoClass,
-  fotosConVisitaDesdeDetalle,
+  fotosConSlotDesdeDetalleExport,
   hydrateFotosFromServerIfNeeded,
   previewDetailSourceForRow,
   type DetailSourceKind,
@@ -362,10 +362,13 @@ export const FormulariosDiligenciadosPage = () => {
               if (!isStillThisRow()) {
                 return;
               }
+              if (!isRegistroFotoSlot(foto.slot)) {
+                continue;
+              }
               fotos.push({
                 nombre_archivo: foto.nombre_archivo,
                 data,
-                ...(isVisitaNumero(foto.visita) ? { visita: foto.visita } : {}),
+                slot: foto.slot,
               });
             } catch {
               // omitimos fotos que fallen al descargar
@@ -403,7 +406,7 @@ export const FormulariosDiligenciadosPage = () => {
         if (row.historial) {
           setDetailPrecarga(precargaLocal);
           const h = row.historial;
-          let fotos = fotosConVisitaDesdeDetalle(h.fotos ?? []);
+          let fotos = fotosConSlotDesdeDetalleExport(h.fotos ?? []);
           fotos = await hydrateFotosFromServerIfNeeded(row, fotos);
           if (!isStillThisRow()) {
             return;
@@ -483,7 +486,7 @@ export const FormulariosDiligenciadosPage = () => {
           const fotos: Array<{
             nombre_archivo: string;
             data: string;
-            visita?: 1 | 2 | 3 | 4;
+            slot?: 1 | 2 | 3 | 4 | 5 | 6;
           }> = [];
           for (const foto of baseFotos) {
             if (foto.serverFormId == null || foto.serverIndex == null) {
@@ -494,10 +497,14 @@ export const FormulariosDiligenciadosPage = () => {
                 foto.serverFormId,
                 foto.serverIndex,
               );
+              if (!isRegistroFotoSlot(foto.slot)) {
+                failedFotos += 1;
+                continue;
+              }
               fotos.push({
                 nombre_archivo: foto.nombre_archivo,
                 data,
-                ...(isVisitaNumero(foto.visita) ? { visita: foto.visita } : {}),
+                slot: foto.slot,
               });
             } catch {
               failedFotos += 1;
@@ -537,10 +544,10 @@ export const FormulariosDiligenciadosPage = () => {
               nombre_archivo: f.nombre_archivo,
               data: f.data,
             };
-            if (isVisitaNumero(f.visita)) {
-              return { ...base, visita: f.visita };
+            if (isRegistroFotoSlot(f.slot)) {
+              return { ...base, slot: f.slot };
             }
-            return base;
+            return null;
           })
           .filter(
             (
@@ -548,7 +555,7 @@ export const FormulariosDiligenciadosPage = () => {
             ): f is {
               nombre_archivo: string;
               data: string;
-              visita?: 1 | 2 | 3 | 4;
+              slot: 1 | 2 | 3 | 4 | 5 | 6;
             } => f !== null,
           );
 
@@ -689,7 +696,7 @@ export const FormulariosDiligenciadosPage = () => {
       }
       const formValues = buildFormValuesFromSnapshot(detailSnapshot);
       const sourceFotos = detailPrecarga?.fotos ?? detailSnapshot.fotos ?? [];
-      let fotos = fotosConVisitaDesdeDetalle(sourceFotos);
+      let fotos = fotosConSlotDesdeDetalleExport(sourceFotos);
       fotos = await hydrateFotosFromServerIfNeeded(row, fotos);
       const gps = detailSnapshot.gps
         ? {
@@ -1393,7 +1400,7 @@ export const FormulariosDiligenciadosPage = () => {
                                 detailSnapshot.fotos ??
                                 [];
                               const fotosConData =
-                                fotosConVisitaDesdeDetalle(fotosDetalle)
+                                fotosConSlotDesdeDetalleExport(fotosDetalle)
                                   .length > 0;
                               const hayFotosServidor =
                                 (row.server?.fotos?.length ?? 0) > 0;
@@ -1414,7 +1421,7 @@ export const FormulariosDiligenciadosPage = () => {
                                     >
                                       {precargaMap.has(row.id_formulario)
                                         ? "Actualizar precarga"
-                                        : "Precargar para visita"}
+                                        : "Precargar offline"}
                                     </Button>
                                   ) : null}
                                   {online &&

@@ -1,3 +1,4 @@
+import { isRegistroFotoSlot } from '@/config/registroFotografico';
 import { db, type FotoForm } from '@/services/db';
 import { fetchFormFromApi, fetchFormPhotoDataUrl } from '@/services/api';
 
@@ -5,6 +6,7 @@ type FotoApiLike =
   | string
   | {
       nombre_archivo?: unknown;
+      slot?: unknown;
       visita?: unknown;
     };
 
@@ -44,6 +46,20 @@ async function optimizeDataUrl(
   });
 }
 
+function resolveSlotFromApi(foto: FotoApiLike): FotoForm['slot'] | undefined {
+  if (typeof foto === 'string') {
+    return undefined;
+  }
+  if (isRegistroFotoSlot(foto.slot)) {
+    return foto.slot;
+  }
+  const legacy = foto.visita;
+  if (legacy === 1 || legacy === 2 || legacy === 3 || legacy === 4) {
+    return legacy as FotoForm['slot'];
+  }
+  return undefined;
+}
+
 export async function downloadAndSavePrecarga(
   formId: string,
   options?: { optimizePhotos?: boolean; maxWidth?: number; quality?: number },
@@ -51,9 +67,8 @@ export async function downloadAndSavePrecarga(
   const opts = options ?? { optimizePhotos: true };
   const resp = await fetchFormFromApi(formId);
   const fotosRaw = Array.isArray(resp.fotos) ? resp.fotos : [];
-  const fotosPromise: Promise<FotoForm>[] = fotosRaw.map(async (p, i) => {
+  const fotosPromise: Promise<FotoForm | null>[] = fotosRaw.map(async (p, i) => {
     try {
-      // intentamos obtener la foto desde el API en form-data URL
       const dataUrl = await fetchFormPhotoDataUrl(formId, i);
       const finalData = opts.optimizePhotos
         ? await optimizeDataUrl(dataUrl, opts.maxWidth ?? DEFAULT_MAX_WIDTH, opts.quality ?? DEFAULT_QUALITY)
@@ -65,20 +80,22 @@ export async function downloadAndSavePrecarga(
           : typeof foto.nombre_archivo === 'string'
             ? foto.nombre_archivo
             : `foto_${i + 1}.jpg`;
-      const visita =
-        typeof foto === 'string' ? undefined : foto.visita;
+      const slot = resolveSlotFromApi(foto);
+      if (slot == null) {
+        return null;
+      }
       return {
         nombre_archivo: nombre,
         data: finalData,
-        ...(visita === 1 || visita === 2 || visita === 3 || visita === 4
-          ? { visita }
-          : {}),
-      } as FotoForm;
+        slot,
+      };
     } catch {
-      return { nombre_archivo: `foto_${i + 1}.jpg`, data: '', visita: undefined } as FotoForm;
+      return null;
     }
   });
-  const fotos = await Promise.all(fotosPromise);
+  const fotos = (await Promise.all(fotosPromise)).filter(
+    (f): f is FotoForm => f != null,
+  );
 
   const historial = await db.historialFormularios.get(formId);
   const modoPrecarga =
@@ -107,12 +124,10 @@ export async function downloadAndSavePrecarga(
 }
 
 export async function enableAutoPrecarga(formId: string): Promise<void> {
-  // marcar flag y forzar descarga inmediata
   const existing = await db.precargas.get(formId);
   if (existing) {
     await db.precargas.update(formId, { auto_precarga: true });
   } else {
-    // crear precarga inicial
     await downloadAndSavePrecarga(formId);
   }
 }

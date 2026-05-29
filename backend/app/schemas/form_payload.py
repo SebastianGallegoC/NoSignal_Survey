@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field, field_validator
 from app.schemas.gps_limits import load_gps_limits
 
 MAX_GPS_ACCURACY_METERS = float(load_gps_limits()["maxGpsAccuracyMeters"])
+REGISTRO_FOTO_SLOTS = frozenset({1, 2, 3, 4, 5, 6})
+
+
 class GPSPayload(BaseModel):
     latitud: float
     longitud: float
@@ -22,6 +25,7 @@ class GPSPayload(BaseModel):
 class PhotoPayload(BaseModel):
     nombre_archivo: str
     data: str
+    slot: Literal[1, 2, 3, 4, 5, 6]
     visita: Literal[1, 2, 3, 4] | None = None
 
     @field_validator("data")
@@ -65,8 +69,12 @@ class FormPayload(BaseModel):
 
     @field_validator("fotos")
     @classmethod
-    def validate_fotos_count(cls, value: List[PhotoPayload]) -> List[PhotoPayload]:
-        if len(value) > 15:
+    def validate_fotos(cls, value: List[PhotoPayload]) -> List[PhotoPayload]:
+        if len(value) > 6:
             raise ValueError("photos_out_of_range")
+        if len(value) != 6:
+            raise ValueError("photos_incomplete")
+        slots = {foto.slot for foto in value}
+        if slots != REGISTRO_FOTO_SLOTS:
+            raise ValueError("photos_slot_required")
         return value
-

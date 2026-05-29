@@ -10,7 +10,10 @@ import {
   ImagePreviewModal,
   type ImagePreview,
 } from "@/components/form/ImagePreviewModal";
-import { FormularioFotosSection } from "@/components/form/FormularioFotosSection";
+import {
+  RegistroFotograficoSection,
+  useRegistroFotoPickerRefs,
+} from "@/components/form/RegistroFotograficoSection";
 import { FormularioOverviewPanel } from "@/components/form/FormularioOverviewPanel";
 import { FormFieldRow } from "@/components/form/FormFieldRow";
 import { Button } from "@/components/ui/button";
@@ -24,7 +27,7 @@ import { handleDiligenciadoFormEnterKey } from "@/lib/formKeyboard";
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { useGPS } from "@/hooks/useGPS";
 import { useFormularioSubmit } from "@/hooks/useFormularioSubmit";
-import type { VisitaNumero } from "@/services/db";
+import type { RegistroFotoSlot } from "@/config/registroFotografico";
 import {
   clearFormDraft,
   loadFormDraft,
@@ -39,6 +42,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/formFields";
 import { buildExternalMapUrl, buildMapUrl } from "@/pages/formulario/mapUtils";
 import { applyCuentaConCocinaToFormValues, isCuentaConCocinaOtroSelection } from "@/lib/cuentaConCocina";
+import { normalizeFotosToSlots } from "@/lib/registroFotoUtils";
 import { useGpsFormFields } from "@/pages/formulario/useGpsFormFields";
 import { useFormDraftPersistence } from "@/pages/formulario/useFormDraftPersistence";
 import { usePhotoCapture } from "@/pages/formulario/usePhotoCapture";
@@ -88,11 +92,11 @@ export const FormularioPage = () => {
   } = useGPS({
     restoredPosition: loadedDraft?.gps ?? null,
   });
-  const [fotos, setFotos] = useState<FotoForm[]>(
-    () => loadedDraft?.fotos ?? [],
+  const [fotos, setFotos] = useState<FotoForm[]>(() =>
+    normalizeFotosToSlots(loadedDraft?.fotos ?? []),
   );
-  const [visitaFotoSeleccionada, setVisitaFotoSeleccionada] =
-    useState<VisitaNumero | null>(null);
+  const [activeFotoSlot, setActiveFotoSlot] =
+    useState<RegistroFotoSlot | null>(null);
   const [previewFoto, setPreviewFoto] = useState<ImagePreview | null>(null);
   const [formId, setFormId] = useState(
     () => loadedDraft?.formId ?? randomUuid(),
@@ -114,7 +118,7 @@ export const FormularioPage = () => {
     () => new Set(["coordenadas"]),
   );
   const [modalLimpiarAbierto, setModalLimpiarAbierto] = useState(false);
-  const pickerInputRef = useRef<HTMLInputElement | null>(null);
+  const pickerInputRefs = useRegistroFotoPickerRefs();
 
   const {
     register,
@@ -254,15 +258,16 @@ export const FormularioPage = () => {
     captureFlash,
     captureBadge,
     cameraVideoRef,
-    openCamera,
+    openCameraForSlot,
     stopCamera,
     captureFromCamera,
-    onFotosChange,
-    quitarFoto,
+    onFotoFileForSlot,
+    quitarFotoSlot,
   } = usePhotoCapture({
     fotos,
     setFotos,
-    visitaFotoSeleccionada,
+    activeSlot: activeFotoSlot,
+    setActiveSlot: setActiveFotoSlot,
     setBanner,
   });
 
@@ -276,12 +281,9 @@ export const FormularioPage = () => {
     setModoCoordenadas("automatico");
     clearFormDraft(draftUserKey);
     setBanner(null);
-    setVisitaFotoSeleccionada(null);
+    setActiveFotoSlot(null);
     setPreviewFoto(null);
     setOpenSections(new Set(["coordenadas"]));
-    if (pickerInputRef.current) {
-      pickerInputRef.current.value = "";
-    }
   }, [limpiarUbicacion, reset, defaults, draftUserKey, stopCamera]);
 
   const confirmarLimpiarFormulario = useCallback(() => {
@@ -544,22 +546,34 @@ export const FormularioPage = () => {
             </details>
           ) : null}
 
-          <FormularioFotosSection
+          <RegistroFotograficoSection
             fotos={fotos}
-            visitaSeleccionada={visitaFotoSeleccionada}
-            onVisitaSeleccionadaChange={setVisitaFotoSeleccionada}
-            pickerInputRef={pickerInputRef}
+            activeSlot={activeFotoSlot}
+            onActiveSlotChange={setActiveFotoSlot}
+            pickerInputRefs={pickerInputRefs}
             cameraOpen={cameraOpen}
             cameraVideoRef={cameraVideoRef}
             captureFlash={captureFlash}
             captureBadge={captureBadge}
-            onOpenCamera={() => void openCamera()}
+            onOpenCameraForSlot={openCameraForSlot}
             onStopCamera={stopCamera}
             onCaptureFromCamera={() => void captureFromCamera()}
-            onFotosChange={(e) => void onFotosChange(e)}
-            onQuitarFoto={quitarFoto}
+            onFotoFileForSlot={(slot, event) => void onFotoFileForSlot(slot, event)}
+            onQuitarFotoSlot={quitarFotoSlot}
             onPreviewFoto={setPreviewFoto}
             cameraNotice={cameraOpen ? banner : null}
+            open={openSections.has("registro-fotografico")}
+            onToggle={(isOpen) => {
+              setOpenSections((prev) => {
+                const next = new Set(prev);
+                if (isOpen) {
+                  next.add("registro-fotografico");
+                } else {
+                  next.delete("registro-fotografico");
+                }
+                return next;
+              });
+            }}
           />
 
           <ImagePreviewModal

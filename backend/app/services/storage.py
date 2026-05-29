@@ -29,7 +29,7 @@ def _coerce_json_list(raw: object) -> list[Any] | None:
 
 
 def normalize_stored_foto_paths(raw: object) -> list[str]:
-    """Rutas de archivo en orden. Acepta lista de str (legado) o de dicts `{"path", "visita?"}`."""
+    """Rutas de archivo en orden. Acepta lista de str (legado) o de dicts `{"path", "slot?"}` / `{"path", "visita?"}` (legado)."""
     items = _coerce_json_list(raw)
     if not items:
         return []
@@ -45,7 +45,7 @@ def normalize_stored_foto_paths(raw: object) -> list[str]:
 
 
 def fotos_json_for_api_list(raw: object) -> list[Any]:
-    """Lista para `GET /forms`: str (legado) o `{"path", "visita?}` para que cualquier cliente agrupe por visita."""
+    """Lista para `GET /forms`: str (legado) o `{"path", "slot?"}`; acepta `visita` legado y lo expone como `slot`."""
     items = _coerce_json_list(raw)
     if not items:
         return []
@@ -59,9 +59,13 @@ def fotos_json_for_api_list(raw: object) -> list[Any]:
             if not isinstance(path, str) or not path.strip():
                 continue
             path = path.strip()
-            v = item.get("visita")
-            if v in (1, 2, 3, 4):
-                out.append({"path": path, "visita": int(v)})
+            slot = item.get("slot")
+            if slot not in (1, 2, 3, 4, 5, 6):
+                legacy = item.get("visita")
+                if legacy in (1, 2, 3, 4):
+                    slot = int(legacy)
+            if slot in (1, 2, 3, 4, 5, 6):
+                out.append({"path": path, "slot": int(slot)})
             else:
                 out.append(path)
     return out
@@ -149,8 +153,8 @@ def save_photos(
             handler.write(raw)
 
         entry: dict[str, Any] = {"path": file_path}
-        if foto.visita in (1, 2, 3, 4):
-            entry["visita"] = foto.visita
+        if foto.slot in (1, 2, 3, 4, 5, 6):
+            entry["slot"] = foto.slot
         saved_entries.append(entry)
 
     return saved_entries

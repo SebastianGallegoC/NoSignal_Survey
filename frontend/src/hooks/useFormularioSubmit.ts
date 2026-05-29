@@ -17,11 +17,16 @@ import {
   validateOfflineFormPayload,
 } from "@/services/formValidation";
 import {
+  FORM_PHOTO_REQUIRED_MESSAGE,
+  slotsCompletos,
+} from "@/lib/formPhotoLimits";
+import { formatCuentaConCocinaForStorage } from "@/lib/cuentaConCocina";
+import { missingSlotsMessage } from "@/lib/registroFotoUtils";
+import {
   formatCoordForDatosFormulario,
   normalizeCoordNumericCell,
   roundCoordDecimal,
 } from "@/lib/coordNumericToken";
-import { formatCuentaConCocinaForStorage } from "@/lib/cuentaConCocina";
 import type { FormFieldKey, FormValues } from "@/types/formFields";
 import {
   GPS_PLACEHOLDER_WHEN_NOT_CAPTURED,
@@ -191,10 +196,11 @@ export const useFormularioSubmit = ({
       );
       return;
     }
-    if (fotos.length > 15) {
+    if (!slotsCompletos(fotos)) {
+      setOpenSections((prev) => new Set([...prev, "registro-fotografico"]));
       showEnvioBloqueadoModal(
         "No se puede enviar",
-        `Máximo 15 fotos. Actualmente tenés ${fotos.length}. Quitá algunas e intentá de nuevo.`,
+        missingSlotsMessage(fotos) || FORM_PHOTO_REQUIRED_MESSAGE,
       );
       return;
     }

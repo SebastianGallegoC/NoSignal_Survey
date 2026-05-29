@@ -1,7 +1,7 @@
 import type { FormularioSnapshot } from "@/components/form/FormularioRespuestaReadOnly";
 import { applyCuentaConCocinaToFormValues } from "@/lib/cuentaConCocina";
 import { parseISODate } from "@/lib/formatDateTime";
-import { parseVisitaNumero } from "@/lib/visitaNumero";
+import { isRegistroFotoSlot } from "@/config/registroFotografico";
 import type { FormReadItem } from "@/services/api";
 import type { HistorialForm, OfflineForm, PrecargaForm } from "@/services/db";
 import { REQUIRED_FIELDS, type FormValues } from "@/types/formFields";
@@ -192,13 +192,28 @@ export function mapServerFotos(
     if (p !== null && typeof p === "object" && "path" in p) {
       const path = String((p as { path: unknown }).path);
       const base = path.split(/[/\\]/).pop() || `foto_${i + 1}.jpg`;
-      const visita = parseVisitaNumero((p as { visita?: unknown }).visita);
+      const slotRaw = (p as { slot?: unknown; visita?: unknown }).slot;
+      let slot: number | null = null;
+      if (isRegistroFotoSlot(slotRaw)) {
+        slot = slotRaw;
+      } else {
+        const legacy = (p as { visita?: unknown }).visita;
+        const legacyNum =
+          typeof legacy === "number"
+            ? legacy
+            : typeof legacy === "string"
+              ? Number.parseInt(legacy, 10)
+              : NaN;
+        if (legacyNum === 1 || legacyNum === 2 || legacyNum === 3 || legacyNum === 4) {
+          slot = legacyNum;
+        }
+      }
       return {
         nombre_archivo: base,
         path,
         serverFormId: formId,
         serverIndex: i,
-        ...(visita != null ? { visita } : {}),
+        ...(slot != null && isRegistroFotoSlot(slot) ? { slot } : {}),
       };
     }
     return {

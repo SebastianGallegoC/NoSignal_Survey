@@ -1,6 +1,11 @@
 import JSZip from "jszip";
 
-import { isVisitaNumero, VISITA_NUMEROS, type VisitaNumero } from "@/lib/visitaNumero";
+import {
+  isRegistroFotoSlot,
+  REGISTRO_FOTO_SLOTS,
+  registroFotoExportFolder,
+  type RegistroFotoSlot,
+} from "@/config/registroFotografico";
 import type { FotoForm, OfflineForm } from "@/services/db";
 import { matrizCaracterizacionFilename } from "@/services/matrizCaracterizacionExport";
 
@@ -80,8 +85,32 @@ function uniqueNameInFolder(baseName: string, used: Set<string>): string {
   return candidate;
 }
 
-function visitaFolderLabel(n: VisitaNumero): string {
-  return `Visita ${n}`;
+function resolveFotoSlot(foto: FotoForm): RegistroFotoSlot | null {
+  if (isRegistroFotoSlot(foto.slot)) {
+    return foto.slot;
+  }
+  if (
+    foto.visita === 1 ||
+    foto.visita === 2 ||
+    foto.visita === 3 ||
+    foto.visita === 4
+  ) {
+    return foto.visita as RegistroFotoSlot;
+  }
+  return null;
+}
+
+function partitionFotosBySlot(fotos: FotoForm[]): Record<RegistroFotoSlot, FotoForm[]> {
+  const bySlot = Object.fromEntries(
+    REGISTRO_FOTO_SLOTS.map(({ slot }) => [slot, [] as FotoForm[]]),
+  ) as Record<RegistroFotoSlot, FotoForm[]>;
+  for (const foto of fotos) {
+    const slot = resolveFotoSlot(foto);
+    if (slot != null) {
+      bySlot[slot].push(foto);
+    }
+  }
+  return bySlot;
 }
 
 function safeBeneficiarioName(form: OfflineForm): string {
@@ -112,27 +141,6 @@ function bulkFormFolderName(form: OfflineForm): string {
   return `${safeBeneficiarioName(form)}-${safeFechaFromForm(form)}`;
 }
 
-function partitionFotos(fotos: FotoForm[]): {
-  byVisita: Record<VisitaNumero, FotoForm[]>;
-  sinVisita: FotoForm[];
-} {
-  const byVisita: Record<VisitaNumero, FotoForm[]> = {
-    1: [],
-    2: [],
-    3: [],
-    4: [],
-  };
-  const sinVisita: FotoForm[] = [];
-  for (const f of fotos) {
-    if (isVisitaNumero(f.visita)) {
-      byVisita[f.visita].push(f);
-    } else {
-      sinVisita.push(f);
-    }
-  }
-  return { byVisita, sinVisita };
-}
-
 export async function buildPhotosZip(form: OfflineForm): Promise<Blob> {
   const fotos = form.fotos ?? [];
   if (fotos.length === 0) {
@@ -141,27 +149,16 @@ export async function buildPhotosZip(form: OfflineForm): Promise<Blob> {
 
   const zip = new JSZip();
   const root = buildBeneficiarioFolderName(form);
-  const { byVisita, sinVisita } = partitionFotos(fotos);
+  const bySlot = partitionFotosBySlot(fotos);
 
-  const visitas = VISITA_NUMEROS;
-  for (const n of visitas) {
-    const list = byVisita[n];
+  for (const { slot } of REGISTRO_FOTO_SLOTS) {
+    const list = bySlot[slot];
     if (list.length === 0) {
       continue;
     }
-    const folder = `${root}/${visitaFolderLabel(n)}`;
+    const folder = `${root}/${registroFotoExportFolder(slot)}`;
     const used = new Set<string>();
     for (const foto of list) {
-      const fileName = uniqueNameInFolder(foto.nombre_archivo, used);
-      const bytes = dataUrlToUint8Array(foto.data);
-      zip.file(`${folder}/${fileName}`, bytes);
-    }
-  }
-
-  if (sinVisita.length > 0) {
-    const folder = `${root}/Sin visita`;
-    const used = new Set<string>();
-    for (const foto of sinVisita) {
       const fileName = uniqueNameInFolder(foto.nombre_archivo, used);
       const bytes = dataUrlToUint8Array(foto.data);
       zip.file(`${folder}/${fileName}`, bytes);
@@ -210,18 +207,14 @@ export async function buildPhotosBulkZip(forms: OfflineForm[]): Promise<Blob> {
       continue;
     }
     const folderBase = `${root}/${bulkFormFolderName(form)}`;
-    const byVisita: Record<VisitaNumero, FotoForm[]> = { 1: [], 2: [], 3: [], 4: [] };
-    for (const foto of fotos) {
-      const visita: VisitaNumero = isVisitaNumero(foto.visita) ? foto.visita : 1;
-      byVisita[visita].push(foto);
-    }
-    for (const visita of VISITA_NUMEROS) {
-      const list = byVisita[visita];
+    const bySlot = partitionFotosBySlot(fotos);
+    for (const { slot } of REGISTRO_FOTO_SLOTS) {
+      const list = bySlot[slot];
       if (list.length === 0) {
         continue;
       }
       const used = new Set<string>();
-      const folder = `${folderBase}/${visitaFolderLabel(visita)}`;
+      const folder = `${folderBase}/${registroFotoExportFolder(slot)}`;
       for (const foto of list) {
         const fileName = uniqueNameInFolder(foto.nombre_archivo, used);
         const bytes = dataUrlToUint8Array(foto.data);

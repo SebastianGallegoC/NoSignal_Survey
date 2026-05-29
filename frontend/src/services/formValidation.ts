@@ -16,8 +16,12 @@ import {
 } from "@/lib/coordNumericToken";
 import type { OfflineForm } from "@/services/db";
 import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/formFields";
-const MIN_PHOTOS = 0;
-const MAX_PHOTOS = 15;
+import {
+  isRegistroFotoSlot,
+  REGISTRO_FOTO_SLOT_NUMBERS,
+} from "@/config/registroFotografico";
+import { missingSlotsMessage } from "@/lib/registroFotoUtils";
+const MAX_PHOTOS = 6;
 const TRI_ALLOWED = new Set(["Si", "No", "NR"]);
 const PHONE_RE = /^[0-9+\-()\s]{6,20}$/;
 
@@ -56,7 +60,7 @@ function parseDateSafe(value: unknown): number | null {
 /**
  * Validación por campo (y mensajes de fila) para mostrar errores en UI de importación.
  * El envío a cola solo exige nombre del encuestado (vía `validateOfflineFormPayload`);
- * el resto de campos puede ir vacío. Si hay fotos, deben tener visita 1–4.
+ * el resto de campos puede ir vacío. El envío exige las 6 fotos del registro fotográfico.
  */
 export const validateFormValuesWithFieldDetails = (
   values: FormValues,
@@ -256,21 +260,30 @@ export const validateOfflineFormPayload = (form: OfflineForm): ValidationIssue[]
     });
   }
 
-  if (!Array.isArray(form.fotos) || form.fotos.length < MIN_PHOTOS || form.fotos.length > MAX_PHOTOS) {
+  if (!Array.isArray(form.fotos) || form.fotos.length !== MAX_PHOTOS) {
     issues.push({
       code: "fotos_count",
-      message: "Máximo 15 fotos comprimidas.",
+      message: "Debés cargar exactamente 6 fotos del registro fotográfico.",
     });
   }
 
-  if (
-    Array.isArray(form.fotos) &&
-    form.fotos.some((f) => f.visita !== 1 && f.visita !== 2 && f.visita !== 3 && f.visita !== 4)
-  ) {
-    issues.push({
-      code: "fotos_visita_required",
-      message: "Cada foto debe estar asociada a visita 1, 2, 3 o 4.",
-    });
+  if (Array.isArray(form.fotos)) {
+    const slots = new Set(
+      form.fotos
+        .map((f) => f.slot)
+        .filter((slot): slot is (typeof REGISTRO_FOTO_SLOT_NUMBERS)[number] =>
+          isRegistroFotoSlot(slot),
+        ),
+    );
+    if (slots.size !== MAX_PHOTOS) {
+      const detail = missingSlotsMessage(form.fotos);
+      issues.push({
+        code: "fotos_slot_required",
+        message:
+          detail ||
+          "Cada foto del registro fotográfico debe corresponder a un campo obligatorio (Foto 1 a Foto 6).",
+      });
+    }
   }
 
   return issues;

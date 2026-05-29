@@ -1,11 +1,15 @@
-import { parseVisitaNumero } from '@/lib/visitaNumero';
 import { fetchFormPhotoDataUrl } from '@/services/api';
 import type { FotoForm, HistorialForm, PrecargaForm } from '@/services/db';
 import { mapServerFotos, type DisplayRow } from '@/services/formHistory';
+import {
+  fotosConSlotDesdeDetalle,
+  normalizeFotosToSlots,
+} from '@/lib/registroFotoUtils';
 
 export type FotoSnapshotLike = {
   nombre_archivo: string;
   data?: string;
+  slot?: unknown;
   visita?: unknown;
 };
 
@@ -31,17 +35,9 @@ export const DETAIL_SOURCE_LABEL: Record<DetailSourceKind, string> = {
   live: 'Local en edicion',
 };
 
-/** Preserva visita 1–4; si falta (p. ej. legado o map previo), asume 1 para pasar validacion al enviar. */
-export function fotosConVisitaDesdeDetalle(source: FotoSnapshotLike[]): FotoForm[] {
-  const out: FotoForm[] = [];
-  for (const f of source) {
-    if (!f.data?.trim()) {
-      continue;
-    }
-    const visita = parseVisitaNumero(f.visita) ?? 1;
-    out.push({ nombre_archivo: f.nombre_archivo, data: f.data, visita });
-  }
-  return out;
+/** Preserva slot 1–6; normaliza visita legacy al cargar detalle. */
+export function fotosConSlotDesdeDetalleExport(source: FotoSnapshotLike[]): FotoForm[] {
+  return fotosConSlotDesdeDetalle(source);
 }
 
 /** Si no hay fotos en base64 local, descarga desde el API usando metadatos del servidor. */
@@ -50,7 +46,7 @@ export async function hydrateFotosFromServerIfNeeded(
   existing: FotoForm[],
 ): Promise<FotoForm[]> {
   if (existing.length > 0) {
-    return existing;
+    return normalizeFotosToSlots(existing);
   }
   const serverRow = row.server;
   if (!serverRow || (serverRow.fotos?.length ?? 0) === 0) {
@@ -70,16 +66,21 @@ export async function hydrateFotosFromServerIfNeeded(
         foto.serverFormId,
         foto.serverIndex,
       );
-      fetched.push({
-        nombre_archivo: foto.nombre_archivo,
-        data,
-        visita: parseVisitaNumero(foto.visita) ?? 1,
-      });
+      fetched.push(
+        ...fotosConSlotDesdeDetalle([
+          {
+            nombre_archivo: foto.nombre_archivo,
+            data,
+            slot: foto.slot,
+            visita: foto.visita,
+          },
+        ]),
+      );
     } catch {
       // Si una foto falla, continuamos con las demas.
     }
   }
-  return fetched;
+  return normalizeFotosToSlots(fetched);
 }
 
 /** Misma prioridad que al armar el detalle: servidor → precarga → historial → cola local. */
@@ -99,3 +100,5 @@ export function previewDetailSourceForRow(
   return 'live';
 }
 
+/** @deprecated Usar fotosConSlotDesdeDetalleExport */
+export const fotosConVisitaDesdeDetalle = fotosConSlotDesdeDetalleExport;

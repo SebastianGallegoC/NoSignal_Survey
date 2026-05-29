@@ -82,28 +82,25 @@ describe("buildPhotosZip", () => {
     await expect(buildPhotosZip(f)).rejects.toThrow("No hay fotos");
   });
 
-  it("solo crea carpetas de visita con fotos", async () => {
+  it("solo crea carpetas de slot con fotos", async () => {
     const root = "Fotos-María Pérez";
     const f = baseForm({
       fotos: [
         {
           nombre_archivo: "solo.jpg",
           data: JPEG_DATA_URL,
-          visita: 2,
+          slot: 2,
         },
       ],
     });
     const blob = await buildPhotosZip(f);
     const zip = await JSZip.loadAsync(blob);
     const paths = Object.keys(zip.files).filter((p) => !zip.files[p].dir);
-    expect(paths).toEqual([`${root}/Visita 2/solo.jpg`]);
-    expect(paths.some((p) => p.includes("Visita 1"))).toBe(false);
-    expect(paths.some((p) => p.includes("Visita 3"))).toBe(false);
-    expect(paths.some((p) => p.includes("Visita 4"))).toBe(false);
-    expect(paths.some((p) => p.includes("Sin visita"))).toBe(false);
+    expect(paths).toEqual([`${root}/02_Condiciones_vivienda/solo.jpg`]);
+    expect(paths.some((p) => p.includes("01_Fachada"))).toBe(false);
   });
 
-  it("reparte por visita 1, 2, 3 y 4", async () => {
+  it("reparte por slots 1 a 6", async () => {
     const root = buildBeneficiarioFolderName(
       baseForm({
         datos_formulario: { nombres_apellidos_encuestado: "B" },
@@ -112,50 +109,46 @@ describe("buildPhotosZip", () => {
     const f = baseForm({
       datos_formulario: { nombres_apellidos_encuestado: "B" },
       fotos: [
-        { nombre_archivo: "a.jpg", data: JPEG_DATA_URL, visita: 1 },
-        { nombre_archivo: "b.jpg", data: JPEG_DATA_URL, visita: 2 },
-        { nombre_archivo: "c.jpg", data: JPEG_DATA_URL, visita: 3 },
-        { nombre_archivo: "d.jpg", data: JPEG_DATA_URL, visita: 4 },
+        { nombre_archivo: "a.jpg", data: JPEG_DATA_URL, slot: 1 },
+        { nombre_archivo: "b.jpg", data: JPEG_DATA_URL, slot: 2 },
+        { nombre_archivo: "c.jpg", data: JPEG_DATA_URL, slot: 3 },
+        { nombre_archivo: "d.jpg", data: JPEG_DATA_URL, slot: 4 },
+        { nombre_archivo: "e.jpg", data: JPEG_DATA_URL, slot: 5 },
+        { nombre_archivo: "f.jpg", data: JPEG_DATA_URL, slot: 6 },
       ],
     });
     const blob = await buildPhotosZip(f);
     const zip = await JSZip.loadAsync(blob);
     const paths = Object.keys(zip.files).filter((p) => !zip.files[p].dir);
-    expect(paths).toContain(`${root}/Visita 1/a.jpg`);
-    expect(paths).toContain(`${root}/Visita 2/b.jpg`);
-    expect(paths).toContain(`${root}/Visita 3/c.jpg`);
-    expect(paths).toContain(`${root}/Visita 4/d.jpg`);
-    expect(paths.some((p) => p.endsWith("/.keep"))).toBe(false);
+    expect(paths).toContain(`${root}/01_Fachada/a.jpg`);
+    expect(paths).toContain(`${root}/06_Documento_trasero/f.jpg`);
   });
 
-  it("coloca fotos sin visita en Sin visita", async () => {
+  it("acepta visita legacy como slot al exportar", async () => {
     const root = buildBeneficiarioFolderName(baseForm());
     const f = baseForm({
       fotos: [
-        { nombre_archivo: "v1.jpg", data: JPEG_DATA_URL, visita: 1 },
-        { nombre_archivo: "orphan.jpg", data: JPEG_DATA_URL },
+        { nombre_archivo: "v1.jpg", data: JPEG_DATA_URL, slot: 1, visita: 1 },
       ],
     });
     const blob = await buildPhotosZip(f);
     const zip = await JSZip.loadAsync(blob);
     const paths = Object.keys(zip.files).filter((p) => !zip.files[p].dir);
-    expect(paths).toContain(`${root}/Sin visita/orphan.jpg`);
-    expect(paths).toContain(`${root}/Visita 1/v1.jpg`);
-    expect(paths.some((p) => p.includes("Visita 2"))).toBe(false);
+    expect(paths).toContain(`${root}/01_Fachada/v1.jpg`);
   });
 
   it("resuelve colisión de nombre en la misma carpeta", async () => {
     const root = buildBeneficiarioFolderName(baseForm());
     const f = baseForm({
       fotos: [
-        { nombre_archivo: "x.jpg", data: JPEG_DATA_URL, visita: 1 },
-        { nombre_archivo: "x.jpg", data: JPEG_DATA_URL, visita: 1 },
+        { nombre_archivo: "x.jpg", data: JPEG_DATA_URL, slot: 1 },
+        { nombre_archivo: "x.jpg", data: JPEG_DATA_URL, slot: 1 },
       ],
     });
     const blob = await buildPhotosZip(f);
     const zip = await JSZip.loadAsync(blob);
     const paths = Object.keys(zip.files).filter((p) => !zip.files[p].dir);
-    expect(paths).toContain(`${root}/Visita 1/x.jpg`);
-    expect(paths).toContain(`${root}/Visita 1/x-2.jpg`);
+    expect(paths).toContain(`${root}/01_Fachada/x.jpg`);
+    expect(paths).toContain(`${root}/01_Fachada/x-2.jpg`);
   });
 });

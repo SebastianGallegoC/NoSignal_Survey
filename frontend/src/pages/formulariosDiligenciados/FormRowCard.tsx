@@ -9,7 +9,7 @@ import {
   DETAIL_SOURCE_COLOR,
   DETAIL_SOURCE_LABEL,
   estadoClass,
-  fotosConVisitaDesdeDetalle,
+  fotosConSlotDesdeDetalleExport,
   type DetailSourceKind,
 } from "@/pages/formulariosDiligenciados/helpers";
 
@@ -194,7 +194,7 @@ export const FormRowCard = ({
                   const fotosDetalle =
                     detailPrecarga?.fotos ?? detailSnapshot.fotos ?? [];
                   const fotosConData =
-                    fotosConVisitaDesdeDetalle(fotosDetalle).length > 0;
+                    fotosConSlotDesdeDetalleExport(fotosDetalle).length > 0;
                   const hayFotosServidor = (row.server?.fotos?.length ?? 0) > 0;
                   const canDownloadPhotos =
                     !detailLoading && (fotosConData || hayFotosServidor);
@@ -210,7 +210,7 @@ export const FormRowCard = ({
                         >
                           {precargado
                             ? "Actualizar precarga"
-                            : "Precargar para visita"}
+                            : "Precargar offline"}
                         </Button>
                       ) : null}
                       {online && (precargado || row.historial) ? (

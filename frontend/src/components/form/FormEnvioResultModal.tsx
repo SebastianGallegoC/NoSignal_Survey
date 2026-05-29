@@ -139,10 +139,10 @@ export const FormEnvioResultModal = ({
               </Button>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-3 text-sm text-slate-700">
-              <p className="font-medium text-slate-900">Fotos por visita</p>
+              <p className="font-medium text-slate-900">Registro fotográfico</p>
               <p className="mt-1 text-xs text-slate-600">
-                Se descarga un ZIP con carpetas «Visita 1», «Visita 2» y «Visita
-                3» dentro de «Fotos-[nombre del encuestado]».
+                Se descarga un ZIP con carpetas por cada foto obligatoria (Foto 1 a Foto 6)
+                dentro de «Fotos-[nombre del encuestado]».
               </p>
               {(submittedForm.fotos?.length ?? 0) === 0 ? (
                 <p className="mt-2 text-xs text-slate-600">

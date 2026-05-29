@@ -24,7 +24,7 @@ function snapshot(overrides: Partial<FormularioEditBaseline> = {}): FormularioEd
       {
         nombre_archivo: "visita1.jpg",
         data: "data:image/jpeg;base64,AA==",
-        visita: 1,
+        slot: 1,
       },
     ],
     modoCoordenadas: "automatico",
@@ -75,7 +75,7 @@ describe("flujo editar formulario → Actualizar", () => {
         {
           nombre_archivo: "nueva.jpg",
           data: "data:image/jpeg;base64,BB==",
-          visita: 4,
+          slot: 4,
         },
       ],
     });

@@ -19,7 +19,7 @@ const photoMocks = vi.hoisted(() => ({
 }));
 
 const helperMocks = vi.hoisted(() => ({
-  fotosConVisitaDesdeDetalle: vi.fn((): FotoForm[] => []),
+  fotosConSlotDesdeDetalleExport: vi.fn((): FotoForm[] => []),
   hydrateFotosFromServerIfNeeded: vi.fn(
     async (_row: DisplayRow, fotos: FotoForm[]): Promise<FotoForm[]> => fotos,
   ),
@@ -88,8 +88,8 @@ describe("useFormExports", () => {
     vi.clearAllMocks();
     dbMocks.bulkGet.mockReset();
     dbMocks.bulkGet.mockResolvedValue([]);
-    helperMocks.fotosConVisitaDesdeDetalle.mockReset();
-    helperMocks.fotosConVisitaDesdeDetalle.mockImplementation(() => []);
+    helperMocks.fotosConSlotDesdeDetalleExport.mockReset();
+    helperMocks.fotosConSlotDesdeDetalleExport.mockImplementation(() => []);
     helperMocks.hydrateFotosFromServerIfNeeded.mockReset();
     helperMocks.hydrateFotosFromServerIfNeeded.mockImplementation(
       async (_row: DisplayRow, fotos: FotoForm[]) => fotos,
@@ -435,25 +435,25 @@ describe("useFormExports", () => {
   });
 
   it("exporta ZIP de fotos del registro cuando hay snapshot y fotos", async () => {
-    helperMocks.fotosConVisitaDesdeDetalle.mockReturnValueOnce([
+    helperMocks.fotosConSlotDesdeDetalleExport.mockReturnValueOnce([
       {
         nombre_archivo: "a.jpg",
         data: "data:image/jpeg;base64,AA==",
-        visita: 1 as const,
+        slot: 1 as const,
       },
     ]);
     helperMocks.hydrateFotosFromServerIfNeeded.mockResolvedValueOnce([
       {
         nombre_archivo: "a.jpg",
         data: "data:image/jpeg;base64,AA==",
-        visita: 1 as const,
+        slot: 1 as const,
       },
     ]);
 
     const snapshot: FormularioSnapshot = {
       datos_formulario: {},
       gps: { latitud: 1, longitud: 2, precision: 1 },
-      fotos: [{ nombre_archivo: "a.jpg", data: "data:image/jpeg;base64,AA==", visita: 1 }],
+      fotos: [{ nombre_archivo: "a.jpg", data: "data:image/jpeg;base64,AA==", slot: 1 }],
     };
     const row = buildRow({
       id_formulario: "foto-1",
@@ -509,11 +509,11 @@ describe("useFormExports", () => {
   });
 
   it("descargarFotosDeTodos llama al ZIP masivo", async () => {
-    helperMocks.fotosConVisitaDesdeDetalle.mockReturnValue([
+    helperMocks.fotosConSlotDesdeDetalleExport.mockReturnValue([
       {
         nombre_archivo: "b.jpg",
         data: "data:image/jpeg;base64,QQ==",
-        visita: 2 as const,
+        slot: 2 as const,
       },
     ]);
     helperMocks.hydrateFotosFromServerIfNeeded.mockImplementation(

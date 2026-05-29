@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 
 import type { FormularioSnapshot } from '@/components/form/FormularioRespuestaReadOnly';
-import { db, type OfflineForm, type PrecargaForm } from '@/services/db';
+import { isRegistroFotoSlot } from '@/config/registroFotografico';
+import { db, type FotoForm, type OfflineForm, type PrecargaForm } from '@/services/db';
 import type { DisplayRow } from '@/services/formHistory';
 import {
   resolveDatosFormularioForExport,
@@ -13,7 +14,7 @@ import {
 } from '@/services/matrizCaracterizacionExport';
 import { downloadPhotosBulkZip, downloadPhotosZip } from '@/services/photosExport';
 import {
-  fotosConVisitaDesdeDetalle,
+  fotosConSlotDesdeDetalleExport,
   hydrateFotosFromServerIfNeeded,
   type FotoSnapshotLike,
 } from '@/pages/formulariosDiligenciados/helpers';
@@ -50,7 +51,7 @@ export const useFormExports = ({
       setDescargaExcelError(null);
       setDescargandoExcelId(row.id_formulario);
       try {
-        const fotos = fotosConVisitaDesdeDetalle(
+        const fotos = fotosConSlotDesdeDetalleExport(
           detailPrecarga?.fotos ?? detailSnapshot.fotos ?? [],
         );
 
@@ -111,7 +112,7 @@ export const useFormExports = ({
       setDescargaFotosError(null);
       setDescargandoFotosId(row.id_formulario);
       try {
-        let fotos = fotosConVisitaDesdeDetalle(
+        let fotos = fotosConSlotDesdeDetalleExport(
           detailPrecarga?.fotos ?? detailSnapshot.fotos ?? [],
         );
         fotos = await hydrateFotosFromServerIfNeeded(row, fotos);
@@ -186,8 +187,10 @@ export const useFormExports = ({
           row.precargaSolo?.fotos ??
           []
         ).filter(
-          (f): f is { nombre_archivo: string; data: string } =>
-            typeof f?.data === 'string' && f.data.trim() !== '',
+          (f): f is FotoForm =>
+            typeof f?.data === 'string' &&
+            f.data.trim() !== '' &&
+            isRegistroFotoSlot(f.slot),
         );
         return {
           id_formulario: row.id_formulario,
@@ -234,7 +237,7 @@ export const useFormExports = ({
         const queued = queuedById.get(row.id_formulario);
         const datos = resolveDatosFormularioForExport(row, queued);
         const gps = resolveGpsForExport(row, queued);
-        let fotos = fotosConVisitaDesdeDetalle(
+        let fotos = fotosConSlotDesdeDetalleExport(
           (queued?.fotos ??
             row.historial?.fotos ??
             row.precargaSolo?.fotos ??

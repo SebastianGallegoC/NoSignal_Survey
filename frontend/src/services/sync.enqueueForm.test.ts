@@ -34,13 +34,11 @@ const baseForm = (): OfflineForm => ({
   fecha_actualizacion: "2026-05-10T15:00:00Z",
   gps: { latitud: 1.23, longitud: -76.5, precision: 5 },
   datos_formulario: { campo: "inicial" },
-  fotos: [
-    {
-      nombre_archivo: "a.jpg",
-      data: "data:image/jpeg;base64,AAA",
-      visita: 1,
-    },
-  ],
+  fotos: ([1, 2, 3, 4, 5, 6] as const).map((slot) => ({
+    nombre_archivo: "a.jpg",
+    data: "data:image/jpeg;base64,AAA",
+    slot,
+  })),
   estado_sincronizacion: "PENDIENTE",
 });
 
