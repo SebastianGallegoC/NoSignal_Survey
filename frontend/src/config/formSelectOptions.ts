@@ -16,7 +16,7 @@ const informacion_vivienda_options = [
   "CON SERVICIO IRREGULAR DIRECTO",
   "CON SERVICIO IRREGULAR INDIRECTO",
 ];
-const cuenta_con_cocina_options = ["SI", "NO", "OTRO - HABILITAR ESCRIBIR"];
+const cuenta_con_cocina_options = ["SI", "NO", "OTRO"];
 const resultado_validacion_options = ["CUMPLE", "NO CUMPLE"];
 const medio_transporte_options = ["CAMIONETA", "CAMINANDO", "OTRO"];
 

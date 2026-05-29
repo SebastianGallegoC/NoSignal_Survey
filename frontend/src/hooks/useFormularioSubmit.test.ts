@@ -35,6 +35,17 @@ describe("useFormularioSubmit helpers", () => {
     expect(Object.keys(data)).toHaveLength(REQUIRED_FIELDS.length);
   });
 
+  it("buildDatosFormulario combina OTRO con texto en cuenta_con_cocina", () => {
+    const values = buildEmptyValues();
+    values.cuenta_con_cocina = "OTRO";
+    values.cuenta_con_cocina_otro = "Cocina comunitaria";
+
+    const data = buildDatosFormulario(values, REQUIRED_FIELDS);
+
+    expect(data.cuenta_con_cocina).toBe("OTRO - Cocina comunitaria");
+    expect(data.cuenta_con_cocina_otro).toBe("");
+  });
+
   it("buildOfflinePayload limita precision GPS", () => {
     const values = buildEmptyValues();
     values.fecha_visita = "2026-05-01";

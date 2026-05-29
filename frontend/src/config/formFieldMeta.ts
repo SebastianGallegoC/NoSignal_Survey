@@ -63,7 +63,7 @@ export const fieldLabel = (field: FormFieldKey): string =>
       edad_encuestado: 'Edad',
       informacion_vivienda: 'Información de la vivienda',
       cuenta_con_cocina: '¿Cuenta con cocina?',
-      cuenta_con_cocina_otro: 'Otra cocina',
+      cuenta_con_cocina_otro: 'Especifique cuál',
       resultado_validacion: 'Resultado de validación',
       tiempo_desplazamiento_horas: 'Tiempo de desplazamiento - horas',
       tiempo_desplazamiento_minutos: 'Tiempo de desplazamiento - minutos',

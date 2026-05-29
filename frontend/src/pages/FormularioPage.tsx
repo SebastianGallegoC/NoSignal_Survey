@@ -36,8 +36,9 @@ import { isNetworkLikeError, syncPendingForms } from "@/services/sync";
 import type { FotoForm } from "@/services/db";
 import { randomUuid } from "@/lib/randomUuid";
 import { useAuthStore } from "@/store/useAuthStore";
-import { REQUIRED_FIELDS, type FormValues } from "@/types/formFields";
+import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/formFields";
 import { buildExternalMapUrl, buildMapUrl } from "@/pages/formulario/mapUtils";
+import { applyCuentaConCocinaToFormValues, isCuentaConCocinaOtroSelection } from "@/lib/cuentaConCocina";
 import { useGpsFormFields } from "@/pages/formulario/useGpsFormFields";
 import { useFormDraftPersistence } from "@/pages/formulario/useFormDraftPersistence";
 import { usePhotoCapture } from "@/pages/formulario/usePhotoCapture";
@@ -70,7 +71,10 @@ export const FormularioPage = () => {
     if (!loadedDraft?.formValues) {
       return defaults;
     }
-    return { ...defaults, ...loadedDraft.formValues } as FormValues;
+    return applyCuentaConCocinaToFormValues({
+      ...defaults,
+      ...loadedDraft.formValues,
+    } as FormValues);
   }, [defaults, loadedDraft]);
 
   const {
@@ -127,6 +131,21 @@ export const FormularioPage = () => {
   });
 
   const formValues = watch();
+  const showCocinaOtro = isCuentaConCocinaOtroSelection(formValues.cuenta_con_cocina);
+
+  useEffect(() => {
+    if (!showCocinaOtro && formValues.cuenta_con_cocina_otro.trim() !== "") {
+      setValue("cuenta_con_cocina_otro", "");
+    }
+  }, [showCocinaOtro, formValues.cuenta_con_cocina_otro, setValue]);
+
+  const visibleSectionFields = useCallback(
+    (fields: readonly FormFieldKey[]) =>
+      fields.filter(
+        (field) => field !== "cuenta_con_cocina_otro" || showCocinaOtro,
+      ),
+    [showCocinaOtro],
+  );
 
   const isEditMode = originalFechaHora != null;
 
@@ -511,7 +530,7 @@ export const FormularioPage = () => {
                 {coordenadasSection.title}
               </summary>
               <div className="form-fields-grid">
-                {coordenadasSection.fields.map((field) => (
+                {visibleSectionFields(coordenadasSection.fields).map((field) => (
                   <FormFieldRow
                     key={field}
                     name={field}
@@ -570,7 +589,7 @@ export const FormularioPage = () => {
                 {section.title}
               </summary>
               <div className="form-fields-grid">
-                {section.fields.map((field) => (
+                {visibleSectionFields(section.fields).map((field) => (
                   <FormFieldRow
                     key={field}
                     name={field}

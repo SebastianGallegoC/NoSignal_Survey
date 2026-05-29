@@ -78,8 +78,8 @@ describe("matrizCaracterizacionExport — Survey", () => {
   it("exporta texto libre de cocina cuando se eligió otro", () => {
     const f = minimalForm();
     f.datos_formulario = {
-      cuenta_con_cocina: "OTRO - HABILITAR ESCRIBIR",
-      cuenta_con_cocina_otro: "Cocina comunitaria",
+      cuenta_con_cocina: "OTRO - Cocina comunitaria",
+      cuenta_con_cocina_otro: "",
     };
     expect(buildMatrizCaracterizacionRow(f)[15]).toBe("Cocina comunitaria");
   });

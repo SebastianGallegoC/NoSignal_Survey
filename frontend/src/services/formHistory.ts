@@ -1,4 +1,5 @@
 import type { FormularioSnapshot } from "@/components/form/FormularioRespuestaReadOnly";
+import { applyCuentaConCocinaToFormValues } from "@/lib/cuentaConCocina";
 import { parseISODate } from "@/lib/formatDateTime";
 import { parseVisitaNumero } from "@/lib/visitaNumero";
 import type { FormReadItem } from "@/services/api";
@@ -367,5 +368,5 @@ export function buildFormValuesFromSnapshot(snapshot: FormularioSnapshot): FormV
       base[key] = String(value);
     }
   }
-  return base;
+  return applyCuentaConCocinaToFormValues(base);
 }

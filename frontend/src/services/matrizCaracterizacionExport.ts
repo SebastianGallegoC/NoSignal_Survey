@@ -163,6 +163,10 @@ export function formatFechaMatriz(raw: string): string {
 function cocinaValue(datos: Record<string, unknown>): string {
   const main = strFromDatos(datos, "cuenta_con_cocina");
   const other = strFromDatos(datos, "cuenta_con_cocina_otro");
+  const otroMatch = /^OTRO\s*-\s*(.+)$/i.exec(main);
+  if (otroMatch?.[1]?.trim()) {
+    return otroMatch[1].trim();
+  }
   if (other && main.toUpperCase().startsWith("OTRO")) {
     return other;
   }

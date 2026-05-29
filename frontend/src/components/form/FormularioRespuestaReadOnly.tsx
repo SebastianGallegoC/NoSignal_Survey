@@ -13,12 +13,17 @@ import {
 } from "@/config/formFieldMeta";
 import { fieldSelectOptions } from "@/config/formSelectOptions";
 import { parseVisitaNumero } from "@/lib/visitaNumero";
+import { displayCuentaConCocinaValue } from "@/lib/cuentaConCocina";
 import type { FormFieldKey } from "@/types/formFields";
 
 const rowClass =
   "flex flex-col gap-0.5 border-b border-slate-100 py-2.5 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4";
 
-function displayFieldValue(key: FormFieldKey, raw: unknown): string {
+function displayFieldValue(key: FormFieldKey, raw: unknown, datos: Record<string, unknown>): string {
+  if (key === "cuenta_con_cocina") {
+    const combined = displayCuentaConCocinaValue(raw, datos.cuenta_con_cocina_otro);
+    return combined || "—";
+  }
   const s = raw == null ? "" : String(raw).trim();
   if (!s) {
     return "—";
@@ -76,13 +81,15 @@ function ReadOnlySection({
         {sectionTitle}
       </summary>
       <dl className="border-t border-slate-100 px-4 pb-3 pt-1">
-        {fieldKeys.map((key) => (
+        {fieldKeys
+          .filter((key) => key !== "cuenta_con_cocina_otro")
+          .map((key) => (
           <div key={key} className={rowClass}>
             <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500 sm:w-[42%]">
               {fieldLabel(key)}
             </dt>
             <dd className="min-w-0 break-words text-sm text-slate-900 [overflow-wrap:anywhere] sm:text-right">
-              {displayFieldValue(key, datos[key])}
+              {displayFieldValue(key, datos[key], datos)}
             </dd>
           </div>
         ))}

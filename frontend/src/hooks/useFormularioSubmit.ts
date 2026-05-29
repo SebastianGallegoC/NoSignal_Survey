@@ -21,6 +21,7 @@ import {
   normalizeCoordNumericCell,
   roundCoordDecimal,
 } from "@/lib/coordNumericToken";
+import { formatCuentaConCocinaForStorage } from "@/lib/cuentaConCocina";
 import type { FormFieldKey, FormValues } from "@/types/formFields";
 import {
   GPS_PLACEHOLDER_WHEN_NOT_CAPTURED,
@@ -70,8 +71,17 @@ export const buildDatosFormulario = (
           : raw;
       continue;
     }
+    if (key === "cuenta_con_cocina" || key === "cuenta_con_cocina_otro") {
+      continue;
+    }
     datos_formulario[key] = values[key];
   }
+  const cocina = formatCuentaConCocinaForStorage(
+    String(values.cuenta_con_cocina ?? ""),
+    String(values.cuenta_con_cocina_otro ?? ""),
+  );
+  datos_formulario.cuenta_con_cocina = cocina.cuenta_con_cocina;
+  datos_formulario.cuenta_con_cocina_otro = cocina.cuenta_con_cocina_otro;
   return datos_formulario;
 };
 
