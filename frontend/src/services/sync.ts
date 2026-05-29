@@ -1,0 +1,316 @@
+import { earliestIso } from '@/lib/formatDateTime';
+import { db, type OfflineForm } from './db';
+import { postForm } from './api';
+import { MAX_GPS_ACCURACY_METERS } from '@/constants/gpsConfig';
+
+const RETENTION_DAYS = 6;
+const BACKOFF_STEPS_MS = [30_000, 60_000, 5 * 60_000, 15 * 60_000, 30 * 60_000];
+const MIN_PHOTOS = 0;
+const MAX_PHOTOS = 15;
+
+/**
+ * Detecta si un error es un error HTTP 5xx del **servidor**.
+ * Excluye `HTTP_503` + `offline`: respuesta sintética del service worker sin red (sw.ts).
+ */
+export const isHttpServerError = (error: unknown): boolean => {
+  const rawMessage =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : typeof error === 'string'
+        ? error
+        : '';
+  const lower = rawMessage.toLowerCase();
+  if (/HTTP_503/.test(rawMessage) && lower.includes('offline')) {
+    return false;
+  }
+  return /HTTP_5\d{2}/.test(rawMessage);
+};
+
+/**
+ * Detecta fallo de conectividad (fetch imposible, SW offline, etc.).
+ * Incluye la respuesta sintética del SW en POST sin red: 503 + detail "offline".
+ */
+export const isNetworkLikeError = (error: unknown): boolean => {
+  const rawMessage =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : typeof error === 'string'
+        ? error
+        : '';
+  const message = rawMessage.toLowerCase();
+
+  // sw.ts: POST /api/v1/forms interceptado; sin red → Response 503 { detail: 'offline' }
+  if (/HTTP_503/.test(rawMessage) && message.includes('offline')) {
+    return true;
+  }
+
+  if (/HTTP_\d{3}/.test(rawMessage)) {
+    return false;
+  }
+
+  return (
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('network request failed') ||
+    message.includes('net::err_name_not_resolved') ||
+    message.includes('net::err_failed') ||
+    message.includes('load failed') ||
+    message.includes('the internet connection appears to be offline')
+  );
+};
+
+export const validateFormPayload = (form: OfflineForm): string[] => {
+  const errors: string[] = [];
+
+  if (
+    !form.gps ||
+    form.gps.precision <= 0 ||
+    form.gps.precision > MAX_GPS_ACCURACY_METERS
+  ) {
+    errors.push('gps_precision');
+  }
+  if (!Array.isArray(form.fotos) || form.fotos.length < MIN_PHOTOS || form.fotos.length > MAX_PHOTOS) {
+    errors.push('fotos_count');
+  }
+  if (
+    Array.isArray(form.fotos) &&
+    form.fotos.some(
+      (f) => f.visita !== 1 && f.visita !== 2 && f.visita !== 3 && f.visita !== 4,
+    )
+  ) {
+    errors.push('fotos_visita_required');
+  }
+
+  return errors;
+};
+
+export const enqueueForm = async (form: OfflineForm): Promise<void> => {
+  const existingHistorial = await db.historialFormularios.get(form.id_formulario);
+  await db.formularios.put({
+    ...form,
+    estado_sincronizacion: 'PENDIENTE',
+    errores_sync: 0,
+  });
+  const fechaAct = form.fecha_actualizacion?.trim() || form.fecha_hora;
+  const fechaEnvioCanonica =
+    earliestIso(existingHistorial?.fecha_envio, form.fecha_hora) ?? form.fecha_hora;
+  await db.historialFormularios.put({
+    id_formulario: form.id_formulario,
+    modo_coordenadas: form.modo_coordenadas,
+    fecha_hora: form.fecha_hora,
+    estado: 'PENDIENTE',
+    fecha_envio: fechaEnvioCanonica,
+    fecha_actualizacion: fechaAct,
+    datos_formulario: form.datos_formulario,
+    gps: form.gps,
+    fotos: form.fotos,
+  });
+
+  /** Si ya había copia precargada para este id, alinearla con el guardado (p. ej. edición pendiente offline). */
+  const existingPrecarga = await db.precargas.get(form.id_formulario);
+  if (existingPrecarga) {
+    await db.precargas.put({
+      ...existingPrecarga,
+      fecha_precarga: new Date().toISOString(),
+      modo_coordenadas: form.modo_coordenadas,
+      datos_formulario: form.datos_formulario,
+      gps: form.gps,
+      fotos: form.fotos,
+    });
+  }
+};
+
+export const countPendingForms = async (): Promise<number> => {
+  return db.formularios
+    .where('estado_sincronizacion')
+    .anyOf(['PENDIENTE', 'SINCRONIZANDO'])
+    .count();
+};
+
+export const countErrorForms = async (): Promise<number> => {
+  return db.formularios.where('estado_sincronizacion').equals('ERROR').count();
+};
+
+export interface SyncErrorItem {
+  id_formulario: string;
+  errores_sync: number;
+  fecha_intento?: string;
+  ultimo_error?: string;
+}
+
+export interface SyncRunResult {
+  sent: number;
+  failed: number;
+  skipped: number;
+  first_error?: string;
+}
+
+export const listSyncErrors = async (limit = 5): Promise<SyncErrorItem[]> => {
+  const rows = await db.formularios.where('estado_sincronizacion').equals('ERROR').sortBy('fecha_hora');
+  return rows
+    .slice(-limit)
+    .reverse()
+    .map((row) => ({
+      id_formulario: row.id_formulario,
+      errores_sync: row.errores_sync ?? 0,
+      fecha_intento: row.fecha_intento,
+      ultimo_error: row.ultimo_error,
+    }));
+};
+
+export const purgeExpiredForms = async (): Promise<void> => {
+  const now = Date.now();
+  const cutoff = now - RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  const all = await db.formularios.toArray();
+
+  for (const form of all) {
+    const time = Date.parse(form.fecha_hora);
+    if (!Number.isNaN(time) && time < cutoff) {
+      await db.formularios.delete(form.id_formulario);
+    }
+  }
+};
+
+export const syncPendingForms = async (): Promise<SyncRunResult> => {
+  const result: SyncRunResult = { sent: 0, failed: 0, skipped: 0 };
+  if (!navigator.onLine) {
+    return result;
+  }
+
+  const pending = await db.formularios
+    .where('estado_sincronizacion')
+    .anyOf(['PENDIENTE', 'ERROR', 'SINCRONIZANDO'])
+    .sortBy('fecha_hora');
+
+  for (const form of pending) {
+    const existingHistorial = await db.historialFormularios.get(form.id_formulario);
+    const intentos = form.errores_sync ?? 0;
+    // Backoff solo tras fallos previos: con intentos === 0, fecha_hora es reciente y
+    // compararla con delay bloqueaba el primer envío ~30s (o hasta que pasara el backoff).
+    if (intentos > 0) {
+      const delay = BACKOFF_STEPS_MS[Math.min(intentos, BACKOFF_STEPS_MS.length - 1)];
+      const lastAttempt = form.fecha_intento
+        ? Date.parse(form.fecha_intento)
+        : Date.parse(form.fecha_hora);
+      if (!Number.isNaN(lastAttempt) && Date.now() - lastAttempt < delay) {
+        result.skipped += 1;
+        continue;
+      }
+    }
+
+    await db.formularios.update(form.id_formulario, {
+      estado_sincronizacion: 'SINCRONIZANDO',
+      fecha_intento: new Date().toISOString(),
+      ultimo_error: undefined,
+    });
+
+    try {
+      const response = await postForm(form);
+      if (!response.ok) {
+        let detail = '';
+        try {
+          const ct = response.headers.get('content-type') ?? '';
+          if (ct.includes('application/json')) {
+            const j = (await response.json()) as { detail?: unknown };
+            if (typeof j.detail === 'string') {
+              detail = j.detail;
+            } else if (Array.isArray(j.detail)) {
+              detail = j.detail
+                .map((e: { loc?: unknown[]; msg?: string }) =>
+                  Array.isArray(e.loc) ? `${e.loc.join('.')}: ${e.msg ?? ''}` : JSON.stringify(e),
+                )
+                .join(' | ');
+            } else if (j.detail != null) {
+              detail = JSON.stringify(j.detail);
+            }
+          } else {
+            detail = await response.text();
+          }
+        } catch {
+          detail = '';
+        }
+        if (response.status === 422) {
+          console.error('sync 422 payload_rejected', {
+            id_formulario: form.id_formulario,
+            gps_precision: form.gps?.precision,
+            fotos_count: Array.isArray(form.fotos) ? form.fotos.length : -1,
+            detail,
+          });
+        }
+        const trimmed = detail.replace(/\s+/g, ' ').trim().slice(0, 800);
+        throw new Error(trimmed ? `HTTP_${response.status}: ${trimmed}` : `HTTP_${response.status}`);
+      }
+
+      const fechaActOk = form.fecha_actualizacion?.trim() || form.fecha_hora;
+      const fechaEnvioOk =
+        earliestIso(existingHistorial?.fecha_envio, form.fecha_hora) ?? form.fecha_hora;
+      await db.historialFormularios.update(form.id_formulario, {
+        estado: 'ENVIADO',
+        fecha_envio: fechaEnvioOk,
+        fecha_actualizacion: fechaActOk,
+        ultimo_error: undefined,
+        datos_formulario: form.datos_formulario,
+        gps: form.gps,
+        fotos: form.fotos,
+        modo_coordenadas: form.modo_coordenadas,
+      });
+      // Precarga local: al ver sin red el listado usa origen «Precarga» y muestra datos offline.
+      try {
+        const mod = await import('@/services/precargaService');
+        if (mod?.downloadAndSavePrecarga) {
+          await mod.downloadAndSavePrecarga(form.id_formulario, { optimizePhotos: true });
+        }
+      } catch {
+        await db.precargas.put({
+          id_formulario: form.id_formulario,
+          fecha_precarga: new Date().toISOString(),
+          modo_coordenadas: form.modo_coordenadas,
+          datos_formulario: form.datos_formulario,
+          gps: form.gps,
+          fotos: form.fotos,
+          auto_precarga: true,
+        });
+      }
+
+      await db.formularios.delete(form.id_formulario);
+      result.sent += 1;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'sync_error';
+      // Errores de red reales (sin conectividad, DNS, etc.) → reintentar más tarde
+      if (isNetworkLikeError(error)) {
+        result.skipped += 1;
+        if (!result.first_error) {
+          result.first_error = message;
+        }
+        await db.formularios.update(form.id_formulario, {
+          estado_sincronizacion: 'PENDIENTE',
+          fecha_intento: new Date().toISOString(),
+          ultimo_error: undefined,
+        });
+        continue;
+      }
+
+      // Cualquier otro error (incluyendo HTTP 5xx) es un fallo de sincronización
+      result.failed += 1;
+      const errores_sync = (form.errores_sync ?? 0) + 1;
+      if (!result.first_error) {
+        result.first_error = message;
+      }
+      console.error('sync attempt failed', {
+        id_formulario: form.id_formulario,
+        message,
+      });
+      await db.formularios.update(form.id_formulario, {
+        estado_sincronizacion: 'ERROR',
+        errores_sync,
+        fecha_intento: new Date().toISOString(),
+        ultimo_error: message,
+      });
+      await db.historialFormularios.update(form.id_formulario, {
+        estado: 'ERROR',
+        ultimo_error: message,
+      });
+    }
+  }
+  return result;
+};

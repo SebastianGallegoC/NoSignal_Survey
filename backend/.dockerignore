@@ -1,0 +1,13 @@
+# Solo aplica si el contexto de build es backend/ (no es el caso en docker-compose).
+# Con context: . en la raíz, usar /.dockerignore del proyecto.
+
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.env
+uploads

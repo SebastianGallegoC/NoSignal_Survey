@@ -1,0 +1,51 @@
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Python backend ---
+backend/.venv/
+backend/**/__pycache__/
+backend/**/*.py[cod]
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/uploads/
+backend/.env
+
+# --- Node frontend ---
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# --- Logs / temp ---
+*.log
+*.tmp
+
+# --- Raíz (Docker Compose / secretos) ---
+.env
+.env.*
+!.env.example
+
+# --- Python (venv en raíz, si se crea fuera de backend/) ---
+.venv/
+
+# --- Cobertura de tests ---
+htmlcov/
+.coverage
+coverage/
+frontend/coverage/
+
+# --- Cursor (reglas sí; logs de depuración no) ---
+.cursor/*.log
+.cursor/debug-*
+
+# --- Backups locales (pg_dump / uploads); no versionar dumps ---
+/backups/
+
+# --- Traefik / ACME ---
+letsencrypt/acme.json

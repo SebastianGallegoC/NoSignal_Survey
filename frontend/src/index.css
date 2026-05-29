@@ -1,0 +1,112 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 45 20% 97%;
+    --foreground: 222.2 47.4% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --primary: 173 80% 30%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 48 96% 89%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 171 83% 37%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 173 80% 30%;
+    --radius: 1.25rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
+    font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* Grids de formulario: min-w-0 evita desborde horizontal; overflow visible para listas de select */
+  .form-fields-grid {
+    @apply grid min-w-0 grid-cols-1 gap-4 overflow-visible md:grid-cols-2;
+  }
+
+  .form-fields-grid > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Anillo de foco interior: no se corta con overflow en tarjetas/secciones */
+  .form-control-focus {
+    @apply focus-visible:outline-none focus-visible:border-teal-600 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600/35;
+  }
+
+  /* Secciones <details> del formulario: permiten desplegar combobox hacia abajo/arriba */
+  .form-section-panel {
+    @apply min-w-0 overflow-visible rounded-2xl border border-slate-200 bg-white/90 p-4 pb-5 shadow-sm;
+  }
+
+  .form-section-panel .form-fields-grid {
+    @apply pb-1;
+  }
+
+  /* WebKit/Safari: el control nativo de fecha suele tener ancho mínimo grande */
+  .form-date-input {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .form-date-input::-webkit-date-and-time-value {
+    min-width: 0;
+    max-width: 100%;
+    text-align: left;
+  }
+
+  /* Barra de acciones en tarjetas expandidas */
+  .page-actions-bar {
+    @apply flex min-w-0 max-w-full flex-wrap items-center gap-2 overflow-x-clip;
+  }
+
+  .page-actions-bar > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Toolbar del encabezado (Formularios diligenciados) */
+  .page-toolbar {
+    @apply flex w-full min-w-0 max-w-full flex-col gap-2.5 overflow-x-clip;
+  }
+
+  .page-toolbar-icons {
+    @apply flex shrink-0 items-center justify-end gap-1.5;
+  }
+
+  .page-toolbar-actions {
+    @apply grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2;
+  }
+
+  .page-toolbar-actions > .toolbar-full-row {
+    @apply sm:col-span-2;
+  }
+
+  .page-toolbar-actions .toolbar-btn {
+    @apply h-auto min-h-9 w-full justify-center whitespace-normal px-3 py-2 text-center text-xs leading-snug sm:text-sm;
+  }
+}

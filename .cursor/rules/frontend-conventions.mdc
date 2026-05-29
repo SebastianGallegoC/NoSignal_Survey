@@ -1,0 +1,42 @@
+---
+description: Convenciones React/TypeScript del frontend Survey
+globs: frontend/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend — convenciones
+
+## Estructura de carpetas
+
+| Carpeta | Uso |
+|---------|-----|
+| `components/` | UI atómica y de formulario; sin llamadas API directas |
+| `hooks/` | GPS, sync, submit, conectividad, PWA |
+| `services/` | Dexie, API, validación, export Excel, sync |
+| `config/` | Secciones, labels, selects del formulario Survey |
+| `types/` | `FormFieldKey`, `FormValues`, contratos compartidos |
+| `lib/` | Utilidades puras (normalización, coordenadas) |
+| `pages/` | Composición de pantallas; delegar lógica a hooks |
+
+## Formulario Survey
+
+- Nuevos campos: actualizar `formFields.ts`, `formSections.ts`, `formFieldMeta.ts`, `formSelectOptions.ts`, `formValidation.ts` y export Excel si aplica.
+- Labels de usuario en español; identificadores de código en snake_case inglés/español según plantilla.
+- Validación dual: cliente (`formValidation.ts`) refleja reglas del servidor.
+
+## Offline-first
+
+- Guardar borradores y cola en Dexie (`NoSignalSurveyDB`); no renombrar la DB.
+- Envío atómico: formulario + fotos como una transacción; fallo parcial no marca como enviado.
+- GPS/cámara: degradación elegante con mensajes claros; no bloquear la app.
+
+## Rendimiento y PWA
+
+- Lazy load de rutas/componentes pesados.
+- Comprimir imágenes (~1280px ancho) antes de IndexedDB.
+- Service worker en `sw.ts`; no romper precache ni sync en background.
+
+## Tests
+
+- Vitest junto al código (`*.test.ts`, `__tests__/`).
+- Probar validación, export Excel y flujos críticos de sync/submit al cambiar campos.

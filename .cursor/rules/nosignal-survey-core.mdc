@@ -1,0 +1,36 @@
+---
+description: Contexto, dominio y límites del proyecto NoSignal Survey
+alwaysApply: true
+---
+
+# NoSignal Survey — contexto del proyecto
+
+PWA offline-first para encuestas de visita con GPS, fotos, sincronización y exportación Excel.
+
+## Arquitectura (no alterar sin motivo)
+
+- `frontend/`: React 19 + Vite + TypeScript + PWA + Dexie (`NoSignalSurveyDB`).
+- `backend/`: FastAPI + SQLAlchemy async + Alembic.
+- `db`: PostgreSQL/PostGIS (`nosignal_survey`), independiente de Huertas.
+- `traefik/`: subdominios `survey.nosignal.site` y `api.survey.nosignal.site`.
+
+## Aislamiento frente a NoSignal_Huertas
+
+- No compartir BD, JWT, usuarios, volúmenes ni IndexedDB con Huertas.
+- No copiar lógica de campos Huertas ni reintroducir importación Excel.
+- Cambios mínimos y localizados; reutilizar patrones existentes, no mezclar dominios.
+
+## Modelo de formulario
+
+- 29 campos en `REQUIRED_FIELDS` (`frontend/src/types/formFields.ts`).
+- `id_formulario` es obligatorio internamente (IndexedDB, API, sync); no se muestra ni exporta a Excel.
+- Campo obligatorio para guardar/enviar: `nombres_apellidos_encuestado`.
+- Secciones en `frontend/src/config/formSections.ts`; selects en `formSelectOptions.ts`.
+- Excel: plantilla `PlantillaSurvey.xlsx` → `frontend/public/PLANTILLA.xlsx`; datos desde fila 7; **solo exportación**.
+
+## Verificación antes de terminar
+
+```bash
+cd frontend && npm run typecheck && npm run lint && npm run test
+cd backend && pytest
+```

@@ -1,0 +1,38 @@
+---
+description: Buenas prácticas de código, seguridad, CI y operación
+alwaysApply: true
+---
+
+# Estándares de desarrollo
+
+Basado en `buenas_practicas.md`. Aplicar en todo cambio.
+
+## Código limpio
+
+- Nombres descriptivos: camelCase (TS/JS), snake_case (Python).
+- Diff mínimo: no refactorizar ni añadir features no pedidas.
+- Comentarios solo para lógica no obvia; el código debe ser legible por sí solo.
+- Reutilizar utilidades y patrones existentes antes de crear abstracciones nuevas.
+
+## Seguridad y datos
+
+- Sanitizar inputs; nunca confiar solo en validación cliente.
+- No commitear `.env`, secretos ni credenciales.
+- JWT, `POSTGRES_PASSWORD` y `NOSIGNAL_AUTH_USERS` únicos para Survey.
+
+## Control de versiones
+
+- Commits semánticos: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`.
+- CI debe pasar: `lint`, `typecheck`, `test`, `build` (frontend) y `pytest` (backend).
+- No crear commits ni push salvo que el usuario lo pida explícitamente.
+
+## Operación
+
+- Healthchecks y logs con contexto en errores 500.
+- Docker: servicios `nosignal-survey-*`; volúmenes propios.
+- Traefik compartido solo como proxy; apps desacopladas.
+
+## Idioma
+
+- UI y mensajes al usuario: **español**.
+- Código (identificadores, commits técnicos): **inglés** salvo claves de dominio ya definidas en la plantilla Excel.

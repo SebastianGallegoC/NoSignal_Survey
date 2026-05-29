@@ -1,0 +1,42 @@
+---
+description: Convenciones FastAPI/Python del backend Survey
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Backend — convenciones
+
+## Capas (respetar siempre)
+
+1. **`api/v1/`** — HTTP, status codes, dependencias de auth; sin SQL.
+2. **`schemas/`** — Pydantic v2 para request/response; validación aquí.
+3. **`services/`** — Reglas de negocio, storage de fotos, upsert por `id_formulario`.
+4. **`repository/`** — Consultas SQLAlchemy async.
+5. **`models/`** — ORM; `datos_formulario` JSONB, `gps` PostGIS.
+
+## Datos del formulario
+
+- `id_formulario`: clave para upsert y edición; obligatorio en payloads de sync.
+- `datos_formulario`: JSON dinámico con las 29 claves Survey; validar en schema.
+- Migraciones con Alembic; no depender de `create_all` en producción.
+
+## Seguridad
+
+- JWT con permisos mínimos; secretos solo en `.env`, nunca en código.
+- Sanitizar/validar inputs; CORS restringido a `https://survey.nosignal.site`.
+- HTTPS en producción (contexto seguro para clientes PWA).
+
+## Estilo Python
+
+- snake_case para funciones, variables y módulos.
+- Type hints en funciones públicas.
+- Tests con pytest en `backend/tests/`; cubrir endpoints y servicios al cambiar contratos.
+
+## Ejemplo de flujo correcto
+
+```python
+# route → service → repository
+@router.post("/forms")
+async def create_form(payload: FormPayload, db: AsyncSession = Depends(get_db)):
+    return await forms_service.upsert_form(db, payload)
+```

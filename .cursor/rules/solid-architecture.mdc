@@ -1,0 +1,44 @@
+---
+description: Principios SOLID y capas arquitectónicas obligatorias
+alwaysApply: true
+---
+
+# SOLID y arquitectura en capas
+
+Respetar la arquitectura documentada en `arquitectura_software.md` y `README.md`.
+
+## SOLID aplicado al proyecto
+
+| Principio | Regla práctica |
+|-----------|----------------|
+| **S** — Single Responsibility | Una función/componente/módulo = una responsabilidad. Componentes de formulario >200 líneas → extraer hooks o subcomponentes. |
+| **O** — Open/Closed | Extender vía config (`formSections`, `formFieldMeta`, `formSelectOptions`) o nuevos servicios; evitar ramas `if (huertas)` en código compartido. |
+| **L** — Liskov Substitution | Contratos estables: tipos (`FormFieldKey`, schemas Pydantic), interfaces de servicios y respuestas API. |
+| **I** — Interface Segregation | Hooks y servicios pequeños (`useGPS`, `formValidation`, `sync`); no crear “god hooks” ni utilidades monolíticas. |
+| **D** — Dependency Inversion | UI depende de hooks/servicios, no de Dexie/fetch directo. Backend: routes → services → repository; routes no ejecutan SQL. |
+
+## Capas frontend
+
+```
+components (UI) → hooks (orquestación) → services (Dexie/API/validación) → types/config
+```
+
+- **IndexedDB es la fuente de verdad** hasta confirmación del servidor.
+- Lógica de negocio en `services/` y `hooks/`, no en JSX.
+- Estado de sesión en store (`useAuthStore`); datos de formulario en Dexie.
+
+## Capas backend
+
+```
+api/v1 (routes) → schemas (Pydantic) → services → repository → models
+```
+
+- Validación de entrada/salida solo con schemas Pydantic.
+- Persistencia y consultas SQL solo en `repository/`.
+- Lógica de negocio (fotos, upsert por `id_formulario`) en `services/`.
+
+## Anti-patrones prohibidos
+
+- Lógica de sync o validación duplicada sin motivo entre capas opuestas.
+- Acceso directo a `fetch`/`db` desde componentes de página.
+- Endpoints que mezclen auth, validación de negocio y SQL en un solo bloque.

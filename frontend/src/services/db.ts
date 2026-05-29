@@ -1,0 +1,144 @@
+import Dexie, { type Table } from 'dexie';
+
+import { stripGmsKeysFromDatos } from '@/lib/stripGmsFromDatos';
+
+export type SyncStatus = 'PENDIENTE' | 'SINCRONIZANDO' | 'ERROR';
+import type { VisitaNumero } from "@/lib/visitaNumero";
+
+export type { VisitaNumero };
+export type FotoForm = {
+  nombre_archivo: string;
+  data: string;
+  visita?: VisitaNumero;
+};
+
+export type ModoCoordenadasForm = 'automatico' | 'manual';
+
+export interface OfflineForm {
+  id_formulario: string;
+  /** Cómo se obtuvo la ubicación al guardar (para reabrir en el mismo modo). */
+  modo_coordenadas?: ModoCoordenadasForm;
+  /** Fecha/hora del primer guardado (no cambia al reeditar el mismo formulario). */
+  fecha_hora: string;
+  /** Momento de este guardado / última modificación local (se envía al API como `fecha_actualizacion`). */
+  fecha_actualizacion?: string;
+  gps: {
+    latitud: number;
+    longitud: number;
+    precision: number;
+  };
+  datos_formulario: Record<string, unknown>;
+  fotos: FotoForm[];
+  estado_sincronizacion: SyncStatus;
+  fecha_intento?: string;
+  errores_sync?: number;
+  ultimo_error?: string;
+}
+
+export type EstadoHistorial = 'PENDIENTE' | 'ERROR' | 'ENVIADO';
+
+export interface HistorialForm {
+  id_formulario: string;
+  modo_coordenadas?: ModoCoordenadasForm;
+  fecha_hora: string;
+  estado: EstadoHistorial;
+  fecha_envio?: string;
+  fecha_actualizacion?: string;
+  ultimo_error?: string;
+  /** Copia local de respuestas (necesaria tras ENVIADO: se borra la fila en `formularios`). */
+  datos_formulario?: Record<string, unknown>;
+  gps?: OfflineForm['gps'];
+  fotos?: OfflineForm['fotos'];
+}
+
+export interface PrecargaForm {
+  id_formulario: string;
+  fecha_precarga: string;
+  modo_coordenadas?: ModoCoordenadasForm;
+  datos_formulario: Record<string, unknown>;
+  gps?: { latitud: number; longitud: number; precision?: number | null } | null;
+  fotos?: OfflineForm['fotos'];
+  /** Flag local: cuando true, el watcher actualiza automáticamente la precarga */
+  auto_precarga?: boolean;
+}
+
+/** Formularios que el usuario ocultó en «diligenciados» en este equipo (sigue en servidor). */
+export interface FormularioOculto {
+  id_formulario: string;
+}
+
+export interface SesionLocalRow {
+  id: 'current';
+  accessToken: string;
+  username: string;
+}
+
+export class NoSignalDB extends Dexie {
+  formularios!: Table<OfflineForm>;
+  historialFormularios!: Table<HistorialForm>;
+  precargas!: Table<PrecargaForm>;
+  formulariosOcultos!: Table<FormularioOculto>;
+  sesionLocal!: Table<SesionLocalRow>;
+
+  constructor() {
+    super('NoSignalSurveyDB');
+    this.version(1).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+    });
+    this.version(2).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+      sesionLocal: 'id',
+    });
+    this.version(3).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+      historialFormularios: '&id_formulario, estado, fecha_hora',
+      sesionLocal: 'id',
+    });
+    this.version(4).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+      historialFormularios: '&id_formulario, estado, fecha_hora',
+      sesionLocal: 'id',
+    });
+    this.version(5).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+      historialFormularios: '&id_formulario, estado, fecha_hora',
+      precargas: '&id_formulario, fecha_precarga',
+      sesionLocal: 'id',
+    });
+    this.version(6).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+      historialFormularios: '&id_formulario, estado, fecha_hora',
+      precargas: '&id_formulario, fecha_precarga',
+      formulariosOcultos: '&id_formulario',
+      sesionLocal: 'id',
+    });
+    this.version(7).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+      historialFormularios: '&id_formulario, estado, fecha_hora',
+      precargas: '&id_formulario, fecha_precarga',
+      formulariosOcultos: '&id_formulario',
+      sesionLocal: 'id',
+    });
+    this.version(8).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+      historialFormularios: '&id_formulario, estado, fecha_hora',
+      precargas: '&id_formulario, fecha_precarga',
+      formulariosOcultos: '&id_formulario',
+      sesionLocal: 'id',
+    }).upgrade(async (tx) => {
+      await tx.table<OfflineForm>('formularios').toCollection().modify((f) => {
+        f.datos_formulario = stripGmsKeysFromDatos(f.datos_formulario);
+      });
+      await tx.table<HistorialForm>('historialFormularios').toCollection().modify((h) => {
+        if (h.datos_formulario) {
+          h.datos_formulario = stripGmsKeysFromDatos(h.datos_formulario);
+        }
+      });
+      await tx.table<PrecargaForm>('precargas').toCollection().modify((p) => {
+        p.datos_formulario = stripGmsKeysFromDatos(p.datos_formulario);
+      });
+    });
+  }
+}
+
+export const db = new NoSignalDB();

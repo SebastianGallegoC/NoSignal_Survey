@@ -1,0 +1,52 @@
+# Contexto de build: raíz del repo (docker-compose context: .)
+# Los .dockerignore en frontend/ y backend/ no aplican con ese contexto.
+
+# --- Secretos (nunca en contexto de build) ---
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# --- Git / editor ---
+.git
+.gitignore
+.github
+.idea
+.vscode
+.cursor
+*.md
+docs/
+
+# --- Python backend (artefactos locales) ---
+backend/.venv
+**/__pycache__
+**/*.py[cod]
+backend/.pytest_cache
+backend/.mypy_cache
+backend/.ruff_cache
+backend/uploads
+htmlcov
+.coverage
+
+# --- Node frontend (artefactos locales) ---
+frontend/node_modules
+frontend/dist
+frontend/dist-ssr
+frontend/coverage
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Backups / certificados locales ---
+/backups/
+letsencrypt/acme.json
+
+# --- OS / temp ---
+.DS_Store
+Thumbs.db
+*.log
+*.tmp

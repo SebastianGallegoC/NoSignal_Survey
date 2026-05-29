@@ -1,0 +1,91 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: nosignal-survey-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nosignal_survey
+      POSTGRES_USER: nosignal_survey
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set_POSTGRES_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - nosignal_survey_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nosignal_survey -d nosignal_survey"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nosignal-survey-internal
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: nosignal-survey-backend
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      APP_NAME: "NoSignal Survey API"
+      API_V1_PREFIX: "/api/v1"
+      JWT_SECRET: ${JWT_SECRET:?set_JWT_SECRET}
+      JWT_ALGORITHM: "HS256"
+      JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-525600}
+      NOSIGNAL_AUTH_USERS: ${NOSIGNAL_AUTH_USERS:?set_NOSIGNAL_AUTH_USERS}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://survey.nosignal.site}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://nosignal_survey:${POSTGRES_PASSWORD}@db:5432/nosignal_survey}
+      UPLOAD_ROOT: "uploads"
+      ALLOW_INSECURE_DEFAULTS: ${ALLOW_INSECURE_DEFAULTS:-false}
+      AUTO_CREATE_SCHEMA: ${AUTO_CREATE_SCHEMA:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\"",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8001:8000"
+    volumes:
+      - nosignal_survey_uploads:/app/uploads
+    networks:
+      - nosignal-survey-internal
+      - traefik-public
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-https://api.survey.nosignal.site}
+    container_name: nosignal-survey-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8081:80"
+    networks:
+      - traefik-public
+
+volumes:
+  nosignal_survey_db:
+  nosignal_survey_uploads:
+
+networks:
+  nosignal-survey-internal:
+    name: nosignal-survey-internal
+    driver: bridge
+  traefik-public:
+    name: traefik-public
+    external: true

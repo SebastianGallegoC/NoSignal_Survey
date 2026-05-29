@@ -1,0 +1,21 @@
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
+
+/**
+ * Separador horizontal accesible (sin dependencia Radix).
+ */
+export function Separator({
+  className,
+  decorative = true,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { decorative?: boolean }) {
+  return (
+    <div
+      role={decorative ? "none" : "separator"}
+      aria-orientation="horizontal"
+      className={cn("h-px w-full shrink-0 bg-border", className)}
+      {...props}
+    />
+  );
+}
