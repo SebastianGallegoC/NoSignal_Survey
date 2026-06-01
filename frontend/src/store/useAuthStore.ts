@@ -1,8 +1,21 @@
 import { create } from 'zustand';
 
 import { ACCESS_TOKEN_KEY, ACCESS_USERNAME_KEY } from '@/lib/authStorage';
-import { db } from '@/services/db';
+import { isAccessTokenValid } from '@/lib/jwt';
 import { loginApi } from '@/services/api';
+import { db } from '@/services/db';
+import { syncEnabledEncuestadorProfiles } from '@/services/encuestadorProfiles';
+
+async function syncEncuestadorProfilesIfOnline(username: string | null): Promise<void> {
+  if (!username?.trim() || !navigator.onLine) {
+    return;
+  }
+  try {
+    await syncEnabledEncuestadorProfiles(username.trim());
+  } catch {
+    // La caché previa sigue disponible offline.
+  }
+}
 
 interface AuthState {
   token: string | null;
@@ -31,6 +44,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     }
     set({ token, username, ready: true });
+    if (isAccessTokenValid(token) && username) {
+      void syncEncuestadorProfilesIfOnline(username);
+    }
   },
 
   login: async (username, password) => {
@@ -43,6 +59,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       username,
     });
     set({ token: res.access_token, username, ready: true });
+    void syncEncuestadorProfilesIfOnline(username);
   },
 
   logout: async () => {

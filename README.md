@@ -40,6 +40,8 @@ Secciones:
 - Desplazamiento
 - Encuestador
 
+En la sección Encuestador del formulario solo se elige un perfil habilitado (`id_perfil_encuestador`). Los datos completos del encuestador (documento, firma, etc.) se gestionan en Inicio. La PWA guarda en IndexedDB un catálogo lite (`id` + nombre) de perfiles habilitados, sincronizado al iniciar sesión con internet y al recuperar conexión, para que el desplegable funcione sin red.
+
 El único campo obligatorio para guardar/enviar es `nombres_apellidos_encuestado`.
 
 ## Excel

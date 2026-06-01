@@ -623,7 +623,8 @@ export const FormularioPage = () => {
                       ))}
                     </select>
                     <span className="mt-1 text-xs text-slate-500">
-                      Si no aparece el perfil, sincronizá o gestioná perfiles desde Inicio.
+                      Los perfiles habilitados se guardan en el dispositivo al iniciar sesión con
+                      internet; sin red se usa la última copia guardada.
                     </span>
                     {errors.id_perfil_encuestador?.message ? (
                       <span className="mt-1 text-xs text-red-600">
