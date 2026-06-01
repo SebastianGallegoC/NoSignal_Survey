@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -20,6 +20,10 @@ import {
   updateEncuestadorProfileApi,
   type EncuestadorProfileRead,
 } from "@/services/api";
+import {
+  hasEncuestadorProfileEditChanges,
+  profileFormStateFromRead,
+} from "@/lib/encuestadorProfileEditDirty";
 import {
   encuestadorProfileCanBeDeleted,
   syncEnabledEncuestadorProfiles,
@@ -43,15 +47,34 @@ export const PerfilEncuestadorPage = () => {
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [profilesError, setProfilesError] = useState<string | null>(null);
   const [editingProfileId, setEditingProfileId] = useState<number | null>(null);
+  const [editBaseline, setEditBaseline] = useState<EncuestadorProfileFormState | null>(
+    null,
+  );
   const [formValues, setFormValues] = useState<EncuestadorProfileFormState>(emptyProfileForm);
   const [profilePendingDelete, setProfilePendingDelete] =
     useState<EncuestadorProfileRead | null>(null);
   const [profileDeleteBlockedOpen, setProfileDeleteBlockedOpen] = useState(false);
   const [profileDeleteConfirming, setProfileDeleteConfirming] = useState(false);
 
+  const isEditMode = editingProfileId != null;
+  const hasProfileEditChanges = useMemo(
+    () => hasEncuestadorProfileEditChanges(editBaseline, formValues),
+    [editBaseline, formValues],
+  );
+  const updateDisabled = isEditMode && !hasProfileEditChanges;
+
   const resetProfileForm = useCallback(() => {
     setEditingProfileId(null);
+    setEditBaseline(null);
     setFormValues(emptyProfileForm());
+  }, []);
+
+  const startEditingProfile = useCallback((profile: EncuestadorProfileRead) => {
+    const values = profileFormStateFromRead(profile);
+    setEditingProfileId(profile.id);
+    setEditBaseline(values);
+    setFormValues(values);
+    setProfilesError(null);
   }, []);
 
   const refreshProfiles = useCallback(async () => {
@@ -76,6 +99,9 @@ export const PerfilEncuestadorPage = () => {
 
   const submitProfile = useCallback(async () => {
     setProfilesError(null);
+    if (editingProfileId != null && !hasEncuestadorProfileEditChanges(editBaseline, formValues)) {
+      return;
+    }
     if (!formValues.nombres_apellidos_encuestador.trim()) {
       setProfilesError("Completá el nombre del encuestador.");
       return;
@@ -100,7 +126,7 @@ export const PerfilEncuestadorPage = () => {
       const msg = error instanceof Error ? error.message : "Error al guardar perfil.";
       setProfilesError(msg);
     }
-  }, [editingProfileId, formValues, refreshProfiles, resetProfileForm]);
+  }, [editBaseline, editingProfileId, formValues, refreshProfiles, resetProfileForm]);
 
   const toggleProfile = useCallback(
     async (profile: EncuestadorProfileRead) => {
@@ -179,7 +205,12 @@ export const PerfilEncuestadorPage = () => {
             </p>
             <EncuestadorProfileFormFields values={formValues} onChange={setFormValues} />
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => void submitProfile()}>
+              <Button
+                type="button"
+                disabled={updateDisabled}
+                className="disabled:pointer-events-none disabled:opacity-50"
+                onClick={() => void submitProfile()}
+              >
                 {editingProfileId == null ? "Guardar perfil" : "Actualizar perfil"}
               </Button>
               {editingProfileId != null ? (
@@ -228,19 +259,7 @@ export const PerfilEncuestadorPage = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        setEditingProfileId(profile.id);
-                        setFormValues({
-                          nombres_apellidos_encuestador: profile.nombres_apellidos_encuestador,
-                          tipo_documento_encuestador: profile.tipo_documento_encuestador,
-                          numero_documento_encuestador: profile.numero_documento_encuestador,
-                          telefono_encuestador: profile.telefono_encuestador,
-                          cargo_encuestador: profile.cargo_encuestador,
-                          empresa_entidad_encuestador: profile.empresa_entidad_encuestador,
-                          firma_encuestador: profile.firma_encuestador,
-                          habilitado: profile.habilitado,
-                        });
-                      }}
+                      onClick={() => startEditingProfile(profile)}
                     >
                       Editar
                     </Button>
