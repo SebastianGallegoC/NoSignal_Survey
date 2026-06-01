@@ -103,6 +103,8 @@ export async function downloadAndSavePrecarga(
 
   await db.precargas.put({
     id_formulario: resp.id_formulario,
+    id_perfil_encuestador:
+      typeof resp.id_perfil_encuestador === "number" ? resp.id_perfil_encuestador : null,
     fecha_precarga: new Date().toISOString(),
     modo_coordenadas: modoPrecarga,
     datos_formulario: resp.datos_formulario ?? {},

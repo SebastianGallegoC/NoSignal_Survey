@@ -45,6 +45,7 @@ class PhotoPayload(BaseModel):
 
 class FormPayload(BaseModel):
     id_formulario: str
+    id_perfil_encuestador: int = Field(gt=0)
     fecha_hora: str = Field(
         ...,
         description="Momento del primer registro / envío inicial (en actualizaciones debe conservarse).",

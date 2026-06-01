@@ -108,7 +108,7 @@ export const FormFieldRow = ({
   const kind = inputKindForField(name);
   const label = fieldLabel(name);
 
-  if (name === "telefono_encuestado" || name === "telefono_encuestador") {
+  if (name === "telefono_encuestado") {
     return (
       <Controller
         name={name}

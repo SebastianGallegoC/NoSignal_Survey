@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { GPS_PLACEHOLDER_WHEN_NOT_CAPTURED } from "@/constants/gpsConfig";
 import type { OfflineForm } from "@/services/db";
-import { REQUIRED_FIELDS, type FormFieldKey } from "@/types/formFields";
+import { REQUIRED_FIELDS } from "@/types/formFields";
 
 import {
   MATRIZ_COLUMN_COUNT,
@@ -37,14 +37,14 @@ describe("matrizCaracterizacionExport — Survey", () => {
   });
 
   it("cada campo exportable aparece en la definición, salvo ID interno y auxiliar cocina", () => {
-    const keysInSources = new Set<FormFieldKey>();
+    const keysInSources = new Set<string>();
     for (const src of MATRIZ_ROW_CELL_SOURCES) {
       if (src.kind === "field" || src.kind === "fecha") {
         keysInSources.add(src.key);
       }
     }
     for (const k of REQUIRED_FIELDS) {
-      if (["longitud", "latitud", "cuenta_con_cocina", "cuenta_con_cocina_otro"].includes(k)) {
+      if (["longitud", "latitud", "cuenta_con_cocina", "cuenta_con_cocina_otro", "id_perfil_encuestador"].includes(k)) {
         continue;
       }
       expect(keysInSources.has(k), `falta en plantilla Survey: ${k}`).toBe(true);

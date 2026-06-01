@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.form_record import FormRecord
 from app.repository.forms import create_form, get_form_by_id
 from app.schemas.form_payload import FormPayload
+from app.services.encuestador_profiles import validate_profile_is_assignable
 from app.services.storage import normalize_stored_foto_paths, safe_delete_stored_photos, save_photos
 
 
@@ -26,10 +27,21 @@ def resolve_fecha_actualizacion_dt(payload: FormPayload) -> datetime:
     return cand if cand >= fecha_envio else fecha_envio
 
 
-async def persist_form(session: AsyncSession, payload: FormPayload) -> FormRecord:
+async def persist_form(
+    session: AsyncSession,
+    payload: FormPayload,
+    username: str,
+) -> FormRecord:
     fecha_hora = parse_fecha_hora_iso(payload.fecha_hora)
     fecha_act = resolve_fecha_actualizacion_dt(payload)
     gps_point = WKTElement(f"POINT({payload.gps.longitud} {payload.gps.latitud})", srid=4326)
+    profile_ok, profile_error = await validate_profile_is_assignable(
+        session,
+        username,
+        payload.id_perfil_encuestador,
+    )
+    if not profile_ok:
+        raise ValueError(profile_error or "encuestador_profile_invalid")
 
     existing = await get_form_by_id(session, payload.id_formulario)
     if existing:
@@ -44,6 +56,7 @@ async def persist_form(session: AsyncSession, payload: FormPayload) -> FormRecor
             )
             existing.fotos = new_paths
         existing.fecha_actualizacion = fecha_act
+        existing.id_perfil_encuestador = payload.id_perfil_encuestador
         existing.gps = gps_point
         existing.datos_formulario = dict(payload.datos_formulario)
         await session.commit()
@@ -58,6 +71,7 @@ async def persist_form(session: AsyncSession, payload: FormPayload) -> FormRecor
 
     record = FormRecord(
         id_formulario=payload.id_formulario,
+        id_perfil_encuestador=payload.id_perfil_encuestador,
         fecha_hora=fecha_hora,
         fecha_actualizacion=fecha_act,
         gps=gps_point,

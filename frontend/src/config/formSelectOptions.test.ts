@@ -8,7 +8,6 @@ describe("formSelectOptions — búsqueda en select", () => {
     expect(isSearchableSelectField("autoriza_tratamiento_datos")).toBe(false);
     expect(isSearchableSelectField("datos_encuestado")).toBe(false);
     expect(isSearchableSelectField("tipo_documento_encuestado")).toBe(false);
-    expect(isSearchableSelectField("tipo_documento_encuestador")).toBe(false);
     expect(isSearchableSelectField("informacion_vivienda")).toBe(false);
     expect(isSearchableSelectField("cuenta_con_cocina")).toBe(false);
     expect(isSearchableSelectField("resultado_validacion")).toBe(false);

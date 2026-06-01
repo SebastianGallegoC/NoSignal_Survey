@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, JSON, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 
@@ -9,6 +9,12 @@ class FormRecord(Base):
     __tablename__ = "forms"
 
     id_formulario = Column(String, primary_key=True, index=True)
+    id_perfil_encuestador = Column(
+        Integer,
+        ForeignKey("encuestador_profiles.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     fecha_hora = Column(DateTime(timezone=True), nullable=False)
     fecha_actualizacion = Column(DateTime(timezone=True), nullable=False)
     gps = Column(Geometry(geometry_type="POINT", srid=4326), nullable=False)

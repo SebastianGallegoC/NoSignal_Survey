@@ -7,6 +7,7 @@ class FormReadItem(BaseModel):
     """Formulario persistido (lectura); las fotos son rutas en disco del servidor, no base64."""
 
     id_formulario: str
+    id_perfil_encuestador: int | None = None
     fecha_hora: str
     fecha_actualizacion: str
     latitud: float

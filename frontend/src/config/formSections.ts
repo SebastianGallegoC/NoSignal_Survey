@@ -66,15 +66,7 @@ export const FORM_SECTIONS: readonly FormSectionDef[] = [
   {
     id: 'encuestador',
     title: 'Encuestador',
-    fields: [
-      'nombres_apellidos_encuestador',
-      'tipo_documento_encuestador',
-      'numero_documento_encuestador',
-      'telefono_encuestador',
-      'cargo_encuestador',
-      'empresa_entidad_encuestador',
-      'firma_encuestador',
-    ],
+    fields: ['id_perfil_encuestador'],
   },
 ] as const;
 

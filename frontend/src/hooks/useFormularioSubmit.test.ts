@@ -33,7 +33,7 @@ describe("useFormularioSubmit helpers", () => {
 
     expect(data).toHaveProperty("municipio", "Cúcuta");
     expect(data).toHaveProperty("fecha_visita", "2026-05-01");
-    expect(Object.keys(data)).toHaveLength(REQUIRED_FIELDS.length);
+    expect(Object.keys(data)).toHaveLength(REQUIRED_FIELDS.length - 1);
   });
 
   it("buildDatosFormulario combina OTRO con texto en cuenta_con_cocina", () => {
@@ -51,6 +51,7 @@ describe("useFormularioSubmit helpers", () => {
     const values = buildEmptyValues();
     values.fecha_visita = "2026-05-01";
     values.nombres_apellidos_encuestado = "Encuestado";
+    values.id_perfil_encuestador = "1";
 
     const payload = buildOfflinePayload(
       basePayloadArgs({
@@ -69,6 +70,7 @@ describe("useFormularioSubmit helpers", () => {
   it("modo manual conserva decimales en datos_formulario y gps", () => {
     const values = buildEmptyValues();
     values.nombres_apellidos_encuestado = "B";
+    values.id_perfil_encuestador = "1";
     values.latitud = "4.6097";
     values.longitud = "-74.08";
 
@@ -90,6 +92,7 @@ describe("useFormularioSubmit helpers", () => {
   it("modo automático redondea gps y datos a 6 decimales", () => {
     const values = buildEmptyValues();
     values.nombres_apellidos_encuestado = "B";
+    values.id_perfil_encuestador = "1";
     values.latitud = "4.6097123456";
     values.longitud = "-74.081751234";
 
@@ -112,6 +115,7 @@ describe("useFormularioSubmit helpers", () => {
     const values = buildEmptyValues();
     values.fecha_visita = "2026-05-01";
     values.nombres_apellidos_encuestado = "B";
+    values.id_perfil_encuestador = "1";
 
     const payload = buildOfflinePayload(
       basePayloadArgs({
@@ -128,6 +132,7 @@ describe("useFormularioSubmit helpers", () => {
   it("buildOfflinePayload corrige precision GPS <= 0 a mínimo válido", () => {
     const values = buildEmptyValues();
     values.nombres_apellidos_encuestado = "B";
+    values.id_perfil_encuestador = "1";
     const payload = buildOfflinePayload(
       basePayloadArgs({
         values,
@@ -142,6 +147,7 @@ describe("useFormularioSubmit helpers", () => {
   it("buildOfflinePayload usa placeholder si no hay GPS", () => {
     const values = buildEmptyValues();
     values.nombres_apellidos_encuestado = "Solo nombre";
+    values.id_perfil_encuestador = "1";
     const payload = buildOfflinePayload(
       basePayloadArgs({
         values,
@@ -172,6 +178,7 @@ describe("useFormularioSubmit helpers", () => {
     vi.setSystemTime(new Date("2026-05-01T10:20:30.000Z"));
     const values = buildEmptyValues();
     values.nombres_apellidos_encuestado = "B";
+    values.id_perfil_encuestador = "1";
     const payload = buildOfflinePayload(
       basePayloadArgs({
         values,
@@ -189,6 +196,7 @@ describe("useFormularioSubmit helpers", () => {
     vi.setSystemTime(new Date("2026-06-15T18:00:00.000Z"));
     const values = buildEmptyValues();
     values.nombres_apellidos_encuestado = "B";
+    values.id_perfil_encuestador = "1";
     const payload = buildOfflinePayload(
       basePayloadArgs({
         values,

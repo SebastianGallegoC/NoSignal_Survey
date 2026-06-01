@@ -24,7 +24,6 @@ export const fieldSelectOptions: Partial<Record<FormFieldKey, SelectOption[]>> =
   autoriza_tratamiento_datos: buildOptions(si_no_options),
   datos_encuestado: buildOptions(datos_encuestado_options),
   tipo_documento_encuestado: buildOptions(tipo_documento_options),
-  tipo_documento_encuestador: buildOptions(tipo_documento_options),
   municipio: buildOptions(municipio_options),
   informacion_vivienda: buildOptions(informacion_vivienda_options),
   cuenta_con_cocina: buildOptions(cuenta_con_cocina_options),

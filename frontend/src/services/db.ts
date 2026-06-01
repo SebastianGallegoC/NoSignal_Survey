@@ -18,6 +18,8 @@ export type ModoCoordenadasForm = 'automatico' | 'manual';
 
 export interface OfflineForm {
   id_formulario: string;
+  /** Relación al perfil de encuestador en backend. */
+  id_perfil_encuestador?: number | null;
   /** Cómo se obtuvo la ubicación al guardar (para reabrir en el mismo modo). */
   modo_coordenadas?: ModoCoordenadasForm;
   /** Fecha/hora del primer guardado (no cambia al reeditar el mismo formulario). */
@@ -41,6 +43,7 @@ export type EstadoHistorial = 'PENDIENTE' | 'ERROR' | 'ENVIADO';
 
 export interface HistorialForm {
   id_formulario: string;
+  id_perfil_encuestador?: number | null;
   modo_coordenadas?: ModoCoordenadasForm;
   fecha_hora: string;
   estado: EstadoHistorial;
@@ -55,6 +58,7 @@ export interface HistorialForm {
 
 export interface PrecargaForm {
   id_formulario: string;
+  id_perfil_encuestador?: number | null;
   fecha_precarga: string;
   modo_coordenadas?: ModoCoordenadasForm;
   datos_formulario: Record<string, unknown>;
@@ -75,12 +79,21 @@ export interface SesionLocalRow {
   username: string;
 }
 
+export interface EncuestadorProfileCacheRow {
+  id: number;
+  username: string;
+  nombre: string;
+  habilitado: boolean;
+  updated_at: string;
+}
+
 export class NoSignalDB extends Dexie {
   formularios!: Table<OfflineForm>;
   historialFormularios!: Table<HistorialForm>;
   precargas!: Table<PrecargaForm>;
   formulariosOcultos!: Table<FormularioOculto>;
   sesionLocal!: Table<SesionLocalRow>;
+  encuestadorProfilesCache!: Table<EncuestadorProfileCacheRow>;
 
   constructor() {
     super('NoSignalSurveyDB');
@@ -139,6 +152,14 @@ export class NoSignalDB extends Dexie {
       await tx.table<PrecargaForm>('precargas').toCollection().modify((p) => {
         p.datos_formulario = stripGmsKeysFromDatos(p.datos_formulario);
       });
+    });
+    this.version(9).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+      historialFormularios: '&id_formulario, estado, fecha_hora',
+      precargas: '&id_formulario, fecha_precarga',
+      formulariosOcultos: '&id_formulario',
+      sesionLocal: 'id',
+      encuestadorProfilesCache: '&id, username, habilitado, updated_at',
     });
   }
 }

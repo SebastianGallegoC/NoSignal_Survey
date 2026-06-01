@@ -76,6 +76,13 @@ export const validateFormPayload = (form: OfflineForm): string[] => {
     errors.push('gps_precision');
   }
   if (
+    typeof form.id_perfil_encuestador !== "number" ||
+    !Number.isFinite(form.id_perfil_encuestador) ||
+    form.id_perfil_encuestador <= 0
+  ) {
+    errors.push("encuestador_profile_required");
+  }
+  if (
     !Array.isArray(form.fotos) ||
     form.fotos.length < REQUIRED_FORM_PHOTOS ||
     form.fotos.length > MAX_FORM_PHOTOS
@@ -110,6 +117,7 @@ export const enqueueForm = async (form: OfflineForm): Promise<void> => {
     earliestIso(existingHistorial?.fecha_envio, form.fecha_hora) ?? form.fecha_hora;
   await db.historialFormularios.put({
     id_formulario: form.id_formulario,
+    id_perfil_encuestador: form.id_perfil_encuestador ?? null,
     modo_coordenadas: form.modo_coordenadas,
     fecha_hora: form.fecha_hora,
     estado: 'PENDIENTE',
@@ -125,6 +133,7 @@ export const enqueueForm = async (form: OfflineForm): Promise<void> => {
   if (existingPrecarga) {
     await db.precargas.put({
       ...existingPrecarga,
+      id_perfil_encuestador: form.id_perfil_encuestador ?? null,
       fecha_precarga: new Date().toISOString(),
       modo_coordenadas: form.modo_coordenadas,
       datos_formulario: form.datos_formulario,
@@ -259,6 +268,7 @@ export const syncPendingForms = async (): Promise<SyncRunResult> => {
       const fechaEnvioOk =
         earliestIso(existingHistorial?.fecha_envio, form.fecha_hora) ?? form.fecha_hora;
       await db.historialFormularios.update(form.id_formulario, {
+        id_perfil_encuestador: form.id_perfil_encuestador ?? null,
         estado: 'ENVIADO',
         fecha_envio: fechaEnvioOk,
         fecha_actualizacion: fechaActOk,
@@ -277,6 +287,7 @@ export const syncPendingForms = async (): Promise<SyncRunResult> => {
       } catch {
         await db.precargas.put({
           id_formulario: form.id_formulario,
+          id_perfil_encuestador: form.id_perfil_encuestador ?? null,
           fecha_precarga: new Date().toISOString(),
           modo_coordenadas: form.modo_coordenadas,
           datos_formulario: form.datos_formulario,

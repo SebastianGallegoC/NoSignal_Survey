@@ -74,13 +74,7 @@ export const fieldLabel = (field: FormFieldKey): string =>
       tiempo_desplazamiento_horas: 'Tiempo de desplazamiento - horas',
       tiempo_desplazamiento_minutos: 'Tiempo de desplazamiento - minutos',
       comentarios_desplazamiento: 'Comentarios',
-      nombres_apellidos_encuestador: 'Nombres y apellidos',
-      tipo_documento_encuestador: 'Identificación',
-      numero_documento_encuestador: 'N°',
-      telefono_encuestador: 'Número telefónico',
-      cargo_encuestador: 'Cargo',
-      empresa_entidad_encuestador: 'Empresa y/o entidad',
-      firma_encuestador: 'Firma',
+      id_perfil_encuestador: 'Perfil de encuestador',
       metros_sobre_nivel_mar: 'Metros sobre el nivel del mar',
     } as Partial<Record<FormFieldKey, string>>
   )[field] ??

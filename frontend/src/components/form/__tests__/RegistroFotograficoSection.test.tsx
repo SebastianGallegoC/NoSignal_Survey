@@ -43,6 +43,21 @@ describe("RegistroFotograficoSection", () => {
     expect(container.textContent).toContain("Completadas: 1/6");
     expect(container.textContent).toContain("Foto 2");
     expect(container.querySelector("img")).toBeTruthy();
+    expect(
+      Array.from(container.querySelectorAll("button")).filter((btn) =>
+        btn.textContent?.includes("Elegir archivo"),
+      ),
+    ).toHaveLength(5);
+    expect(
+      Array.from(container.querySelectorAll("button")).filter((btn) =>
+        btn.textContent?.includes("Tomar foto"),
+      ),
+    ).toHaveLength(5);
+    expect(
+      Array.from(container.querySelectorAll("button")).filter((btn) =>
+        btn.textContent?.includes("Quitar"),
+      ),
+    ).toHaveLength(1);
 
     act(() => {
       root.unmount();

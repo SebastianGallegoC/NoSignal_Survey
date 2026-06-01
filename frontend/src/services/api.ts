@@ -16,6 +16,7 @@ import type { OfflineForm } from './db';
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 type ApiFormPayload = {
   id_formulario: string;
+  id_perfil_encuestador: number;
   fecha_hora: string;
   fecha_actualizacion?: string;
   gps: {
@@ -45,6 +46,7 @@ function payloadForApi(form: OfflineForm): ApiFormPayload {
   const fechaAct = form.fecha_actualizacion?.trim() || form.fecha_hora;
   const out: ApiFormPayload = {
     id_formulario: form.id_formulario,
+    id_perfil_encuestador: Number(form.id_perfil_encuestador ?? 0),
     fecha_hora: form.fecha_hora,
     gps: {
       ...form.gps,
@@ -117,6 +119,7 @@ export const loginApi = async (username: string, password: string): Promise<Logi
 /** Respuesta de `GET /api/v1/forms/` (datos en servidor; fotos = rutas de archivo). */
 export interface FormReadItem {
   id_formulario: string;
+  id_perfil_encuestador?: number | null;
   fecha_hora: string;
   fecha_actualizacion: string;
   latitud: number;
@@ -124,6 +127,26 @@ export interface FormReadItem {
   precision: number | null;
   datos_formulario: Record<string, unknown>;
   fotos: unknown[];
+}
+
+export interface EncuestadorProfileRead {
+  id: number;
+  username_owner: string;
+  nombres_apellidos_encuestador: string;
+  tipo_documento_encuestador: string;
+  numero_documento_encuestador: string;
+  telefono_encuestador: string;
+  cargo_encuestador: string;
+  empresa_entidad_encuestador: string;
+  firma_encuestador: string;
+  habilitado: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EncuestadorProfileLite {
+  id: number;
+  nombre: string;
 }
 
 /** Elimina el formulario en el servidor (requiere JWT). */
@@ -258,4 +281,88 @@ export const fetchFormPhotoDataUrl = async (
   }
   const blob = await res.blob();
   return blobToDataUrl(blob);
+};
+
+export const listEncuestadorProfilesApi = async (): Promise<EncuestadorProfileRead[]> => {
+  const response = await fetch(`${API_BASE}/api/v1/encuestador-profiles/`, {
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `encuestador_profiles_list_${response.status}`);
+  }
+  const body = (await response.json()) as { items?: EncuestadorProfileRead[] };
+  return Array.isArray(body.items) ? body.items : [];
+};
+
+export const listEnabledEncuestadorProfilesApi = async (): Promise<EncuestadorProfileLite[]> => {
+  const response = await fetch(`${API_BASE}/api/v1/encuestador-profiles/enabled`, {
+    headers: { ...authHeaders() },
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `encuestador_profiles_enabled_${response.status}`);
+  }
+  const body = (await response.json()) as { items?: EncuestadorProfileLite[] };
+  return Array.isArray(body.items) ? body.items : [];
+};
+
+export const createEncuestadorProfileApi = async (
+  payload: Omit<EncuestadorProfileRead, "id" | "username_owner" | "created_at" | "updated_at">,
+): Promise<EncuestadorProfileRead> => {
+  const response = await fetch(`${API_BASE}/api/v1/encuestador-profiles/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `encuestador_profiles_create_${response.status}`);
+  }
+  return (await response.json()) as EncuestadorProfileRead;
+};
+
+export const updateEncuestadorProfileApi = async (
+  profileId: number,
+  payload: Omit<EncuestadorProfileRead, "id" | "username_owner" | "created_at" | "updated_at">,
+): Promise<EncuestadorProfileRead> => {
+  const response = await fetch(`${API_BASE}/api/v1/encuestador-profiles/${profileId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `encuestador_profiles_update_${response.status}`);
+  }
+  return (await response.json()) as EncuestadorProfileRead;
+};
+
+export const setEncuestadorProfileEnabledApi = async (
+  profileId: number,
+  habilitado: boolean,
+): Promise<EncuestadorProfileRead> => {
+  const response = await fetch(`${API_BASE}/api/v1/encuestador-profiles/${profileId}/enabled`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ habilitado }),
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `encuestador_profiles_enabled_update_${response.status}`);
+  }
+  return (await response.json()) as EncuestadorProfileRead;
+};
+
+export const deleteEncuestadorProfileApi = async (profileId: number): Promise<void> => {
+  const response = await fetch(`${API_BASE}/api/v1/encuestador-profiles/${profileId}`, {
+    method: "DELETE",
+    headers: { ...authHeaders() },
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `encuestador_profiles_delete_${response.status}`);
+  }
 };

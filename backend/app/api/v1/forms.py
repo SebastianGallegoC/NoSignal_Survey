@@ -111,7 +111,7 @@ async def create_form(
         raise HTTPException(status_code=409, detail="idempotency_key_mismatch")
 
     try:
-        record = await persist_form(session, payload)
+        record = await persist_form(session, payload, _current_user)
     except ValueError as exc:
         # Errores tras validar el JSON (fotos, fecha_hora, etc.); no pasan por RequestValidationError.
         logger.warning("422 persist_form: %s", exc)

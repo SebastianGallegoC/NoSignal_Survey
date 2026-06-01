@@ -47,6 +47,7 @@ function displayFieldValue(key: FormFieldKey, raw: unknown, datos: Record<string
 }
 
 export interface FormularioSnapshot {
+  id_perfil_encuestador?: number | null;
   datos_formulario: Record<string, unknown>;
   gps?: { latitud: number; longitud: number; precision?: number | null } | null;
   /** `data` = data URL local; `path` = ruta en servidor; `serverFormId` + `serverIndex` = imagen vía API autenticado. */
@@ -174,6 +175,16 @@ export const FormularioRespuestaReadOnly = ({
           >
             Ver en OpenStreetMap
           </a>
+        </section>
+      ) : null}
+
+      {typeof snapshot.id_perfil_encuestador === "number" &&
+      snapshot.id_perfil_encuestador > 0 ? (
+        <section className="rounded-xl border border-slate-200 bg-slate-50/90 p-4">
+          <h3 className="text-sm font-semibold text-slate-900">Perfil de encuestador</h3>
+          <p className="mt-2 text-sm text-slate-700">
+            ID de perfil relacionado: {snapshot.id_perfil_encuestador}
+          </p>
         </section>
       ) : null}
 

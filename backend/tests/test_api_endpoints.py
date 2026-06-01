@@ -11,6 +11,17 @@ from app.main import app
 from app.schemas.form_payload import MAX_GPS_ACCURACY_METERS
 
 
+def _six_photos_payload():
+    return [
+        {
+            "nombre_archivo": f"f{i}.jpg",
+            "data": "data:image/jpeg;base64,AA==",
+            "slot": i,
+        }
+        for i in [1, 2, 3, 4, 5, 6]
+    ]
+
+
 class _DummyResult:
     def first(self):
         return (1,)
@@ -77,17 +88,18 @@ def test_create_form_returns_queued(monkeypatch):
     app.dependency_overrides[get_session] = _fake_session
     app.dependency_overrides[get_current_user] = _fake_user
 
-    async def fake_persist_form(_session, payload):
+    async def fake_persist_form(_session, payload, _user):
         return SimpleNamespace(id_formulario=payload.id_formulario)
 
     monkeypatch.setattr(forms_mod, "persist_form", fake_persist_form)
     client = TestClient(app)
     payload = {
         "id_formulario": "f-123",
+        "id_perfil_encuestador": 1,
         "fecha_hora": "2026-05-04T12:00:00Z",
         "gps": {"latitud": 1.123, "longitud": -76.55, "precision": float(MAX_GPS_ACCURACY_METERS)},
         "datos_formulario": {"entidad_aportante": "X"},
-        "fotos": [],
+        "fotos": _six_photos_payload(),
     }
     resp = client.post("/api/v1/forms/", json=payload)
     assert resp.status_code == 200
@@ -145,6 +157,7 @@ def test_get_form_by_id_ok(monkeypatch):
             return None
         return {
             "id_formulario": "f-123",
+            "id_perfil_encuestador": 1,
             "fecha_hora": "2026-05-04T12:00:00Z",
             "fecha_actualizacion": "2026-05-04T12:30:00Z",
             "latitud": 1.123,

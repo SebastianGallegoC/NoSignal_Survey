@@ -21,6 +21,7 @@ const registroFotosCompletas = (): FotoForm[] =>
 
 const baseForm = (datos: Record<string, unknown>): OfflineForm => ({
   id_formulario: "x",
+  id_perfil_encuestador: 1,
   fecha_hora: new Date().toISOString(),
   gps: { latitud: 4.6, longitud: -74.08, precision: 4 },
   datos_formulario: datos,

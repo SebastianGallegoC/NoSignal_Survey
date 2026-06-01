@@ -23,7 +23,6 @@ describe("formFieldMeta — Survey", () => {
 
   it("mantiene etiquetas específicas de columnas duplicadas", () => {
     expect(fieldLabel("nombres_apellidos_encuestado")).toBe("Nombres y apellidos");
-    expect(fieldLabel("tipo_documento_encuestador")).toBe("Identificación");
-    expect(fieldLabel("empresa_entidad_encuestador")).toBe("Empresa y/o entidad");
+    expect(fieldLabel("id_perfil_encuestador")).toBe("Perfil de encuestador");
   });
 });

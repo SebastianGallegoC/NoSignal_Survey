@@ -79,6 +79,9 @@ export const buildDatosFormulario = (
     if (key === "cuenta_con_cocina" || key === "cuenta_con_cocina_otro") {
       continue;
     }
+    if (key === "id_perfil_encuestador") {
+      continue;
+    }
     datos_formulario[key] = values[key];
   }
   const cocina = formatCuentaConCocinaForStorage(
@@ -130,6 +133,7 @@ export const buildOfflinePayload = ({
   const gpsResolved = gps ?? GPS_PLACEHOLDER_WHEN_NOT_CAPTURED;
   return {
     id_formulario: formId,
+    id_perfil_encuestador: Number.parseInt(values.id_perfil_encuestador || "0", 10) || null,
     modo_coordenadas: modoCoordenadas === "manual" ? "manual" : "automatico",
     fecha_hora: fechaPrimerEnvio,
     fecha_actualizacion: fechaActualizacion,
@@ -193,6 +197,16 @@ export const useFormularioSubmit = ({
       showEnvioBloqueadoModal(
         "No se puede enviar",
         "Completá el nombre del encuestado antes de guardar o enviar el formulario.",
+      );
+      return;
+    }
+    const perfilEncuestadorId = Number.parseInt(values.id_perfil_encuestador || "0", 10);
+    if (!Number.isFinite(perfilEncuestadorId) || perfilEncuestadorId <= 0) {
+      setOpenSections((prev) => new Set([...prev, "encuestador"]));
+      setFocus("id_perfil_encuestador");
+      showEnvioBloqueadoModal(
+        "No se puede enviar",
+        "Seleccioná un perfil de encuestador habilitado antes de guardar o enviar el formulario.",
       );
       return;
     }

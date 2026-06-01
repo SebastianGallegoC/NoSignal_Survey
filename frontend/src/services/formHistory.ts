@@ -356,11 +356,13 @@ export function parseFiltroDiaFin(isoDay: string): number {
 }
 
 export function precargaToSnapshot(precarga: {
+  id_perfil_encuestador?: number | null;
   datos_formulario?: Record<string, unknown>;
   gps?: FormularioSnapshot["gps"];
   fotos?: FormularioSnapshot["fotos"];
 }): FormularioSnapshot {
   return {
+    id_perfil_encuestador: precarga.id_perfil_encuestador ?? null,
     datos_formulario: precarga.datos_formulario ?? {},
     gps: precarga.gps ?? null,
     fotos: precarga.fotos ?? [],
@@ -382,6 +384,12 @@ export function buildFormValuesFromSnapshot(snapshot: FormularioSnapshot): FormV
     if (typeof value === "number" || typeof value === "boolean") {
       base[key] = String(value);
     }
+  }
+  if (
+    typeof snapshot.id_perfil_encuestador === "number" &&
+    snapshot.id_perfil_encuestador > 0
+  ) {
+    base.id_perfil_encuestador = String(snapshot.id_perfil_encuestador);
   }
   return applyCuentaConCocinaToFormValues(base);
 }

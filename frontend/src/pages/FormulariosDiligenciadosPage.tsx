@@ -335,6 +335,7 @@ export const FormulariosDiligenciadosPage = () => {
         if (queued) {
           setDetailPrecarga(precargaLocal);
           setDetailSnapshot({
+            id_perfil_encuestador: queued.id_perfil_encuestador ?? null,
             datos_formulario: queued.datos_formulario ?? {},
             gps: queued.gps ?? null,
             fotos: queued.fotos ?? [],
@@ -378,6 +379,7 @@ export const FormulariosDiligenciadosPage = () => {
             return;
           }
           setDetailSnapshot({
+            id_perfil_encuestador: row.server.id_perfil_encuestador ?? null,
             datos_formulario: (row.server.datos_formulario ?? {}) as Record<
               string,
               unknown
@@ -412,6 +414,7 @@ export const FormulariosDiligenciadosPage = () => {
             return;
           }
           setDetailSnapshot({
+            id_perfil_encuestador: h.id_perfil_encuestador ?? null,
             datos_formulario: h.datos_formulario ?? {},
             gps: h.gps ?? null,
             fotos,
@@ -511,6 +514,7 @@ export const FormulariosDiligenciadosPage = () => {
             }
           }
           snapshot = {
+            id_perfil_encuestador: row.server.id_perfil_encuestador ?? null,
             datos_formulario: (row.server.datos_formulario ?? {}) as Record<
               string,
               unknown
@@ -524,6 +528,7 @@ export const FormulariosDiligenciadosPage = () => {
           };
         } else if (row.historial) {
           snapshot = {
+            id_perfil_encuestador: row.historial.id_perfil_encuestador ?? null,
             datos_formulario: row.historial.datos_formulario ?? {},
             gps: row.historial.gps ?? null,
             fotos: row.historial.fotos ?? [],
@@ -566,6 +571,7 @@ export const FormulariosDiligenciadosPage = () => {
 
         const precarga: PrecargaForm = {
           id_formulario: row.id_formulario,
+          id_perfil_encuestador: snapshot.id_perfil_encuestador ?? null,
           fecha_precarga: new Date().toISOString(),
           modo_coordenadas: modoPrecarga,
           datos_formulario: snapshot.datos_formulario ?? {},

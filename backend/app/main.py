@@ -31,7 +31,7 @@ _FORMS_FECHA_ACTUALIZACION_SQL = text(
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Inicializa requisitos mínimos; migraciones formales se manejan con Alembic."""
-    from .models import FormRecord  # noqa: F401 — registra metadatos en Base
+    from .models import EncuestadorProfile, FormRecord  # noqa: F401 — registra metadatos en Base
 
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))

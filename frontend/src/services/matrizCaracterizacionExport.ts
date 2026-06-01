@@ -6,7 +6,6 @@ import {
   normalizeCoordNumericCell,
 } from "@/lib/coordNumericToken";
 import type { OfflineForm } from "@/services/db";
-import type { FormFieldKey } from "@/types/formFields";
 
 export const MATRIZ_COLUMN_COUNT = 29;
 export const MATRIZ_SHEET_NAME = "Plantilla";
@@ -48,8 +47,8 @@ if (MATRIZ_F_PSA_HEADERS.length !== MATRIZ_COLUMN_COUNT) {
 }
 
 export type MatrizRowCellSource =
-  | { kind: "field"; key: FormFieldKey }
-  | { kind: "fecha"; key: FormFieldKey }
+  | { kind: "field"; key: string }
+  | { kind: "fecha"; key: string }
   | { kind: "lon" }
   | { kind: "lat" }
   | { kind: "cocina" };
@@ -92,7 +91,7 @@ if (MATRIZ_ROW_CELL_SOURCES.length !== MATRIZ_COLUMN_COUNT) {
   );
 }
 
-function strFromDatos(datos: Record<string, unknown>, key: FormFieldKey): string {
+function strFromDatos(datos: Record<string, unknown>, key: string): string {
   const v = datos[key];
   if (v == null) {
     return "";
@@ -100,7 +99,7 @@ function strFromDatos(datos: Record<string, unknown>, key: FormFieldKey): string
   return String(v).trim();
 }
 
-function coordTokenFromDatos(datos: Record<string, unknown>, key: FormFieldKey): string {
+function coordTokenFromDatos(datos: Record<string, unknown>, key: string): string {
   return normalizeCoordNumericCell(strFromDatos(datos, key));
 }
 
@@ -113,7 +112,7 @@ export function isGpsPlaceholderForExport(gps: OfflineForm["gps"]): boolean {
 
 export function coordFieldForMatrizExport(
   datos: Record<string, unknown>,
-  key: FormFieldKey,
+  key: string,
 ): string {
   return coordTokenFromDatos(datos, key);
 }
@@ -190,7 +189,7 @@ function cellValueForSource(
   if (src.kind === "cocina") {
     return cocinaValue(datos);
   }
-  if (COORD_NUMERIC_FIELD_KEYS.has(src.key)) {
+  if ((COORD_NUMERIC_FIELD_KEYS as ReadonlySet<string>).has(src.key)) {
     return coordFieldForMatrizExport(datos, src.key);
   }
   return strFromDatos(datos, src.key);

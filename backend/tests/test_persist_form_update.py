@@ -10,6 +10,17 @@ from app.schemas.form_payload import FormPayload, GPSPayload
 from app.services.forms import parse_fecha_hora_iso, persist_form, resolve_fecha_actualizacion_dt
 
 
+def _six_photos_payload():
+    return [
+        {
+            "nombre_archivo": f"f{i}.jpg",
+            "data": "data:image/jpeg;base64,AA==",
+            "slot": i,
+        }
+        for i in [1, 2, 3, 4, 5, 6]
+    ]
+
+
 @pytest.mark.asyncio
 async def test_persist_form_updates_datos_when_id_exists(monkeypatch):
     existing = SimpleNamespace(
@@ -18,13 +29,18 @@ async def test_persist_form_updates_datos_when_id_exists(monkeypatch):
         fecha_actualizacion=datetime(2026, 1, 1, tzinfo=timezone.utc),
         gps=None,
         datos_formulario={"nombres_apellidos_beneficiario": "Viejo"},
-        fotos=[],
+        fotos=_six_photos_payload(),
     )
 
     async def fake_get(_session, form_id):
         return existing if form_id == "f-upd" else None
 
     monkeypatch.setattr("app.services.forms.get_form_by_id", fake_get)
+    monkeypatch.setattr(
+        "app.services.forms.validate_profile_is_assignable",
+        AsyncMock(return_value=(True, None)),
+    )
+    monkeypatch.setattr("app.services.forms.save_photos", lambda *_args, **_kwargs: [])
 
     session = AsyncMock()
     session.commit = AsyncMock()
@@ -32,13 +48,14 @@ async def test_persist_form_updates_datos_when_id_exists(monkeypatch):
 
     payload = FormPayload(
         id_formulario="f-upd",
+        id_perfil_encuestador=1,
         fecha_hora="2026-05-04T12:00:00Z",
         gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
         datos_formulario={"nombres_apellidos_beneficiario": "Nuevo"},
-        fotos=[],
+        fotos=_six_photos_payload(),
     )
 
-    result = await persist_form(session, payload)
+    result = await persist_form(session, payload, "tester")
 
     assert result is existing
     assert existing.datos_formulario["nombres_apellidos_beneficiario"] == "Nuevo"
@@ -51,11 +68,12 @@ async def test_persist_form_updates_datos_when_id_exists(monkeypatch):
 def test_resolve_fecha_actualizacion_no_baja_de_fecha_hora():
     p = FormPayload(
         id_formulario="f",
+        id_perfil_encuestador=1,
         fecha_hora="2026-05-04T12:00:00Z",
         fecha_actualizacion="2026-01-01T00:00:00Z",
         gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
         datos_formulario={},
-        fotos=[],
+        fotos=_six_photos_payload(),
     )
     assert resolve_fecha_actualizacion_dt(p) == parse_fecha_hora_iso("2026-05-04T12:00:00Z")
 
@@ -68,13 +86,18 @@ async def test_persist_form_update_usa_fecha_actualizacion_explicita(monkeypatch
         fecha_actualizacion=datetime(2026, 1, 1, tzinfo=timezone.utc),
         gps=None,
         datos_formulario={},
-        fotos=[],
+        fotos=_six_photos_payload(),
     )
 
     async def fake_get(_session, form_id):
         return existing if form_id == "f-upd2" else None
 
     monkeypatch.setattr("app.services.forms.get_form_by_id", fake_get)
+    monkeypatch.setattr(
+        "app.services.forms.validate_profile_is_assignable",
+        AsyncMock(return_value=(True, None)),
+    )
+    monkeypatch.setattr("app.services.forms.save_photos", lambda *_args, **_kwargs: [])
 
     session = AsyncMock()
     session.commit = AsyncMock()
@@ -82,14 +105,15 @@ async def test_persist_form_update_usa_fecha_actualizacion_explicita(monkeypatch
 
     payload = FormPayload(
         id_formulario="f-upd2",
+        id_perfil_encuestador=1,
         fecha_hora="2026-01-01T00:00:00Z",
         fecha_actualizacion="2026-08-20T15:30:00Z",
         gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
         datos_formulario={"k": "v"},
-        fotos=[],
+        fotos=_six_photos_payload(),
     )
 
-    await persist_form(session, payload)
+    await persist_form(session, payload, "tester")
 
     assert existing.fecha_hora == datetime(2026, 1, 1, tzinfo=timezone.utc)
     assert existing.fecha_actualizacion == datetime(2026, 8, 20, 15, 30, tzinfo=timezone.utc)
@@ -103,6 +127,11 @@ async def test_persist_form_creates_new_when_id_not_found(monkeypatch):
         return None
 
     monkeypatch.setattr("app.services.forms.get_form_by_id", fake_get)
+    monkeypatch.setattr(
+        "app.services.forms.validate_profile_is_assignable",
+        AsyncMock(return_value=(True, None)),
+    )
+    monkeypatch.setattr("app.services.forms.save_photos", lambda *_args, **_kwargs: [])
 
     created: list = []
 
@@ -115,13 +144,14 @@ async def test_persist_form_creates_new_when_id_not_found(monkeypatch):
     session = AsyncMock()
     payload = FormPayload(
         id_formulario="f-nuevo",
+        id_perfil_encuestador=1,
         fecha_hora="2026-06-01T10:00:00Z",
         gps=GPSPayload(latitud=4.5, longitud=-74.1, precision=4.0),
         datos_formulario={"entidad_aportante": "ACME"},
-        fotos=[],
+        fotos=_six_photos_payload(),
     )
 
-    result = await persist_form(session, payload)
+    result = await persist_form(session, payload, "tester")
 
     assert len(created) == 1
     assert result is created[0]

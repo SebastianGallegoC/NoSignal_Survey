@@ -79,7 +79,7 @@ export const validateFormValuesWithFieldDetails = (
     }
   }
 
-  for (const key of ["telefono_encuestado", "telefono_encuestador"] as const) {
+  for (const key of ["telefono_encuestado"] as const) {
     if (!isBlank(values[key])) {
       const tel = normalizeTelefonoStoredValue(String(values[key]));
       if (
@@ -228,6 +228,16 @@ export const validateOfflineFormPayload = (form: OfflineForm): ValidationIssue[]
     issues.push({
       code: "encuestado_required",
       message: "El nombre del encuestado es obligatorio para enviar.",
+    });
+  }
+  if (
+    typeof form.id_perfil_encuestador !== "number" ||
+    !Number.isFinite(form.id_perfil_encuestador) ||
+    form.id_perfil_encuestador <= 0
+  ) {
+    issues.push({
+      code: "encuestador_profile_required",
+      message: "Seleccioná un perfil de encuestador válido antes de enviar.",
     });
   }
 

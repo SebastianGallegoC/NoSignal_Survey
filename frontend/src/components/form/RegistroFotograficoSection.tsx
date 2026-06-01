@@ -116,30 +116,33 @@ export const RegistroFotograficoSection = ({
                 ) : null}
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    onActiveSlotChange(slot);
-                    pickerInputRefs.current[slot]?.click();
-                  }}
-                >
-                  Elegir archivo
-                </Button>
-                {!cameraOpen || activeSlot !== slot ? (
+              {missing ? (
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => {
                       onActiveSlotChange(slot);
-                      onOpenCameraForSlot(slot);
+                      pickerInputRefs.current[slot]?.click();
                     }}
                   >
-                    Tomar foto
+                    Elegir archivo
                   </Button>
-                ) : null}
-                {foto ? (
+                  {!cameraOpen || activeSlot !== slot ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        onActiveSlotChange(slot);
+                        onOpenCameraForSlot(slot);
+                      }}
+                    >
+                      Tomar foto
+                    </Button>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -147,8 +150,8 @@ export const RegistroFotograficoSection = ({
                   >
                     Quitar
                   </Button>
-                ) : null}
-              </div>
+                </div>
+              )}
 
               <input
                 ref={(el) => {

@@ -23,13 +23,7 @@ export const REQUIRED_FIELDS = [
   'tiempo_desplazamiento_minutos',
   'medio_transporte',
   'comentarios_desplazamiento',
-  'nombres_apellidos_encuestador',
-  'tipo_documento_encuestador',
-  'numero_documento_encuestador',
-  'telefono_encuestador',
-  'cargo_encuestador',
-  'empresa_entidad_encuestador',
-  'firma_encuestador',
+  'id_perfil_encuestador',
 ] as const;
 
 export type FormFieldKey = (typeof REQUIRED_FIELDS)[number];
@@ -37,6 +31,7 @@ export type FormFieldKey = (typeof REQUIRED_FIELDS)[number];
 /** Únicos campos de datos que deben estar completos para guardar / enviar a cola. */
 export const FIELDS_REQUIRED_TO_SUBMIT = [
   "nombres_apellidos_encuestado",
+  "id_perfil_encuestador",
 ] as const satisfies readonly FormFieldKey[];
 
 export type FormValues = Record<FormFieldKey, string>;

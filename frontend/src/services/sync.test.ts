@@ -13,6 +13,7 @@ const registroFotosCompletas = () =>
 
 const baseForm = (): OfflineForm => ({
   id_formulario: "f-1",
+  id_perfil_encuestador: 1,
   fecha_hora: "2026-05-04T12:00:00Z",
   gps: { latitud: 1.23, longitud: -76.5, precision: 4 },
   datos_formulario: {},
