@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { FieldErrors, UseFormSetFocus } from "react-hook-form";
 
 import type { FormEnvioResultState } from "@/components/form/FormEnvioResultModal";
+import { SURVEY_TESTING_RELAXED_SUBMIT } from "@/config/submitRequirements";
 import { fieldLabel } from "@/config/formFieldMeta";
 import { FORM_SECTIONS } from "@/config/formSections";
 import type { OfflineForm } from "@/services/db";
@@ -200,23 +201,25 @@ export const useFormularioSubmit = ({
       );
       return;
     }
-    const perfilEncuestadorId = Number.parseInt(values.id_perfil_encuestador || "0", 10);
-    if (!Number.isFinite(perfilEncuestadorId) || perfilEncuestadorId <= 0) {
-      setOpenSections((prev) => new Set([...prev, "encuestador"]));
-      setFocus("id_perfil_encuestador");
-      showEnvioBloqueadoModal(
-        "No se puede enviar",
-        "Seleccioná un perfil de encuestador habilitado antes de guardar o enviar el formulario.",
-      );
-      return;
-    }
-    if (!slotsCompletos(fotos)) {
-      setOpenSections((prev) => new Set([...prev, "registro-fotografico"]));
-      showEnvioBloqueadoModal(
-        "No se puede enviar",
-        missingSlotsMessage(fotos) || FORM_PHOTO_REQUIRED_MESSAGE,
-      );
-      return;
+    if (!SURVEY_TESTING_RELAXED_SUBMIT) {
+      const perfilEncuestadorId = Number.parseInt(values.id_perfil_encuestador || "0", 10);
+      if (!Number.isFinite(perfilEncuestadorId) || perfilEncuestadorId <= 0) {
+        setOpenSections((prev) => new Set([...prev, "encuestador"]));
+        setFocus("id_perfil_encuestador");
+        showEnvioBloqueadoModal(
+          "No se puede enviar",
+          "Seleccioná un perfil de encuestador habilitado antes de guardar o enviar el formulario.",
+        );
+        return;
+      }
+      if (!slotsCompletos(fotos)) {
+        setOpenSections((prev) => new Set([...prev, "registro-fotografico"]));
+        showEnvioBloqueadoModal(
+          "No se puede enviar",
+          missingSlotsMessage(fotos) || FORM_PHOTO_REQUIRED_MESSAGE,
+        );
+        return;
+      }
     }
 
     const payload = buildOfflinePayload({

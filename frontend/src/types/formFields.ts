@@ -28,10 +28,13 @@ export const REQUIRED_FIELDS = [
 
 export type FormFieldKey = (typeof REQUIRED_FIELDS)[number];
 
+import { SURVEY_TESTING_RELAXED_SUBMIT } from "@/config/submitRequirements";
+
 /** Únicos campos de datos que deben estar completos para guardar / enviar a cola. */
-export const FIELDS_REQUIRED_TO_SUBMIT = [
-  "nombres_apellidos_encuestado",
-  "id_perfil_encuestador",
-] as const satisfies readonly FormFieldKey[];
+export const FIELDS_REQUIRED_TO_SUBMIT = (
+  SURVEY_TESTING_RELAXED_SUBMIT
+    ? (["nombres_apellidos_encuestado"] as const)
+    : (["nombres_apellidos_encuestado", "id_perfil_encuestador"] as const)
+) satisfies readonly FormFieldKey[];
 
 export type FormValues = Record<FormFieldKey, string>;

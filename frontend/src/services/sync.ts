@@ -2,6 +2,7 @@ import { earliestIso } from '@/lib/formatDateTime';
 import { db, type OfflineForm } from './db';
 import { postForm } from './api';
 import { MAX_GPS_ACCURACY_METERS } from '@/constants/gpsConfig';
+import { SURVEY_TESTING_RELAXED_SUBMIT } from '@/config/submitRequirements';
 
 const RETENTION_DAYS = 6;
 const BACKOFF_STEPS_MS = [30_000, 60_000, 5 * 60_000, 15 * 60_000, 30 * 60_000];
@@ -68,37 +69,39 @@ export const isNetworkLikeError = (error: unknown): boolean => {
 export const validateFormPayload = (form: OfflineForm): string[] => {
   const errors: string[] = [];
 
-  if (
-    !form.gps ||
-    form.gps.precision <= 0 ||
-    form.gps.precision > MAX_GPS_ACCURACY_METERS
-  ) {
-    errors.push('gps_precision');
-  }
-  if (
-    typeof form.id_perfil_encuestador !== "number" ||
-    !Number.isFinite(form.id_perfil_encuestador) ||
-    form.id_perfil_encuestador <= 0
-  ) {
-    errors.push("encuestador_profile_required");
-  }
-  if (
-    !Array.isArray(form.fotos) ||
-    form.fotos.length < REQUIRED_FORM_PHOTOS ||
-    form.fotos.length > MAX_FORM_PHOTOS
-  ) {
-    errors.push('fotos_count');
-  }
-  if (Array.isArray(form.fotos)) {
-    const slots = new Set(
-      form.fotos
-        .map((f) => f.slot)
-        .filter((slot): slot is (typeof REGISTRO_FOTO_SLOT_NUMBERS)[number] =>
-          isRegistroFotoSlot(slot),
-        ),
-    );
-    if (slots.size !== REQUIRED_FORM_PHOTOS) {
-      errors.push('fotos_slot_required');
+  if (!SURVEY_TESTING_RELAXED_SUBMIT) {
+    if (
+      !form.gps ||
+      form.gps.precision <= 0 ||
+      form.gps.precision > MAX_GPS_ACCURACY_METERS
+    ) {
+      errors.push('gps_precision');
+    }
+    if (
+      typeof form.id_perfil_encuestador !== "number" ||
+      !Number.isFinite(form.id_perfil_encuestador) ||
+      form.id_perfil_encuestador <= 0
+    ) {
+      errors.push("encuestador_profile_required");
+    }
+    if (
+      !Array.isArray(form.fotos) ||
+      form.fotos.length < REQUIRED_FORM_PHOTOS ||
+      form.fotos.length > MAX_FORM_PHOTOS
+    ) {
+      errors.push('fotos_count');
+    }
+    if (Array.isArray(form.fotos)) {
+      const slots = new Set(
+        form.fotos
+          .map((f) => f.slot)
+          .filter((slot): slot is (typeof REGISTRO_FOTO_SLOT_NUMBERS)[number] =>
+            isRegistroFotoSlot(slot),
+          ),
+      );
+      if (slots.size !== REQUIRED_FORM_PHOTOS) {
+        errors.push('fotos_slot_required');
+      }
     }
   }
 

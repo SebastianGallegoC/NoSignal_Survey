@@ -103,6 +103,34 @@ export class LoginApiError extends Error {
   }
 }
 
+export class EncuestadorProfileApiError extends Error {
+  status: number;
+  detail: string;
+
+  constructor(status: number, detail: string) {
+    super(detail || `encuestador_profile_${status}`);
+    this.name = "EncuestadorProfileApiError";
+    this.status = status;
+    this.detail = detail || `encuestador_profile_${status}`;
+  }
+}
+
+function parseApiErrorDetail(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return "";
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as { detail?: unknown };
+    if (typeof parsed.detail === "string") {
+      return parsed.detail;
+    }
+  } catch {
+    // texto plano del servidor
+  }
+  return trimmed;
+}
+
 export const loginApi = async (username: string, password: string): Promise<LoginResponse> => {
   const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
     method: 'POST',
@@ -363,6 +391,7 @@ export const deleteEncuestadorProfileApi = async (profileId: number): Promise<vo
   });
   if (!response.ok) {
     const t = await response.text();
-    throw new Error(t || `encuestador_profiles_delete_${response.status}`);
+    const detail = parseApiErrorDetail(t) || `encuestador_profiles_delete_${response.status}`;
+    throw new EncuestadorProfileApiError(response.status, detail);
   }
 };

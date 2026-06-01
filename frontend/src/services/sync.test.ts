@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/config/submitRequirements", () => ({
+  SURVEY_TESTING_RELAXED_SUBMIT: false,
+}));
 
 import type { RegistroFotoSlot } from "@/config/registroFotografico";
 import type { OfflineForm } from "./db";

@@ -1,4 +1,5 @@
 import { MAX_GPS_ACCURACY_METERS } from "@/constants/gpsConfig";
+import { SURVEY_TESTING_RELAXED_SUBMIT } from "@/config/submitRequirements";
 import {
   normalizeTelefonoStoredValue,
   TELEFONO_NO_TIENE_VALUE,
@@ -230,15 +231,17 @@ export const validateOfflineFormPayload = (form: OfflineForm): ValidationIssue[]
       message: "El nombre del encuestado es obligatorio para enviar.",
     });
   }
-  if (
-    typeof form.id_perfil_encuestador !== "number" ||
-    !Number.isFinite(form.id_perfil_encuestador) ||
-    form.id_perfil_encuestador <= 0
-  ) {
-    issues.push({
-      code: "encuestador_profile_required",
-      message: "Seleccioná un perfil de encuestador válido antes de enviar.",
-    });
+  if (!SURVEY_TESTING_RELAXED_SUBMIT) {
+    if (
+      typeof form.id_perfil_encuestador !== "number" ||
+      !Number.isFinite(form.id_perfil_encuestador) ||
+      form.id_perfil_encuestador <= 0
+    ) {
+      issues.push({
+        code: "encuestador_profile_required",
+        message: "Seleccioná un perfil de encuestador válido antes de enviar.",
+      });
+    }
   }
 
   const tsEnvio = parseDateSafe(form.fecha_hora);
@@ -263,36 +266,38 @@ export const validateOfflineFormPayload = (form: OfflineForm): ValidationIssue[]
     }
   }
 
-  if (form.gps.precision > MAX_GPS_ACCURACY_METERS) {
-    issues.push({
-      code: "gps_precision",
-      message: `GPS con precisión ≤ ${MAX_GPS_ACCURACY_METERS} m (usá “Tomar ubicación”).`,
-    });
-  }
-
-  if (!Array.isArray(form.fotos) || form.fotos.length !== MAX_PHOTOS) {
-    issues.push({
-      code: "fotos_count",
-      message: "Debés cargar exactamente 6 fotos del registro fotográfico.",
-    });
-  }
-
-  if (Array.isArray(form.fotos)) {
-    const slots = new Set(
-      form.fotos
-        .map((f) => f.slot)
-        .filter((slot): slot is (typeof REGISTRO_FOTO_SLOT_NUMBERS)[number] =>
-          isRegistroFotoSlot(slot),
-        ),
-    );
-    if (slots.size !== MAX_PHOTOS) {
-      const detail = missingSlotsMessage(form.fotos);
+  if (!SURVEY_TESTING_RELAXED_SUBMIT) {
+    if (form.gps.precision > MAX_GPS_ACCURACY_METERS) {
       issues.push({
-        code: "fotos_slot_required",
-        message:
-          detail ||
-          "Cada foto del registro fotográfico debe corresponder a un campo obligatorio (Foto 1 a Foto 6).",
+        code: "gps_precision",
+        message: `GPS con precisión ≤ ${MAX_GPS_ACCURACY_METERS} m (usá “Tomar ubicación”).`,
       });
+    }
+
+    if (!Array.isArray(form.fotos) || form.fotos.length !== MAX_PHOTOS) {
+      issues.push({
+        code: "fotos_count",
+        message: "Debés cargar exactamente 6 fotos del registro fotográfico.",
+      });
+    }
+
+    if (Array.isArray(form.fotos)) {
+      const slots = new Set(
+        form.fotos
+          .map((f) => f.slot)
+          .filter((slot): slot is (typeof REGISTRO_FOTO_SLOT_NUMBERS)[number] =>
+            isRegistroFotoSlot(slot),
+          ),
+      );
+      if (slots.size !== MAX_PHOTOS) {
+        const detail = missingSlotsMessage(form.fotos);
+        issues.push({
+          code: "fotos_slot_required",
+          message:
+            detail ||
+            "Cada foto del registro fotográfico debe corresponder a un campo obligatorio (Foto 1 a Foto 6).",
+        });
+      }
     }
   }
 

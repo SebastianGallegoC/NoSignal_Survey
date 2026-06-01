@@ -42,4 +42,26 @@ describe("FormularioRespuestaReadOnly — encuestador", () => {
     expect(encuestadorSection).toBeTruthy();
     expect(encuestadorSection?.textContent).toContain("—");
   });
+
+  it("agrupa fotos en un bloque retraído por defecto", () => {
+    render(
+      <FormularioRespuestaReadOnly
+        snapshot={{
+          datos_formulario: { nombres_apellidos_encuestado: "Juan" },
+          gps: null,
+          fotos: [
+            {
+              nombre_archivo: "f1.jpg",
+              data: "data:image/jpeg;base64,abc",
+              slot: 1,
+            },
+          ],
+        }}
+      />,
+    );
+
+    const group = screen.getByText("Registro fotográfico (1)").closest("details");
+    expect(group).toBeTruthy();
+    expect((group as HTMLDetailsElement).open).toBe(false);
+  });
 });

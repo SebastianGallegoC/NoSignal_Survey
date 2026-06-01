@@ -41,23 +41,31 @@ describe("formValidation — envío mínimo Survey", () => {
     expect(issues.map((i) => i.code)).toContain("encuestado_required");
   });
 
-  it("validateOfflineFormPayload acepta encuestado, GPS y 6 fotos", () => {
-    const datos = emptyValues();
-    datos.nombres_apellidos_encuestado = "Ana Pérez";
-    const issues = validateOfflineFormPayload(baseForm(datos));
-    expect(issues).toHaveLength(0);
-  });
-
-  it("validateOfflineFormPayload exige los 6 slots del registro fotográfico", () => {
+  it("validateOfflineFormPayload acepta solo nombre del encuestado en fase de pruebas", () => {
     const datos = emptyValues();
     datos.nombres_apellidos_encuestado = "Ana Pérez";
     const form = {
       ...baseForm(datos),
+      id_perfil_encuestador: null,
+      fotos: [],
+      gps: { latitud: 4.6, longitud: -74.08, precision: 99 },
+    };
+    const issues = validateOfflineFormPayload(form);
+    expect(issues).toHaveLength(0);
+  });
+
+  it("validateOfflineFormPayload no exige perfil ni 6 fotos en fase de pruebas", () => {
+    const datos = emptyValues();
+    datos.nombres_apellidos_encuestado = "Ana Pérez";
+    const form = {
+      ...baseForm(datos),
+      id_perfil_encuestador: null,
       fotos: [{ nombre_archivo: "a.jpg", data: "data:image/jpeg;base64,AA==", slot: 1 as const }],
     };
     const issues = validateOfflineFormPayload(form);
-    expect(issues.map((i) => i.code)).toContain("fotos_count");
-    expect(issues.map((i) => i.code)).toContain("fotos_slot_required");
+    expect(issues.map((i) => i.code)).not.toContain("fotos_count");
+    expect(issues.map((i) => i.code)).not.toContain("fotos_slot_required");
+    expect(issues.map((i) => i.code)).not.toContain("encuestador_profile_required");
   });
 
   it("validateOfflineFormPayload rechaza fecha_actualizacion anterior a fecha_hora", () => {
