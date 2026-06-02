@@ -180,6 +180,14 @@ export const useFormularioSubmit = ({
   setFocus,
   requiredFields,
 }: Args) => {
+  const isServerSyncReady = (form: OfflineForm): boolean => {
+    const hasProfile =
+      typeof form.id_perfil_encuestador === "number" &&
+      Number.isFinite(form.id_perfil_encuestador) &&
+      form.id_perfil_encuestador > 0;
+    return hasProfile && slotsCompletos(form.fotos);
+  };
+
   const showEnvioBloqueadoModal = (title: string, message: string) => {
     setBanner(null);
     setEnvioModal({
@@ -256,6 +264,18 @@ export const useFormularioSubmit = ({
           isEdit: !!_originalFechaHora,
         });
       } else {
+        if (SURVEY_TESTING_RELAXED_SUBMIT && !isServerSyncReady(payload)) {
+          setEnvioModal({
+            tone: "warning",
+            title: "Guardado localmente (modo pruebas)",
+            message:
+              "El formulario se guardó en este dispositivo, pero todavía no cumple los requisitos del servidor para sincronizarse (perfil de encuestador y 6 fotos). Podés completarlo después y sincronizar desde Inicio.",
+            submittedForm: payload,
+            isEdit: !!_originalFechaHora,
+          });
+          await refreshPendientes();
+          return;
+        }
         const result = await syncPendingForms();
         const firstErr = result.first_error?.trim() ?? "";
         const networkLikeFailure =

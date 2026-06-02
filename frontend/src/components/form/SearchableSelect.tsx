@@ -107,7 +107,7 @@ const SearchableSelectInner = ({
   const anchorRef = useRef<HTMLDivElement>(null);
   const inputElRef = useRef<HTMLInputElement | null>(null);
   /** Trampa de foco breve: evita que el blur salte al siguiente campo del formulario. */
-  const focusTrapRef = useRef<HTMLButtonElement>(null);
+  const focusTrapRef = useRef<HTMLDivElement>(null);
   /** Evita que onBlur revierta la opción recién elegida (típico en táctil). */
   const skipBlurCommitRef = useRef(false);
   const clearSkipTimerRef = useRef<number | null>(null);
@@ -346,10 +346,8 @@ const SearchableSelectInner = ({
             }
           }}
         />
-        <button
-          type="button"
+        <div
           tabIndex={-1}
-          aria-hidden="true"
           ref={focusTrapRef}
           className="sr-only absolute h-0 w-0 overflow-hidden border-0 p-0 opacity-0"
         />

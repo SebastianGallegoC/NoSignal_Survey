@@ -237,7 +237,7 @@ export const PerfilEncuestadorPage = () => {
                   className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"
                 >
                   <p className="font-semibold text-slate-900">
-                    {profile.nombres_apellidos_encuestador} (ID {profile.id})
+                    {profile.nombres_apellidos_encuestador}
                   </p>
                   <p className="text-xs text-slate-600">
                     {profile.tipo_documento_encuestador} · {profile.numero_documento_encuestador}

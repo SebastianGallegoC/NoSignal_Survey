@@ -108,6 +108,46 @@ export const FormFieldRow = ({
   const kind = inputKindForField(name);
   const label = fieldLabel(name);
 
+  if (name === "autoriza_tratamiento_datos") {
+    const options = (fieldSelectOptions[name] ?? SELECT_FALLBACK).filter(
+      (o) => o.value.trim() !== "",
+    );
+    return (
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <fieldset className="flex min-w-0 max-w-full flex-col text-sm font-medium text-slate-800">
+            <legend className="mb-2">{label}</legend>
+            <div className="flex flex-wrap gap-2">
+              {options.map((option) => {
+                const selected = String(field.value ?? "") === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => field.onChange(option.value)}
+                    className={`rounded-xl border px-3 py-2 text-sm transition ${
+                      selected
+                        ? "border-teal-600 bg-teal-50 text-teal-800"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                    }`}
+                    aria-pressed={selected}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            {error ? (
+              <span className="mt-1 text-xs text-red-600">{error}</span>
+            ) : null}
+          </fieldset>
+        )}
+      />
+    );
+  }
+
   if (name === "telefono_encuestado") {
     return (
       <Controller

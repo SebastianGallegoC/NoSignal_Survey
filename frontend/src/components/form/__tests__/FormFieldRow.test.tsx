@@ -26,6 +26,39 @@ function Wrapper({
 }
 
 describe("FormFieldRow editableGpsFields", () => {
+  it("muestra tratamiento de datos como dos opciones directas de selección única", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(<Wrapper name="autoriza_tratamiento_datos" />);
+    });
+    const options = Array.from(container.querySelectorAll("button"));
+    const si = options.find((b) => b.textContent?.trim() === "SI") as HTMLButtonElement;
+    const no = options.find((b) => b.textContent?.trim() === "NO") as HTMLButtonElement;
+    expect(si).toBeTruthy();
+    expect(no).toBeTruthy();
+    expect(si.getAttribute("aria-pressed")).toBe("false");
+    expect(no.getAttribute("aria-pressed")).toBe("false");
+
+    await act(async () => {
+      si.click();
+    });
+    expect(si.getAttribute("aria-pressed")).toBe("true");
+    expect(no.getAttribute("aria-pressed")).toBe("false");
+
+    await act(async () => {
+      no.click();
+    });
+    expect(si.getAttribute("aria-pressed")).toBe("false");
+    expect(no.getAttribute("aria-pressed")).toBe("true");
+
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
   it("marca campos GPS como readOnly cuando editableGpsFields=false", async () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
