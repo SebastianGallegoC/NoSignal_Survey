@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildMonthlyChartRows } from "@/pages/datos/monthlyChartUtils";
+import {
+  aggregateMonthlyStatsTodos,
+  buildMonthlyChartRows,
+  TODOS_MUNICIPIOS_CHART_LABEL,
+} from "@/pages/datos/monthlyChartUtils";
 import type { FormStatsMonthlyResponse } from "@/services/api";
 
 const sampleMonthly = (): FormStatsMonthlyResponse => ({
@@ -27,6 +31,22 @@ const sampleMonthly = (): FormStatsMonthlyResponse => ({
     },
   ],
   total: 6,
+});
+
+describe("aggregateMonthlyStatsTodos", () => {
+  it("suma todas las series en una sola por mes", () => {
+    const raw = sampleMonthly();
+    raw.series.push({
+      municipio: "Medellín",
+      totales: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    });
+    raw.total = 9;
+    const agg = aggregateMonthlyStatsTodos(raw);
+    expect(agg.series).toHaveLength(1);
+    expect(agg.series[0]?.municipio).toBe(TODOS_MUNICIPIOS_CHART_LABEL);
+    expect(agg.series[0]?.totales[0]).toBe(4);
+    expect(agg.total).toBe(9);
+  });
 });
 
 describe("buildMonthlyChartRows", () => {

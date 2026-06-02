@@ -1,5 +1,8 @@
 import type { FormStatsMonthlyResponse } from "@/services/api";
 
+/** Etiqueta de la única serie cuando se agrupan todos los municipios. */
+export const TODOS_MUNICIPIOS_CHART_LABEL = "Todos los municipios";
+
 const SERIE_COLORS = [
   "#0d9488",
   "#6366f1",
@@ -20,6 +23,21 @@ export type MonthlyChartRow = {
   mesIndex: number;
   [municipio: string]: string | number;
 };
+
+/** Suma todas las series en una sola barra por mes. */
+export function aggregateMonthlyStatsTodos(
+  data: FormStatsMonthlyResponse,
+): FormStatsMonthlyResponse {
+  const totales = Array.from({ length: 12 }, (_, monthIndex) =>
+    data.series.reduce((sum, serie) => sum + (serie.totales[monthIndex] ?? 0), 0),
+  );
+  return {
+    ...data,
+    municipios: [TODOS_MUNICIPIOS_CHART_LABEL],
+    series: [{ municipio: TODOS_MUNICIPIOS_CHART_LABEL, totales }],
+    total: totales.reduce((acc, n) => acc + n, 0),
+  };
+}
 
 export function buildMonthlyChartRows(
   data: FormStatsMonthlyResponse,

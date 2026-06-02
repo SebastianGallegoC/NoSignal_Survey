@@ -10,6 +10,7 @@ import { DatosFilters } from "@/pages/datos/DatosFilters";
 import { DatosOfflineBanner } from "@/pages/datos/DatosOfflineBanner";
 import { DatosReportSection } from "@/pages/datos/DatosReportSection";
 import { MonthlyDiligenciasChart } from "@/pages/datos/MonthlyDiligenciasChart";
+import { aggregateMonthlyStatsTodos } from "@/pages/datos/monthlyChartUtils";
 import {
   MUNICIPIO_MENSUAL_TODOS,
   MonthlyDiligenciasFilters,
@@ -67,6 +68,16 @@ export const DatosPage = () => {
     reload: reloadMonthly,
     reloadAnios,
   } = useFormStatsMonthly(monthlyQuery, online);
+
+  const monthlyChartData = useMemo(() => {
+    if (!monthlyData) {
+      return null;
+    }
+    if (municipioMensual === MUNICIPIO_MENSUAL_TODOS) {
+      return aggregateMonthlyStatsTodos(monthlyData);
+    }
+    return monthlyData;
+  }, [monthlyData, municipioMensual]);
 
   useEffect(() => {
     if (
@@ -257,8 +268,8 @@ export const DatosPage = () => {
             </p>
           ) : null}
 
-          {online && monthlyLoadState === "ready" && monthlyData ? (
-            <MonthlyDiligenciasChart data={monthlyData} />
+          {online && monthlyLoadState === "ready" && monthlyChartData ? (
+            <MonthlyDiligenciasChart data={monthlyChartData} />
           ) : null}
 
           {!online ? (

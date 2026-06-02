@@ -63,7 +63,7 @@ export const MonthlyDiligenciasChart = ({ data }: MonthlyDiligenciasChartProps) 
                 "Formularios",
               ]}
             />
-            <Legend />
+            {data.series.length > 1 ? <Legend /> : null}
             {data.series.map((serie, index) => (
               <Bar
                 key={serie.municipio}
