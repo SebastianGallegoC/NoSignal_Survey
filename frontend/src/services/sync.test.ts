@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { RegistroFotoSlot } from "@/config/registroFotografico";
 import type { OfflineForm } from "./db";
