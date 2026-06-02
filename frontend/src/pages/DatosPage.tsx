@@ -8,6 +8,7 @@ import { useFormStatsMunicipios } from "@/hooks/useFormStatsMunicipios";
 import { useFormStatsMonthly } from "@/hooks/useFormStatsMonthly";
 import { DatosFilters } from "@/pages/datos/DatosFilters";
 import { DatosOfflineBanner } from "@/pages/datos/DatosOfflineBanner";
+import { DatosReportSection } from "@/pages/datos/DatosReportSection";
 import { MonthlyDiligenciasChart } from "@/pages/datos/MonthlyDiligenciasChart";
 import { MonthlyDiligenciasFilters } from "@/pages/datos/MonthlyDiligenciasFilters";
 import { ValidationStatsChart } from "@/pages/datos/ValidationStatsChart";
@@ -159,24 +160,28 @@ export const DatosPage = () => {
           </div>
         ) : null}
 
-        <section className="mb-8" aria-label="Validación">
-          <DatosFilters
-            municipio={municipio}
-            municipioOptions={municipioOptions}
-            municipiosLoading={municipiosLoadState === "loading"}
-            fechaDesde={fechaDesde}
-            fechaHasta={fechaHasta}
-            onChangeMunicipio={setMunicipio}
-            onChangeFechaDesde={setFechaDesde}
-            onChangeFechaHasta={setFechaHasta}
-            onClear={clearValidationFilters}
-            disabled={!online}
-          />
-
+        <DatosReportSection
+          ariaLabel="Validación"
+          title="Resultado de validación"
+          description="Distribución de formularios según el campo «Resultado de validación». Los filtros de abajo aplican solo a este gráfico."
+          filters={
+            <DatosFilters
+              municipio={municipio}
+              municipioOptions={municipioOptions}
+              municipiosLoading={municipiosLoadState === "loading"}
+              fechaDesde={fechaDesde}
+              fechaHasta={fechaHasta}
+              onChangeMunicipio={setMunicipio}
+              onChangeFechaDesde={setFechaDesde}
+              onChangeFechaHasta={setFechaHasta}
+              onClear={clearValidationFilters}
+              disabled={!online}
+            />
+          }
+        >
           {online && loadState === "error" ? (
-            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-900">
-              No se pudieron cargar las estadísticas de validación:{" "}
-              {error ?? "error desconocido"}.
+            <div className="rounded-xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-900">
+              No se pudieron cargar las estadísticas: {error ?? "error desconocido"}.
               <button
                 type="button"
                 onClick={() => void reload()}
@@ -188,48 +193,48 @@ export const DatosPage = () => {
           ) : null}
 
           {online && loadState === "loading" ? (
-            <div className="rounded-xl border border-slate-200 bg-white/90 px-4 py-12 text-center text-sm text-slate-600">
-              Cargando validación…
-            </div>
+            <p className="py-8 text-center text-sm text-slate-600">
+              Cargando gráfico…
+            </p>
           ) : null}
 
           {online && loadState === "ready" && stats ? (
-            <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-6">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Resultado de validación
-              </h2>
-              <p className="mt-1 text-xs text-slate-600">
-                Basado en el campo «Resultado de validación» de cada formulario.
-              </p>
-              <div className="mt-4">
-                <ValidationStatsChart stats={stats} />
-              </div>
-            </div>
+            <ValidationStatsChart stats={stats} />
           ) : null}
-        </section>
 
-        <section aria-label="Diligencias mensuales">
-          <MonthlyDiligenciasFilters
-            anio={anioMensual}
-            anioOptions={anioOptions}
-            aniosLoading={aniosLoadState === "loading"}
-            municipiosSeleccionados={municipiosMensuales}
-            municipioOptions={municipioOptions}
-            municipiosLoading={municipiosLoadState === "loading"}
-            onChangeAnio={setAnioMensual}
-            onToggleMunicipio={toggleMunicipioMensual}
-            onSelectAllMunicipios={() =>
-              setMunicipiosMensuales([...municipioOptions])
-            }
-            onClearMunicipios={() => setMunicipiosMensuales([])}
-            onClear={clearMonthlyFilters}
-            disabled={!online}
-          />
+          {!online ? (
+            <p className="py-6 text-center text-sm text-slate-500">
+              Conectate a internet para ver este gráfico.
+            </p>
+          ) : null}
+        </DatosReportSection>
 
+        <DatosReportSection
+          ariaLabel="Diligencias mensuales"
+          title="Formularios diligenciados por mes"
+          description="Cantidad de formularios por mes del año elegido, según la fecha de visita de cada registro. Los filtros de abajo aplican solo a este gráfico."
+          filters={
+            <MonthlyDiligenciasFilters
+              anio={anioMensual}
+              anioOptions={anioOptions}
+              aniosLoading={aniosLoadState === "loading"}
+              municipiosSeleccionados={municipiosMensuales}
+              municipioOptions={municipioOptions}
+              municipiosLoading={municipiosLoadState === "loading"}
+              onChangeAnio={setAnioMensual}
+              onToggleMunicipio={toggleMunicipioMensual}
+              onSelectAllMunicipios={() =>
+                setMunicipiosMensuales([...municipioOptions])
+              }
+              onClearMunicipios={() => setMunicipiosMensuales([])}
+              onClear={clearMonthlyFilters}
+              disabled={!online}
+            />
+          }
+        >
           {online && monthlyLoadState === "error" ? (
-            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-900">
-              No se pudieron cargar las diligencias mensuales:{" "}
-              {monthlyError ?? "error desconocido"}.
+            <div className="rounded-xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-900">
+              No se pudieron cargar los datos: {monthlyError ?? "error desconocido"}.
               <button
                 type="button"
                 onClick={() => void reloadMonthly()}
@@ -241,34 +246,30 @@ export const DatosPage = () => {
           ) : null}
 
           {online && monthlyLoadState === "loading" ? (
-            <div className="rounded-xl border border-slate-200 bg-white/90 px-4 py-12 text-center text-sm text-slate-600">
-              Cargando diligencias mensuales…
-            </div>
+            <p className="py-8 text-center text-sm text-slate-600">
+              Cargando gráfico…
+            </p>
           ) : null}
 
           {online &&
           monthlyLoadState === "needs_municipios" &&
           municipiosMensuales.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-600">
-              Elegí uno o más municipios en los filtros para ver el gráfico mensual.
-            </div>
+            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-600">
+              Elegí al menos un municipio en los filtros de arriba para generar el
+              gráfico.
+            </p>
           ) : null}
 
           {online && monthlyLoadState === "ready" && monthlyData ? (
-            <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-6">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Formularios diligenciados por mes
-              </h2>
-              <p className="mt-1 text-xs text-slate-600">
-                Conteo por mes del año {monthlyData.anio} según la fecha de visita
-                de cada formulario.
-              </p>
-              <div className="mt-4">
-                <MonthlyDiligenciasChart data={monthlyData} />
-              </div>
-            </div>
+            <MonthlyDiligenciasChart data={monthlyData} />
           ) : null}
-        </section>
+
+          {!online ? (
+            <p className="py-6 text-center text-sm text-slate-500">
+              Conectate a internet para ver este gráfico.
+            </p>
+          ) : null}
+        </DatosReportSection>
       </div>
     </div>
   );

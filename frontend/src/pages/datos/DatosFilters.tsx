@@ -31,10 +31,8 @@ export const DatosFilters = ({
     !municipiosLoading && municipioOptions.length === 0 && !disabled;
 
   return (
-    <div className="mb-4 min-w-0 overflow-x-clip rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-slate-900">Filtros</h2>
-
-      <div className="mt-4">
+    <div className="min-w-0 overflow-x-clip">
+      <div>
         <label className="flex min-w-0 max-w-md flex-col text-xs font-medium text-slate-700">
           Municipio
           <select

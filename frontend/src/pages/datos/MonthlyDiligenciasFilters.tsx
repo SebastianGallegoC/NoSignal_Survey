@@ -38,13 +38,8 @@ export const MonthlyDiligenciasFilters = ({
       : [new Date().getFullYear()];
 
   return (
-    <div className="mb-4 min-w-0 overflow-x-clip rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-slate-900">Filtros</h2>
-      <p className="mt-1 text-xs text-slate-600">
-        Fecha de referencia: fecha de la visita registrada en cada formulario.
-      </p>
-
-      <div className="mt-4">
+    <div className="min-w-0 overflow-x-clip">
+      <div>
         <label className="flex min-w-0 max-w-xs flex-col text-xs font-medium text-slate-700">
           Año
           <select
