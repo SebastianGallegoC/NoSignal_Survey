@@ -330,6 +330,43 @@ export function getBeneficiarioDisplayName(row: DisplayRow): string {
   return "";
 }
 
+function municipioFromDatos(datos: Record<string, unknown> | undefined): string {
+  const raw = datos?.municipio;
+  if (typeof raw === "string") {
+    return raw.trim();
+  }
+  return "";
+}
+
+/** Municipio con prioridad servidor > precarga > historial local. */
+export function getMunicipioDisplayValue(row: DisplayRow): string {
+  const server = municipioFromDatos(
+    row.server?.datos_formulario as Record<string, unknown> | undefined,
+  );
+  if (server) {
+    return server;
+  }
+  const precarga = municipioFromDatos(row.precargaSolo?.datos_formulario);
+  if (precarga) {
+    return precarga;
+  }
+  return municipioFromDatos(
+    row.historial?.datos_formulario as Record<string, unknown> | undefined,
+  );
+}
+
+/** Municipios distintos presentes en el listado, ordenados alfabéticamente. */
+export function collectMunicipiosFromRows(rows: DisplayRow[]): string[] {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const municipio = getMunicipioDisplayValue(row);
+    if (municipio) {
+      seen.add(municipio);
+    }
+  }
+  return [...seen].sort((a, b) => a.localeCompare(b, "es"));
+}
+
 /** Normaliza texto para búsqueda insensible a mayúsculas y tildes. */
 export function normalizeTextoBusqueda(s: string): string {
   return s

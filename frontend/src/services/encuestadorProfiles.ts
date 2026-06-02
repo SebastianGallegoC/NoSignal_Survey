@@ -244,9 +244,9 @@ export function formatPerfilEncuestadorDisplay(
   }
   const label = nombre?.trim();
   if (label) {
-    return `${label} (ID ${id})`;
+    return label;
   }
-  return `Perfil ID ${id}`;
+  return "—";
 }
 
 export async function resolveEncuestadorProfileNombre(

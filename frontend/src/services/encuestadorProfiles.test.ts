@@ -89,12 +89,12 @@ import {
 } from "@/services/encuestadorProfiles";
 
 describe("formatPerfilEncuestadorDisplay", () => {
-  it("muestra nombre e id cuando hay caché", () => {
-    expect(formatPerfilEncuestadorDisplay(3, "Ana Pérez")).toBe("Ana Pérez (ID 3)");
+  it("muestra solo el nombre cuando hay caché", () => {
+    expect(formatPerfilEncuestadorDisplay(3, "Ana Pérez")).toBe("Ana Pérez");
   });
 
-  it("muestra solo id si no hay nombre", () => {
-    expect(formatPerfilEncuestadorDisplay(5, null)).toBe("Perfil ID 5");
+  it("muestra guión si no hay nombre", () => {
+    expect(formatPerfilEncuestadorDisplay(5, null)).toBe("—");
   });
 
   it("muestra guión sin perfil válido", () => {

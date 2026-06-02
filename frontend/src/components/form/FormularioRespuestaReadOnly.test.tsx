@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { FormularioRespuestaReadOnly } from "@/components/form/FormularioRespuestaReadOnly";
 
 describe("FormularioRespuestaReadOnly — encuestador", () => {
-  it("muestra nombre e id del perfil aunque no esté en datos_formulario", () => {
+  it("muestra solo el nombre del perfil aunque no esté en datos_formulario", () => {
     render(
       <FormularioRespuestaReadOnly
         snapshot={{
@@ -20,7 +20,7 @@ describe("FormularioRespuestaReadOnly — encuestador", () => {
     );
 
     expect(screen.getByText("Encuestador")).toBeInTheDocument();
-    expect(screen.getByText("María López (ID 2)")).toBeInTheDocument();
+    expect(screen.getByText("María López")).toBeInTheDocument();
     expect(screen.queryByText("ID de perfil relacionado: 2")).not.toBeInTheDocument();
   });
 

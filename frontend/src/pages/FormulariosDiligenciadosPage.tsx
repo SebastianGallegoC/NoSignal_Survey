@@ -37,8 +37,10 @@ import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import {
   buildFormValuesFromSnapshot,
   coalesceIdPerfilEncuestador,
+  collectMunicipiosFromRows,
   getBeneficiarioDisplayName,
   getFechaReferenciaEnvio,
+  getMunicipioDisplayValue,
   mapServerFotos,
   mergeFormsWithPrecargas,
   filterDisplayRowsWithPrecarga,
@@ -77,6 +79,7 @@ export const FormulariosDiligenciadosPage = () => {
   const [filtroDesde, setFiltroDesde] = useState("");
   const [filtroHasta, setFiltroHasta] = useState("");
   const [filtroBeneficiario, setFiltroBeneficiario] = useState("");
+  const [filtroMunicipio, setFiltroMunicipio] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -154,6 +157,11 @@ export const FormulariosDiligenciadosPage = () => {
     [rows, precargas, online],
   );
 
+  const municipioOptions = useMemo(
+    () => collectMunicipiosFromRows(rowsMostrados),
+    [rowsMostrados],
+  );
+
   const rowsFiltrados = useMemo(() => {
     const q = normalizeTextoBusqueda(filtroBeneficiario);
     const inicio = filtroDesde ? parseFiltroDiaInicio(filtroDesde) : Number.NaN;
@@ -164,6 +172,9 @@ export const FormulariosDiligenciadosPage = () => {
         if (!nombre.includes(q)) {
           return false;
         }
+      }
+      if (filtroMunicipio && getMunicipioDisplayValue(r) !== filtroMunicipio) {
+        return false;
       }
       if (!Number.isNaN(inicio) || !Number.isNaN(fin)) {
         const ref = getFechaReferenciaEnvio(r);
@@ -179,7 +190,7 @@ export const FormulariosDiligenciadosPage = () => {
       }
       return true;
     });
-  }, [rowsMostrados, filtroBeneficiario, filtroDesde, filtroHasta]);
+  }, [rowsMostrados, filtroBeneficiario, filtroMunicipio, filtroDesde, filtroHasta]);
 
   /** Total en servidor; `sin_red` = sin Wi‑Fi/datos: no se muestra ningún mensaje en UI. */
   const contadorServidor = useMemo(() => {
@@ -1255,15 +1266,19 @@ export const FormulariosDiligenciadosPage = () => {
         {rowsMostrados.length > 0 ? (
           <FiltersPanel
             filtroBeneficiario={filtroBeneficiario}
+            filtroMunicipio={filtroMunicipio}
             filtroDesde={filtroDesde}
             filtroHasta={filtroHasta}
+            municipioOptions={municipioOptions}
             onChangeBeneficiario={setFiltroBeneficiario}
+            onChangeMunicipio={setFiltroMunicipio}
             onChangeDesde={setFiltroDesde}
             onChangeHasta={setFiltroHasta}
             onClear={() => {
               setFiltroDesde("");
               setFiltroHasta("");
               setFiltroBeneficiario("");
+              setFiltroMunicipio("");
             }}
             rowsTotal={rowsMostrados.length}
             rowsFiltered={rowsFiltrados.length}
@@ -1271,6 +1286,7 @@ export const FormulariosDiligenciadosPage = () => {
               !!(
                 filtroDesde ||
                 filtroHasta ||
+                filtroMunicipio ||
                 normalizeTextoBusqueda(filtroBeneficiario)
               )
             }
@@ -1284,8 +1300,8 @@ export const FormulariosDiligenciadosPage = () => {
           </div>
         ) : rowsFiltrados.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white/90 p-6 text-sm text-slate-600 shadow-sm">
-            Ningún registro coincide con los filtros (nombre del encuestado o
-            rango de fechas). Prueba otro texto, ampliar fechas o usar «Limpiar
+            Ningún registro coincide con los filtros (nombre del encuestado,
+            municipio o rango de fechas). Prueba otros criterios o usa «Limpiar
             filtros».
           </div>
         ) : (

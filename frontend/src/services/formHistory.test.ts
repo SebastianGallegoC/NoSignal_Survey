@@ -4,8 +4,10 @@ import type { FormReadItem } from "@/services/api";
 import type { HistorialForm, PrecargaForm } from "@/services/db";
 import {
   coalesceIdPerfilEncuestador,
+  collectMunicipiosFromRows,
   filterDisplayRowsWithPrecarga,
   getBeneficiarioDisplayName,
+  getMunicipioDisplayValue,
   resolveDatosFormularioForExport,
   resolveGpsForExport,
   mapServerFotos,
@@ -51,6 +53,31 @@ describe("formHistory — beneficiario", () => {
       } satisfies HistorialForm,
     };
     expect(getBeneficiarioDisplayName(row)).toBe("Ana Pérez");
+  });
+
+  it("getMunicipioDisplayValue prioriza servidor", () => {
+    const row: DisplayRow = {
+      id_formulario: "m1",
+      onServer: true,
+      server: {
+        id_formulario: "m1",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        fecha_actualizacion: "2026-01-01T00:00:00Z",
+        latitud: 0,
+        longitud: 0,
+        precision: 1,
+        datos_formulario: { municipio: "Cúcuta" },
+        fotos: [],
+      },
+      historial: {
+        id_formulario: "m1",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        estado: "ENVIADO",
+        datos_formulario: { municipio: "Medellín" },
+      } satisfies HistorialForm,
+    };
+    expect(getMunicipioDisplayValue(row)).toBe("Cúcuta");
+    expect(collectMunicipiosFromRows([row])).toEqual(["Cúcuta"]);
   });
 
   it("resolveDatosFormularioForExport prioriza servidor sobre historial (p. ej. fecha_inicio)", () => {

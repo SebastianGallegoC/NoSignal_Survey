@@ -1,8 +1,11 @@
 interface FiltersPanelProps {
   filtroBeneficiario: string;
+  filtroMunicipio: string;
   filtroDesde: string;
   filtroHasta: string;
+  municipioOptions: string[];
   onChangeBeneficiario: (value: string) => void;
+  onChangeMunicipio: (value: string) => void;
   onChangeDesde: (value: string) => void;
   onChangeHasta: (value: string) => void;
   onClear: () => void;
@@ -13,9 +16,12 @@ interface FiltersPanelProps {
 
 export const FiltersPanel = ({
   filtroBeneficiario,
+  filtroMunicipio,
   filtroDesde,
   filtroHasta,
+  municipioOptions,
   onChangeBeneficiario,
+  onChangeMunicipio,
   onChangeDesde,
   onChangeHasta,
   onClear,
@@ -27,18 +33,38 @@ export const FiltersPanel = ({
     <div className="mb-4 min-w-0 overflow-x-clip rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
       <h2 className="text-sm font-semibold text-slate-900">Filtros</h2>
 
-      <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-          Nombre del encuestado
-        </h3>
-        <input
-          type="search"
-          value={filtroBeneficiario}
-          onChange={(e) => onChangeBeneficiario(e.target.value)}
-          placeholder="Ej.: García, María…"
-          className="mt-2 w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
-          autoComplete="off"
-        />
+      <div className="mt-3 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:items-end">
+        <div className="min-w-0">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+            Nombre del encuestado
+          </h3>
+          <input
+            type="search"
+            value={filtroBeneficiario}
+            onChange={(e) => onChangeBeneficiario(e.target.value)}
+            placeholder="Ej.: García, María…"
+            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="min-w-0">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+            Municipio
+          </h3>
+          <select
+            value={filtroMunicipio}
+            onChange={(e) => onChangeMunicipio(e.target.value)}
+            className="mt-2 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+          >
+            <option value="">Todos los municipios</option>
+            {municipioOptions.map((municipio) => (
+              <option key={municipio} value={municipio}>
+                {municipio}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="mt-4 border-t border-slate-100 pt-4">
