@@ -70,14 +70,9 @@ export const RegistroFotograficoSection = ({
       </summary>
       <div className="mt-3 space-y-4">
         <p className="text-xs text-slate-500">
-          Las 6 fotos son obligatorias. Podés tomar la foto desde la app o elegir un archivo.
+          Podés tomar cada foto desde la app o elegir un archivo (hasta 6 en total).
         </p>
-        <p className="text-xs text-slate-600">
-          Completadas: {completedCount}/6
-          {completedCount < 6 ? (
-            <span className="ml-2 font-medium text-amber-700">— faltan fotos obligatorias</span>
-          ) : null}
-        </p>
+        <p className="text-xs text-slate-600">Completadas: {completedCount}/6</p>
 
         {REGISTRO_FOTO_SLOTS.map(({ slot, label }) => {
           const foto = fotoPorSlot(fotos, slot);

@@ -16,7 +16,7 @@ import type { OfflineForm } from './db';
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 type ApiFormPayload = {
   id_formulario: string;
-  id_perfil_encuestador: number;
+  id_perfil_encuestador?: number;
   fecha_hora: string;
   fecha_actualizacion?: string;
   gps: {
@@ -44,9 +44,9 @@ function ensureFotoDataUrl(data: string): string {
 
 function payloadForApi(form: OfflineForm): ApiFormPayload {
   const fechaAct = form.fecha_actualizacion?.trim() || form.fecha_hora;
+  const perfilId = form.id_perfil_encuestador;
   const out: ApiFormPayload = {
     id_formulario: form.id_formulario,
-    id_perfil_encuestador: Number(form.id_perfil_encuestador ?? 0),
     fecha_hora: form.fecha_hora,
     gps: {
       ...form.gps,
@@ -63,6 +63,13 @@ function payloadForApi(form: OfflineForm): ApiFormPayload {
       slot: isRegistroFotoSlot(f.slot) ? f.slot : 1,
     })),
   };
+  if (
+    typeof perfilId === "number" &&
+    Number.isFinite(perfilId) &&
+    perfilId > 0
+  ) {
+    out.id_perfil_encuestador = perfilId;
+  }
   if (fechaAct !== form.fecha_hora) {
     out.fecha_actualizacion = fechaAct;
   }

@@ -2,7 +2,6 @@ import type { Dispatch, SetStateAction } from "react";
 import type { FieldErrors, UseFormSetFocus } from "react-hook-form";
 
 import type { FormEnvioResultState } from "@/components/form/FormEnvioResultModal";
-import { SURVEY_TESTING_RELAXED_SUBMIT } from "@/config/submitRequirements";
 import { fieldLabel } from "@/config/formFieldMeta";
 import { FORM_SECTIONS } from "@/config/formSections";
 import type { OfflineForm } from "@/services/db";
@@ -17,12 +16,7 @@ import {
   joinValidationMessages,
   validateOfflineFormPayload,
 } from "@/services/formValidation";
-import {
-  FORM_PHOTO_REQUIRED_MESSAGE,
-  slotsCompletos,
-} from "@/lib/formPhotoLimits";
 import { formatCuentaConCocinaForStorage } from "@/lib/cuentaConCocina";
-import { missingSlotsMessage } from "@/lib/registroFotoUtils";
 import {
   formatCoordForDatosFormulario,
   normalizeCoordNumericCell,
@@ -180,14 +174,6 @@ export const useFormularioSubmit = ({
   setFocus,
   requiredFields,
 }: Args) => {
-  const isServerSyncReady = (form: OfflineForm): boolean => {
-    const hasProfile =
-      typeof form.id_perfil_encuestador === "number" &&
-      Number.isFinite(form.id_perfil_encuestador) &&
-      form.id_perfil_encuestador > 0;
-    return hasProfile && slotsCompletos(form.fotos);
-  };
-
   const showEnvioBloqueadoModal = (title: string, message: string) => {
     setBanner(null);
     setEnvioModal({
@@ -209,27 +195,6 @@ export const useFormularioSubmit = ({
       );
       return;
     }
-    if (!SURVEY_TESTING_RELAXED_SUBMIT) {
-      const perfilEncuestadorId = Number.parseInt(values.id_perfil_encuestador || "0", 10);
-      if (!Number.isFinite(perfilEncuestadorId) || perfilEncuestadorId <= 0) {
-        setOpenSections((prev) => new Set([...prev, "encuestador"]));
-        setFocus("id_perfil_encuestador");
-        showEnvioBloqueadoModal(
-          "No se puede enviar",
-          "Seleccioná un perfil de encuestador habilitado antes de guardar o enviar el formulario.",
-        );
-        return;
-      }
-      if (!slotsCompletos(fotos)) {
-        setOpenSections((prev) => new Set([...prev, "registro-fotografico"]));
-        showEnvioBloqueadoModal(
-          "No se puede enviar",
-          missingSlotsMessage(fotos) || FORM_PHOTO_REQUIRED_MESSAGE,
-        );
-        return;
-      }
-    }
-
     const payload = buildOfflinePayload({
       values,
       requiredFields,
@@ -264,18 +229,6 @@ export const useFormularioSubmit = ({
           isEdit: !!_originalFechaHora,
         });
       } else {
-        if (SURVEY_TESTING_RELAXED_SUBMIT && !isServerSyncReady(payload)) {
-          setEnvioModal({
-            tone: "warning",
-            title: "Guardado localmente (modo pruebas)",
-            message:
-              "El formulario se guardó en este dispositivo, pero todavía no cumple los requisitos del servidor para sincronizarse (perfil de encuestador y 6 fotos). Podés completarlo después y sincronizar desde Inicio.",
-            submittedForm: payload,
-            isEdit: !!_originalFechaHora,
-          });
-          await refreshPendientes();
-          return;
-        }
         const result = await syncPendingForms();
         const firstErr = result.first_error?.trim() ?? "";
         const networkLikeFailure =

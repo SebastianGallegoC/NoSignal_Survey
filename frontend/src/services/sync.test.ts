@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/config/submitRequirements", () => ({
-  SURVEY_TESTING_RELAXED_SUBMIT: false,
-}));
-
 import type { RegistroFotoSlot } from "@/config/registroFotografico";
 import type { OfflineForm } from "./db";
 import { validateFormPayload, isNetworkLikeError, isHttpServerError } from "./sync";
@@ -26,30 +22,16 @@ const baseForm = (): OfflineForm => ({
 });
 
 describe("validateFormPayload", () => {
-  it("acepta payload válido con 6 fotos", () => {
-    const errors = validateFormPayload(baseForm());
-    expect(errors).toEqual([]);
-  });
-
-  it("marca error cuando la precisión GPS supera el umbral", () => {
-    const form = baseForm();
-    form.gps.precision = 6;
-    const errors = validateFormPayload(form);
-    expect(errors).toContain("gps_precision");
-  });
-
-  it("marca error cuando la precisión GPS es 0 o menor", () => {
-    const form = baseForm();
-    form.gps.precision = 0;
-    const errors = validateFormPayload(form);
-    expect(errors).toContain("gps_precision");
-  });
-
-  it("marca error cuando faltan fotos del registro", () => {
+  it("acepta payload sin fotos", () => {
     const form = baseForm();
     form.fotos = [];
-    const errors = validateFormPayload(form);
-    expect(errors).toContain("fotos_count");
+    expect(validateFormPayload(form)).toEqual([]);
+  });
+
+  it("acepta payload con fotos parciales", () => {
+    const form = baseForm();
+    form.fotos = [{ nombre_archivo: "f1.jpg", data: "data:image/jpeg;base64,abc", slot: 1 }];
+    expect(validateFormPayload(form)).toEqual([]);
   });
 
   it("marca error cuando excede el máximo de fotos", () => {
@@ -60,13 +42,6 @@ describe("validateFormPayload", () => {
     ];
     const errors = validateFormPayload(form);
     expect(errors).toContain("fotos_count");
-  });
-
-  it("marca error cuando falta algún slot obligatorio", () => {
-    const form = baseForm();
-    form.fotos = [{ nombre_archivo: "f1.jpg", data: "data:image/jpeg;base64,abc", slot: 1 }];
-    const errors = validateFormPayload(form);
-    expect(errors).toContain("fotos_slot_required");
   });
 });
 

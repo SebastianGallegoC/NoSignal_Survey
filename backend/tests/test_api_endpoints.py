@@ -82,6 +82,30 @@ def test_health_returns_ok(monkeypatch):
     assert body.get("schema_forms_fecha_actualizacion") is True
 
 
+def test_create_form_accepts_empty_fotos_with_encuestado_name(monkeypatch):
+    from app.api.v1 import forms as forms_mod
+
+    app.dependency_overrides[get_session] = _fake_session
+    app.dependency_overrides[get_current_user] = _fake_user
+
+    async def fake_persist_form(_session, payload, _user):
+        return SimpleNamespace(id_formulario=payload.id_formulario)
+
+    monkeypatch.setattr(forms_mod, "persist_form", fake_persist_form)
+    client = TestClient(app)
+    payload = {
+        "id_formulario": "f-sin-fotos",
+        "fecha_hora": "2026-05-04T12:00:00Z",
+        "gps": {"latitud": 1.123, "longitud": -76.55, "precision": float(MAX_GPS_ACCURACY_METERS)},
+        "datos_formulario": {"nombres_apellidos_encuestado": "Ana Pérez"},
+        "fotos": [],
+    }
+    resp = client.post("/api/v1/forms/", json=payload)
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "queued", "id_formulario": "f-sin-fotos"}
+    app.dependency_overrides.clear()
+
+
 def test_create_form_returns_queued(monkeypatch):
     from app.api.v1 import forms as forms_mod
 
@@ -98,7 +122,10 @@ def test_create_form_returns_queued(monkeypatch):
         "id_perfil_encuestador": 1,
         "fecha_hora": "2026-05-04T12:00:00Z",
         "gps": {"latitud": 1.123, "longitud": -76.55, "precision": float(MAX_GPS_ACCURACY_METERS)},
-        "datos_formulario": {"entidad_aportante": "X"},
+        "datos_formulario": {
+            "entidad_aportante": "X",
+            "nombres_apellidos_encuestado": "Juan Pérez",
+        },
         "fotos": _six_photos_payload(),
     }
     resp = client.post("/api/v1/forms/", json=payload)

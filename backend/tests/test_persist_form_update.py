@@ -51,7 +51,10 @@ async def test_persist_form_updates_datos_when_id_exists(monkeypatch):
         id_perfil_encuestador=1,
         fecha_hora="2026-05-04T12:00:00Z",
         gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
-        datos_formulario={"nombres_apellidos_beneficiario": "Nuevo"},
+        datos_formulario={
+            "nombres_apellidos_beneficiario": "Nuevo",
+            "nombres_apellidos_encuestado": "Encuestado",
+        },
         fotos=_six_photos_payload(),
     )
 
@@ -72,7 +75,7 @@ def test_resolve_fecha_actualizacion_no_baja_de_fecha_hora():
         fecha_hora="2026-05-04T12:00:00Z",
         fecha_actualizacion="2026-01-01T00:00:00Z",
         gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
-        datos_formulario={},
+        datos_formulario={"nombres_apellidos_encuestado": "Encuestado"},
         fotos=_six_photos_payload(),
     )
     assert resolve_fecha_actualizacion_dt(p) == parse_fecha_hora_iso("2026-05-04T12:00:00Z")
@@ -109,7 +112,7 @@ async def test_persist_form_update_usa_fecha_actualizacion_explicita(monkeypatch
         fecha_hora="2026-01-01T00:00:00Z",
         fecha_actualizacion="2026-08-20T15:30:00Z",
         gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
-        datos_formulario={"k": "v"},
+        datos_formulario={"k": "v", "nombres_apellidos_encuestado": "Encuestado"},
         fotos=_six_photos_payload(),
     )
 
@@ -147,7 +150,10 @@ async def test_persist_form_creates_new_when_id_not_found(monkeypatch):
         id_perfil_encuestador=1,
         fecha_hora="2026-06-01T10:00:00Z",
         gps=GPSPayload(latitud=4.5, longitud=-74.1, precision=4.0),
-        datos_formulario={"entidad_aportante": "ACME"},
+        datos_formulario={
+            "entidad_aportante": "ACME",
+            "nombres_apellidos_encuestado": "Encuestado",
+        },
         fotos=_six_photos_payload(),
     )
 
@@ -157,5 +163,8 @@ async def test_persist_form_creates_new_when_id_not_found(monkeypatch):
     assert result is created[0]
     rec = created[0]
     assert rec.id_formulario == "f-nuevo"
-    assert rec.datos_formulario == {"entidad_aportante": "ACME"}
+    assert rec.datos_formulario == {
+        "entidad_aportante": "ACME",
+        "nombres_apellidos_encuestado": "Encuestado",
+    }
     assert rec.fotos == []

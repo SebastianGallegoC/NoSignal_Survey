@@ -1,5 +1,5 @@
 /**
- * Fase de pruebas: al guardar/enviar en el cliente solo se exige el nombre del encuestado.
- * La sincronización al servidor puede seguir rechazando payloads incompletos (perfil, 6 fotos, etc.).
+ * Al guardar/enviar solo se exige el nombre del encuestado en el cliente.
+ * Perfil, GPS y fotos son opcionales para envío y sincronización.
  */
 export const SURVEY_TESTING_RELAXED_SUBMIT = true;

@@ -41,7 +41,7 @@ describe("formValidation — envío mínimo Survey", () => {
     expect(issues.map((i) => i.code)).toContain("encuestado_required");
   });
 
-  it("validateOfflineFormPayload acepta solo nombre del encuestado en fase de pruebas", () => {
+  it("validateOfflineFormPayload acepta solo nombre del encuestado", () => {
     const datos = emptyValues();
     datos.nombres_apellidos_encuestado = "Ana Pérez";
     const form = {
@@ -54,7 +54,7 @@ describe("formValidation — envío mínimo Survey", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("validateOfflineFormPayload no exige perfil ni 6 fotos en fase de pruebas", () => {
+  it("validateOfflineFormPayload no exige perfil ni fotos", () => {
     const datos = emptyValues();
     datos.nombres_apellidos_encuestado = "Ana Pérez";
     const form = {

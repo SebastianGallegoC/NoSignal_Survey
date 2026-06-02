@@ -1,5 +1,3 @@
-import { MAX_GPS_ACCURACY_METERS } from "@/constants/gpsConfig";
-import { SURVEY_TESTING_RELAXED_SUBMIT } from "@/config/submitRequirements";
 import {
   normalizeTelefonoStoredValue,
   TELEFONO_NO_TIENE_VALUE,
@@ -17,12 +15,6 @@ import {
 } from "@/lib/coordNumericToken";
 import type { OfflineForm } from "@/services/db";
 import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/formFields";
-import {
-  isRegistroFotoSlot,
-  REGISTRO_FOTO_SLOT_NUMBERS,
-} from "@/config/registroFotografico";
-import { missingSlotsMessage } from "@/lib/registroFotoUtils";
-const MAX_PHOTOS = 6;
 const TRI_ALLOWED = new Set(["Si", "No", "NR"]);
 const PHONE_RE = /^[0-9+\-()\s]{6,20}$/;
 
@@ -61,7 +53,7 @@ function parseDateSafe(value: unknown): number | null {
 /**
  * Validación por campo (y mensajes de fila) para mostrar errores en UI de importación.
  * El envío a cola solo exige nombre del encuestado (vía `validateOfflineFormPayload`);
- * el resto de campos puede ir vacío. El envío exige las 6 fotos del registro fotográfico.
+ * el resto de campos puede ir vacío.
  */
 export const validateFormValuesWithFieldDetails = (
   values: FormValues,
@@ -231,19 +223,6 @@ export const validateOfflineFormPayload = (form: OfflineForm): ValidationIssue[]
       message: "El nombre del encuestado es obligatorio para enviar.",
     });
   }
-  if (!SURVEY_TESTING_RELAXED_SUBMIT) {
-    if (
-      typeof form.id_perfil_encuestador !== "number" ||
-      !Number.isFinite(form.id_perfil_encuestador) ||
-      form.id_perfil_encuestador <= 0
-    ) {
-      issues.push({
-        code: "encuestador_profile_required",
-        message: "Seleccioná un perfil de encuestador válido antes de enviar.",
-      });
-    }
-  }
-
   const tsEnvio = parseDateSafe(form.fecha_hora);
   if (tsEnvio == null) {
     issues.push({
@@ -263,41 +242,6 @@ export const validateOfflineFormPayload = (form: OfflineForm): ValidationIssue[]
         code: "fecha_actualizacion_before_envio",
         message: "La fecha de actualización no puede ser anterior al primer guardado.",
       });
-    }
-  }
-
-  if (!SURVEY_TESTING_RELAXED_SUBMIT) {
-    if (form.gps.precision > MAX_GPS_ACCURACY_METERS) {
-      issues.push({
-        code: "gps_precision",
-        message: `GPS con precisión ≤ ${MAX_GPS_ACCURACY_METERS} m (usá “Tomar ubicación”).`,
-      });
-    }
-
-    if (!Array.isArray(form.fotos) || form.fotos.length !== MAX_PHOTOS) {
-      issues.push({
-        code: "fotos_count",
-        message: "Debés cargar exactamente 6 fotos del registro fotográfico.",
-      });
-    }
-
-    if (Array.isArray(form.fotos)) {
-      const slots = new Set(
-        form.fotos
-          .map((f) => f.slot)
-          .filter((slot): slot is (typeof REGISTRO_FOTO_SLOT_NUMBERS)[number] =>
-            isRegistroFotoSlot(slot),
-          ),
-      );
-      if (slots.size !== MAX_PHOTOS) {
-        const detail = missingSlotsMessage(form.fotos);
-        issues.push({
-          code: "fotos_slot_required",
-          message:
-            detail ||
-            "Cada foto del registro fotográfico debe corresponder a un campo obligatorio (Foto 1 a Foto 6).",
-        });
-      }
     }
   }
 

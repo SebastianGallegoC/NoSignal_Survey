@@ -35,13 +35,14 @@ async def persist_form(
     fecha_hora = parse_fecha_hora_iso(payload.fecha_hora)
     fecha_act = resolve_fecha_actualizacion_dt(payload)
     gps_point = WKTElement(f"POINT({payload.gps.longitud} {payload.gps.latitud})", srid=4326)
-    profile_ok, profile_error = await validate_profile_is_assignable(
-        session,
-        username,
-        payload.id_perfil_encuestador,
-    )
-    if not profile_ok:
-        raise ValueError(profile_error or "encuestador_profile_invalid")
+    if payload.id_perfil_encuestador is not None:
+        profile_ok, profile_error = await validate_profile_is_assignable(
+            session,
+            username,
+            payload.id_perfil_encuestador,
+        )
+        if not profile_ok:
+            raise ValueError(profile_error or "encuestador_profile_invalid")
 
     existing = await get_form_by_id(session, payload.id_formulario)
     if existing:

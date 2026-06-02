@@ -1,12 +1,11 @@
 import re
 from typing import Any, Dict, List, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.gps_limits import load_gps_limits
 
 MAX_GPS_ACCURACY_METERS = float(load_gps_limits()["maxGpsAccuracyMeters"])
-REGISTRO_FOTO_SLOTS = frozenset({1, 2, 3, 4, 5, 6})
 
 
 class GPSPayload(BaseModel):
@@ -45,7 +44,7 @@ class PhotoPayload(BaseModel):
 
 class FormPayload(BaseModel):
     id_formulario: str
-    id_perfil_encuestador: int = Field(gt=0)
+    id_perfil_encuestador: int | None = None
     fecha_hora: str = Field(
         ...,
         description="Momento del primer registro / envío inicial (en actualizaciones debe conservarse).",
@@ -68,14 +67,27 @@ class FormPayload(BaseModel):
             return s if s else None
         return None
 
+    @field_validator("id_perfil_encuestador")
+    @classmethod
+    def validate_id_perfil_encuestador(cls, value: int | None) -> int | None:
+        if value is not None and value <= 0:
+            raise ValueError("encuestador_profile_invalid")
+        return value
+
     @field_validator("fotos")
     @classmethod
     def validate_fotos(cls, value: List[PhotoPayload]) -> List[PhotoPayload]:
         if len(value) > 6:
             raise ValueError("photos_out_of_range")
-        if len(value) != 6:
-            raise ValueError("photos_incomplete")
-        slots = {foto.slot for foto in value}
-        if slots != REGISTRO_FOTO_SLOTS:
-            raise ValueError("photos_slot_required")
+        slots = [foto.slot for foto in value]
+        if len(slots) != len(set(slots)):
+            raise ValueError("photos_duplicate_slot")
         return value
+
+    @model_validator(mode="after")
+    def validate_encuestado_nombre(self) -> "FormPayload":
+        datos = self.datos_formulario or {}
+        nombre = str(datos.get("nombres_apellidos_encuestado") or "").strip()
+        if not nombre:
+            raise ValueError("encuestado_name_required")
+        return self
