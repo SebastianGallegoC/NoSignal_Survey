@@ -618,7 +618,7 @@ export const FormularioPage = () => {
                       <option value="">Seleccioná un perfil habilitado</option>
                       {encuestadorProfiles.map((profile) => (
                         <option key={profile.id} value={String(profile.id)}>
-                          {profile.nombre} (ID {profile.id})
+                          {profile.nombre}
                         </option>
                       ))}
                     </select>
