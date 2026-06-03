@@ -6,6 +6,7 @@ import {
   TODOS_MUNICIPIOS_CHART_LABEL,
 } from "@/pages/datos/monthlyChartUtils";
 import type { FormStatsMonthlyResponse } from "@/services/api";
+import { MUNICIPIO_SIN_ASOCIAR } from "@/constants/formStatsMunicipio";
 
 const sampleMonthly = (): FormStatsMonthlyResponse => ({
   anio: 2026,
@@ -40,12 +41,16 @@ describe("aggregateMonthlyStatsTodos", () => {
       municipio: "Medellín",
       totales: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     });
-    raw.total = 9;
+    raw.series.push({
+      municipio: MUNICIPIO_SIN_ASOCIAR,
+      totales: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    });
+    raw.total = 10;
     const agg = aggregateMonthlyStatsTodos(raw);
     expect(agg.series).toHaveLength(1);
     expect(agg.series[0]?.municipio).toBe(TODOS_MUNICIPIOS_CHART_LABEL);
-    expect(agg.series[0]?.totales[0]).toBe(4);
-    expect(agg.total).toBe(9);
+    expect(agg.series[0]?.totales[0]).toBe(5);
+    expect(agg.total).toBe(10);
   });
 });
 

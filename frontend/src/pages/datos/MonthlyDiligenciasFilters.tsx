@@ -1,3 +1,5 @@
+import { municipioFilterLabel } from "@/constants/formStatsMunicipio";
+
 /** Valor del dropdown cuando se muestran todos los municipios con datos. */
 export const MUNICIPIO_MENSUAL_TODOS = "";
 
@@ -78,7 +80,7 @@ export const MonthlyDiligenciasFilters = ({
             </option>
             {municipioOptions.map((name) => (
               <option key={name} value={name}>
-                {name}
+                {municipioFilterLabel(name)}
               </option>
             ))}
           </select>

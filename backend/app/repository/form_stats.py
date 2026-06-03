@@ -1,8 +1,9 @@
 from datetime import date
 
-from sqlalchemy import Integer, cast, func, select
+from sqlalchemy import Integer, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants.form_stats_municipio import MUNICIPIO_SIN_ASOCIAR
 from app.models.form_record import FormRecord
 
 MES_ETIQUETAS = (
@@ -23,6 +24,11 @@ MES_ETIQUETAS = (
 
 def _json_text(key: str):
     return FormRecord.datos_formulario[key].as_string()
+
+
+def _municipio_vacio():
+    municipio_col = _json_text("municipio")
+    return or_(municipio_col.is_(None), municipio_col == "")
 
 
 async def aggregate_validation_stats(
@@ -50,7 +56,10 @@ async def aggregate_validation_stats(
     ).select_from(FormRecord)
 
     if municipio:
-        stmt = stmt.where(municipio_col == municipio)
+        if municipio == MUNICIPIO_SIN_ASOCIAR:
+            stmt = stmt.where(_municipio_vacio())
+        else:
+            stmt = stmt.where(municipio_col == municipio)
 
     if fecha_desde is not None:
         desde = fecha_desde.isoformat()
@@ -77,7 +86,7 @@ async def aggregate_validation_stats(
 
 
 async def list_distinct_municipios(session: AsyncSession) -> list[str]:
-    """Municipios no vacíos presentes en al menos un formulario sincronizado."""
+    """Municipios presentes en formularios; incluye centinela para no asociado."""
     municipio_col = _json_text("municipio")
     stmt = (
         select(municipio_col)
@@ -87,7 +96,16 @@ async def list_distinct_municipios(session: AsyncSession) -> list[str]:
         .order_by(municipio_col)
     )
     result = await session.execute(stmt)
-    return [str(row[0]).strip() for row in result.all() if row[0] and str(row[0]).strip()]
+    municipios = [str(row[0]).strip() for row in result.all() if row[0] and str(row[0]).strip()]
+    if await exists_forms_without_municipio(session):
+        municipios.append(MUNICIPIO_SIN_ASOCIAR)
+    return municipios
+
+
+async def exists_forms_without_municipio(session: AsyncSession) -> bool:
+    stmt = select(func.count()).select_from(FormRecord).where(_municipio_vacio())
+    total = int((await session.execute(stmt)).scalar_one() or 0)
+    return total > 0
 
 
 def _fecha_visita_valida():
@@ -133,13 +151,22 @@ async def aggregate_monthly_diligencias(
     """
     Devuelve filas (municipio, mes 1-12, total) para el año y municipios dados.
   """
-    if not municipios:
+    normalized = [m.strip() for m in municipios if m and m.strip()]
+    include_sin_asociar = MUNICIPIO_SIN_ASOCIAR in normalized
+    named_municipios = [m for m in normalized if m != MUNICIPIO_SIN_ASOCIAR]
+    if not named_municipios and not include_sin_asociar:
         return []
 
     fecha_visita = _json_text("fecha_visita")
     municipio_col = _json_text("municipio")
     anio_txt = str(anio)
     mes_col = cast(func.substring(fecha_visita, 6, 2), Integer)
+
+    municipio_filters = []
+    if named_municipios:
+        municipio_filters.append(municipio_col.in_(named_municipios))
+    if include_sin_asociar:
+        municipio_filters.append(_municipio_vacio())
 
     stmt = (
         select(
@@ -151,7 +178,7 @@ async def aggregate_monthly_diligencias(
         .where(
             *_fecha_visita_valida(),
             func.substring(fecha_visita, 1, 4) == anio_txt,
-            municipio_col.in_(municipios),
+            or_(*municipio_filters),
             mes_col >= 1,
             mes_col <= 12,
         )
@@ -160,9 +187,9 @@ async def aggregate_monthly_diligencias(
     result = await session.execute(stmt)
     rows: list[tuple[str, int, int]] = []
     for row in result.all():
-        municipio = str(row.municipio or "").strip()
+        municipio = str(row.municipio or "").strip() or MUNICIPIO_SIN_ASOCIAR
         mes = int(row.mes or 0)
         total = int(row.total or 0)
-        if municipio and 1 <= mes <= 12:
+        if 1 <= mes <= 12:
             rows.append((municipio, mes, total))
     return rows

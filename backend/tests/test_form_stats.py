@@ -9,6 +9,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_session
 from app.main import app
 from app.api.v1 import forms as forms_api
+from app.constants.form_stats_municipio import MUNICIPIO_SIN_ASOCIAR
 from app.schemas.form_stats import (
     FormStatsFiltersApplied,
     FormStatsMonthlyMunicipioSerie,
@@ -128,6 +129,47 @@ def test_form_stats_monthly_ok(monkeypatch):
         assert body["anio"] == 2026
         assert body["total"] == 1
         assert body["series"][0]["totales"][0] == 1
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_form_stats_monthly_accepts_sentinel_municipio(monkeypatch):
+    async def _fake_monthly(_session, **kwargs):
+        assert kwargs["anio"] == 2026
+        assert kwargs["municipios"] == [MUNICIPIO_SIN_ASOCIAR]
+        return FormStatsMonthlyResponse(
+            anio=2026,
+            municipios=[MUNICIPIO_SIN_ASOCIAR],
+            etiquetas_mes=["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
+            series=[
+                FormStatsMonthlyMunicipioSerie(
+                    municipio=MUNICIPIO_SIN_ASOCIAR,
+                    totales=[0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ),
+            ],
+            total=1,
+        )
+
+    monkeypatch.setattr(
+        forms_api,
+        "get_monthly_diligencias",
+        AsyncMock(side_effect=_fake_monthly),
+    )
+
+    app.dependency_overrides[get_session] = _fake_session
+    app.dependency_overrides[get_current_user] = _fake_user
+    try:
+        client = TestClient(app)
+        resp = client.get(
+            "/api/v1/forms/stats/diligencias-mensuales",
+            params={"anio": 2026, "municipios": [MUNICIPIO_SIN_ASOCIAR]},
+            headers={"Authorization": "Bearer dummy"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["municipios"] == [MUNICIPIO_SIN_ASOCIAR]
+        assert body["series"][0]["municipio"] == MUNICIPIO_SIN_ASOCIAR
+        assert body["total"] == 1
     finally:
         app.dependency_overrides.clear()
 

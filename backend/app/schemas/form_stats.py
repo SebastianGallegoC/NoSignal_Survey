@@ -44,6 +44,7 @@ class FormStatsMonthlyResponse(BaseModel):
 
 class FormStatsMonthlyQueryParams(BaseModel):
     anio: int = Field(ge=2000, le=2100)
+    # Soporta valor reservado "__SIN_ASOCIAR__" para formularios sin municipio.
     municipios: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")

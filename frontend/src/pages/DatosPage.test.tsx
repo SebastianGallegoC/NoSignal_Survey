@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MUNICIPIO_SIN_ASOCIAR } from "@/constants/formStatsMunicipio";
 
 const mockFetchFormStats = vi.fn();
 const mockFetchFormStatsMunicipios = vi.fn();
@@ -47,7 +48,11 @@ describe("DatosPage", () => {
     vi.clearAllMocks();
     localStorage.clear();
     mockUseConnectivity.mockReturnValue(true);
-    mockFetchFormStatsMunicipios.mockResolvedValue(["Cúcuta", "Medellín"]);
+    mockFetchFormStatsMunicipios.mockResolvedValue([
+      "Cúcuta",
+      "Medellín",
+      MUNICIPIO_SIN_ASOCIAR,
+    ]);
     mockFetchFormStatsAnios.mockResolvedValue([2026, 2025]);
     mockFetchFormStatsMonthly.mockResolvedValue({
       anio: 2026,
@@ -111,6 +116,29 @@ describe("DatosPage", () => {
     expect(options).not.toContain("Abejorral");
   });
 
+  it("muestra opción Sin asociar cuando el backend la devuelve", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    mockFetchFormStatsMunicipios.mockResolvedValue([MUNICIPIO_SIN_ASOCIAR]);
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(mockFetchFormStatsMunicipios).toHaveBeenCalled();
+    });
+
+    const monthlySelect = screen.getByRole("combobox", {
+      name: /Municipio para gráfico mensual/i,
+    });
+    const options = Array.from(monthlySelect.querySelectorAll("option")).map(
+      (o) => o.textContent,
+    );
+    expect(options).toContain("Sin asociar");
+  });
+
   it("muestra gráfico cuando hay datos del servidor", async () => {
     localStorage.setItem("nosignal_access_token", "token");
     mockFetchFormStats.mockResolvedValue(sampleStats);
@@ -136,8 +164,29 @@ describe("DatosPage", () => {
     await waitFor(() => {
       expect(mockFetchFormStatsMonthly).toHaveBeenCalled();
       const lastCall = mockFetchFormStatsMonthly.mock.calls.at(-1)?.[0];
-      expect(lastCall?.municipios).toEqual(expect.arrayContaining(["Cúcuta", "Medellín"]));
+      expect(lastCall?.municipios).toEqual(
+        expect.arrayContaining(["Cúcuta", "Medellín", MUNICIPIO_SIN_ASOCIAR]),
+      );
       expect(screen.getByText(/Total en 2026/i)).toBeInTheDocument();
+    });
+  });
+
+  it("envía centinela al seleccionar Sin asociar en mensual", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(mockFetchFormStatsMonthly).toHaveBeenCalled());
+    const municipioSelect = screen.getByRole("combobox", {
+      name: /Municipio para gráfico mensual/i,
+    });
+    fireEvent.change(municipioSelect, { target: { value: MUNICIPIO_SIN_ASOCIAR } });
+    await waitFor(() => {
+      const lastCall = mockFetchFormStatsMonthly.mock.calls.at(-1)?.[0];
+      expect(lastCall?.municipios).toEqual([MUNICIPIO_SIN_ASOCIAR]);
     });
   });
 

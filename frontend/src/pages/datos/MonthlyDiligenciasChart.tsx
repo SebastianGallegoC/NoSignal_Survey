@@ -15,6 +15,7 @@ import {
   serieColor,
 } from "@/pages/datos/monthlyChartUtils";
 import { ResponsiveChartBox } from "@/pages/datos/ResponsiveChartBox";
+import { municipioFilterLabel } from "@/constants/formStatsMunicipio";
 
 interface MonthlyDiligenciasChartProps {
   data: FormStatsMonthlyResponse;
@@ -69,7 +70,7 @@ export const MonthlyDiligenciasChart = ({ data }: MonthlyDiligenciasChartProps) 
               <Bar
                 key={serie.municipio}
                 dataKey={serie.municipio}
-                name={serie.municipio}
+                name={municipioFilterLabel(serie.municipio)}
                 fill={serieColor(index)}
                 radius={[4, 4, 0, 0]}
               />

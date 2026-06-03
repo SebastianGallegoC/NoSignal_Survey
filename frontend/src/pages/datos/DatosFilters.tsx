@@ -1,3 +1,5 @@
+import { municipioFilterLabel } from "@/constants/formStatsMunicipio";
+
 interface DatosFiltersProps {
   municipio: string;
   municipioOptions: string[];
@@ -50,7 +52,7 @@ export const DatosFilters = ({
             </option>
             {municipioOptions.map((name) => (
               <option key={name} value={name}>
-                {name}
+                {municipioFilterLabel(name)}
               </option>
             ))}
           </select>
