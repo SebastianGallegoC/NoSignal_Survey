@@ -15,9 +15,10 @@ from app.repository.forms import (
     get_form_fotos_paths_by_id,
     get_form_for_read_by_id,
     list_forms_for_read,
+    search_forms_summary,
 )
 from app.schemas.form_payload import FormPayload
-from app.schemas.form_read import FormListResponse, FormReadItem
+from app.schemas.form_read import FormListResponse, FormReadItem, FormSearchResponse
 from app.schemas.form_stats import (
     FormStatsAniosResponse,
     FormStatsMonthlyQueryParams,
@@ -76,6 +77,51 @@ async def list_forms(
         _current_user,
     )
     return FormListResponse(items=items)
+
+
+@router.get("/search", response_model=FormSearchResponse)
+async def search_forms(
+    request: Request,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    q: str | None = Query(default=None),
+    municipio: str | None = Query(default=None),
+    fecha_desde: date | None = Query(default=None),
+    fecha_hasta: date | None = Query(default=None),
+    session: AsyncSession = Depends(get_session),
+    _current_user: str = Depends(get_current_user),
+):
+    """Listado paginado y filtrable para la tabla de formularios diligenciados."""
+    rid = getattr(request.state, "request_id", None)
+    try:
+        items, total = await search_forms_summary(
+            session,
+            limit=limit,
+            offset=offset,
+            q=q,
+            municipio=municipio,
+            fecha_desde=fecha_desde.isoformat() if fecha_desde else None,
+            fecha_hasta=fecha_hasta.isoformat() if fecha_hasta else None,
+        )
+    except SQLAlchemyError:
+        logger.exception(
+            "search_forms DB error request_id=%s limit=%s offset=%s user=%r",
+            rid,
+            limit,
+            offset,
+            _current_user,
+        )
+        raise
+    logger.info(
+        "search_forms_ok request_id=%s count=%s total=%s limit=%s offset=%s user=%r",
+        rid,
+        len(items),
+        total,
+        limit,
+        offset,
+        _current_user,
+    )
+    return FormSearchResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.get("/stats/anios", response_model=FormStatsAniosResponse)

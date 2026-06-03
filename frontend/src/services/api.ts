@@ -164,6 +164,36 @@ export interface FormReadItem {
   fotos: unknown[];
 }
 
+export interface FormSummaryItem {
+  id_formulario: string;
+  id_perfil_encuestador?: number | null;
+  fecha_hora: string;
+  fecha_actualizacion: string;
+  latitud: number;
+  longitud: number;
+  precision: number | null;
+  nombres_apellidos_encuestado: string;
+  municipio: string;
+  fecha_visita: string;
+  resultado_validacion: string;
+}
+
+export interface FormSearchQuery {
+  limit?: number;
+  offset?: number;
+  q?: string;
+  municipio?: string;
+  fecha_desde?: string;
+  fecha_hasta?: string;
+}
+
+export interface FormSearchResponse {
+  items: FormSummaryItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface EncuestadorProfileRead {
   id: number;
   username_owner: string;
@@ -254,27 +284,45 @@ export const listFormsFromApi = async (limit = 200): Promise<FormReadItem[]> => 
     throw new Error(t || `forms_list_${response.status}`);
   }
   const body = (await response.json()) as { items?: FormReadItem[] };
-  const items = Array.isArray(body.items) ? body.items : [];
-  // #region agent log
-  agentSessionLog({
-    hypothesisId: "H2",
-    location: "api.ts:listFormsFromApi",
-    message: "forms_list_response",
-    data: {
-      limit,
-      count: items.length,
-      cacheControl: response.headers?.get?.("cache-control") ?? null,
-      age: response.headers?.get?.("age") ?? null,
-      date: response.headers?.get?.("date") ?? null,
-      probes: items.slice(0, 80).map((it) => ({
-        idSuf: idSuffix(it.id_formulario),
-        ben: beneficiaryFieldProbe(it.datos_formulario),
-        datosJsonLen: JSON.stringify(it.datos_formulario ?? {}).length,
-      })),
-    },
+  return Array.isArray(body.items) ? body.items : [];
+};
+
+export const searchFormsFromApi = async (
+  params: FormSearchQuery = {},
+): Promise<FormSearchResponse> => {
+  const search = new URLSearchParams();
+  const limit = params.limit ?? 100;
+  const offset = params.offset ?? 0;
+  search.set("limit", String(limit));
+  search.set("offset", String(offset));
+  if (params.q?.trim()) {
+    search.set("q", params.q.trim());
+  }
+  if (params.municipio?.trim()) {
+    search.set("municipio", params.municipio.trim());
+  }
+  if (params.fecha_desde?.trim()) {
+    search.set("fecha_desde", params.fecha_desde.trim());
+  }
+  if (params.fecha_hasta?.trim()) {
+    search.set("fecha_hasta", params.fecha_hasta.trim());
+  }
+  const response = await fetch(`${API_BASE}/api/v1/forms/search?${search.toString()}`, {
+    headers: { ...authHeaders() },
+    cache: "no-store",
   });
-  // #endregion
-  return items;
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `forms_search_${response.status}`);
+  }
+  const body = (await response.json()) as Partial<FormSearchResponse>;
+  const items = Array.isArray(body.items) ? body.items : [];
+  return {
+    items,
+    total: typeof body.total === "number" ? body.total : items.length,
+    limit: typeof body.limit === "number" ? body.limit : limit,
+    offset: typeof body.offset === "number" ? body.offset : offset,
+  };
 };
 
 /** Agregados de validación en servidor (`GET /api/v1/forms/stats`). */

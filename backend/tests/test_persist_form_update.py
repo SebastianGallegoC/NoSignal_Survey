@@ -7,7 +7,12 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.schemas.form_payload import FormPayload, GPSPayload
-from app.services.forms import parse_fecha_hora_iso, persist_form, resolve_fecha_actualizacion_dt
+from app.services.forms import (
+    normalize_datos_formulario_for_persist,
+    parse_fecha_hora_iso,
+    persist_form,
+    resolve_fecha_actualizacion_dt,
+)
 
 
 def _six_photos_payload():
@@ -155,6 +160,7 @@ async def test_persist_form_creates_new_when_id_not_found(monkeypatch):
         datos_formulario={
             "entidad_aportante": "ACME",
             "nombres_apellidos_encuestado": "Encuestado",
+            "fecha_visita": "01/06/2026",
         },
         fotos=_six_photos_payload(),
     )
@@ -168,8 +174,19 @@ async def test_persist_form_creates_new_when_id_not_found(monkeypatch):
     assert rec.datos_formulario == {
         "entidad_aportante": "ACME",
         "nombres_apellidos_encuestado": "Encuestado",
+        "fecha_visita": "2026-06-01",
     }
     assert rec.fotos == []
+
+
+def test_normalize_datos_formulario_for_persist():
+    normalized = normalize_datos_formulario_for_persist(
+        {
+            "nombres_apellidos_encuestado": "Ana",
+            "fecha_visita": "03/06/2026",
+        }
+    )
+    assert normalized["fecha_visita"] == "2026-06-03"
 
 
 @pytest.mark.asyncio

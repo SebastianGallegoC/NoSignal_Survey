@@ -28,7 +28,27 @@ const mocks = vi.hoisted(() => {
     resetState() {
       state.items = [makeForm()];
     },
-    listFormsFromApi: vi.fn(async () => [...state.items]),
+    searchFormsFromApi: vi.fn(async () => ({
+      items: state.items.map((it) => ({
+        id_formulario: it.id_formulario,
+        id_perfil_encuestador: it.id_perfil_encuestador ?? null,
+        fecha_hora: it.fecha_hora,
+        fecha_actualizacion: it.fecha_actualizacion,
+        latitud: it.latitud,
+        longitud: it.longitud,
+        precision: it.precision,
+        nombres_apellidos_encuestado: "",
+        municipio: "",
+        fecha_visita: "",
+        resultado_validacion: "",
+      })),
+      total: state.items.length,
+      limit: 100,
+      offset: 0,
+    })),
+    fetchFormFromApi: vi.fn(async (id: string) =>
+      state.items.find((x) => x.id_formulario === id),
+    ),
     deleteFormFromApi: vi.fn(async (id: string) => {
       state.items = state.items.filter((x) => x.id_formulario !== id);
     }),
@@ -43,7 +63,8 @@ vi.mock("@/store/useAuthStore", () => ({
 }));
 
 vi.mock("@/services/api", () => ({
-  listFormsFromApi: mocks.listFormsFromApi,
+  searchFormsFromApi: mocks.searchFormsFromApi,
+  fetchFormFromApi: mocks.fetchFormFromApi,
   deleteFormFromApi: mocks.deleteFormFromApi,
   fetchFormPhotoDataUrl: vi.fn(),
   loginApi: vi.fn(),

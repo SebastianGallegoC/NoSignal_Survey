@@ -19,3 +19,26 @@ class FormReadItem(BaseModel):
 
 class FormListResponse(BaseModel):
     items: list[FormReadItem]
+
+
+class FormSummaryItem(BaseModel):
+    """Fila liviana para listados y búsqueda en servidor."""
+
+    id_formulario: str
+    id_perfil_encuestador: int | None = None
+    fecha_hora: str
+    fecha_actualizacion: str
+    latitud: float
+    longitud: float
+    precision: float | None = Field(default=None, description="No almacenada en BD; null.")
+    nombres_apellidos_encuestado: str = ""
+    municipio: str = ""
+    fecha_visita: str = ""
+    resultado_validacion: str = ""
+
+
+class FormSearchResponse(BaseModel):
+    items: list[FormSummaryItem]
+    total: int
+    limit: int
+    offset: int

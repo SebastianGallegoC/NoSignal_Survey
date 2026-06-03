@@ -20,10 +20,12 @@ import {
 } from "@/lib/formatDateTime";
 import {
   deleteFormFromApi,
+  fetchFormFromApi,
   fetchFormPhotoDataUrl,
   loginApi,
-  listFormsFromApi,
+  searchFormsFromApi,
   type FormReadItem,
+  type FormSummaryItem,
 } from "@/services/api";
 import { saveFormDraft, type FormDraftV1 } from "@/services/formDraftStorage";
 import { db, type FotoForm, type PrecargaForm } from "@/services/db";
@@ -70,6 +72,26 @@ import { useFormExports } from "@/pages/formulariosDiligenciados/useFormExports"
 import { isBulkDeleteAllPasswordValid } from "@/pages/formulariosDiligenciados/bulkDeleteAllFormularios";
 
 // Helpers moved to pages/formulariosDiligenciados/helpers.ts
+const SERVER_PAGE_SIZE = 100;
+
+function summaryToServerListItem(summary: FormSummaryItem): FormReadItem {
+  return {
+    id_formulario: summary.id_formulario,
+    id_perfil_encuestador: summary.id_perfil_encuestador ?? null,
+    fecha_hora: summary.fecha_hora,
+    fecha_actualizacion: summary.fecha_actualizacion,
+    latitud: summary.latitud,
+    longitud: summary.longitud,
+    precision: summary.precision ?? null,
+    datos_formulario: {
+      nombres_apellidos_encuestado: summary.nombres_apellidos_encuestado,
+      municipio: summary.municipio,
+      fecha_visita: summary.fecha_visita,
+      resultado_validacion: summary.resultado_validacion,
+    },
+    fotos: [],
+  };
+}
 
 export const FormulariosDiligenciadosPage = () => {
   const authUsername = useAuthStore((s) => s.username);
@@ -97,6 +119,13 @@ export const FormulariosDiligenciadosPage = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [remoteError, setRemoteError] = useState<string | null>(null);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
+  const [serverItems, setServerItems] = useState<FormReadItem[]>([]);
+  const [serverTotal, setServerTotal] = useState(0);
+  const [serverOffset, setServerOffset] = useState(0);
+  const [serverHasMore, setServerHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const serverItemsRef = useRef<FormReadItem[]>([]);
+  const serverOffsetRef = useRef(0);
   const [precargas, setPrecargas] = useState<PrecargaForm[]>([]);
   const [precargaLoadingId, setPrecargaLoadingId] = useState<string | null>(
     null,
@@ -147,6 +176,14 @@ export const FormulariosDiligenciadosPage = () => {
     return m;
   }, [precargas]);
 
+  useEffect(() => {
+    serverItemsRef.current = serverItems;
+  }, [serverItems]);
+
+  useEffect(() => {
+    serverOffsetRef.current = serverOffset;
+  }, [serverOffset]);
+
   const rowsMostrados = useMemo(
     () =>
       rowsForOfflineAwareList(rows, precargas, {
@@ -163,6 +200,17 @@ export const FormulariosDiligenciadosPage = () => {
   );
 
   const rowsFiltrados = useMemo(() => {
+    const token =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem(ACCESS_TOKEN_KEY)
+        : null;
+    const navOnline =
+      typeof navigator !== "undefined" ? navigator.onLine : true;
+    const serverFilteringActive =
+      online && navOnline && !!token && !remoteError && remoteLoaded;
+    if (serverFilteringActive) {
+      return rowsMostrados;
+    }
     const q = normalizeTextoBusqueda(filtroBeneficiario);
     const inicio = filtroDesde ? parseFiltroDiaInicio(filtroDesde) : Number.NaN;
     const fin = filtroHasta ? parseFiltroDiaFin(filtroHasta) : Number.NaN;
@@ -190,7 +238,16 @@ export const FormulariosDiligenciadosPage = () => {
       }
       return true;
     });
-  }, [rowsMostrados, filtroBeneficiario, filtroMunicipio, filtroDesde, filtroHasta]);
+  }, [
+    rowsMostrados,
+    filtroBeneficiario,
+    filtroMunicipio,
+    filtroDesde,
+    filtroHasta,
+    online,
+    remoteError,
+    remoteLoaded,
+  ]);
 
   /** Total en servidor; `sin_red` = sin Wi‑Fi/datos: no se muestra ningún mensaje en UI. */
   const contadorServidor = useMemo(() => {
@@ -212,12 +269,16 @@ export const FormulariosDiligenciadosPage = () => {
     if (!remoteLoaded) {
       return { estado: "cargando" as const };
     }
-    const n = rows.filter((r) => r.onServer).length;
+    const n = serverTotal > 0 ? serverTotal : rows.filter((r) => r.onServer).length;
     return { estado: "listo" as const, count: n };
-  }, [online, remoteLoaded, remoteError, rows]);
+  }, [online, remoteLoaded, remoteError, rows, serverTotal]);
 
-  const loadList = useCallback(async (): Promise<DisplayRow[]> => {
+  const loadList = useCallback(async (opts?: { append?: boolean }): Promise<DisplayRow[]> => {
+    const append = opts?.append === true;
     setRemoteError(null);
+    if (append) {
+      setLoadingMore(true);
+    }
 
     const precargasLocal = await db.precargas.toArray();
     const historialLocal = await db.historialFormularios.toArray();
@@ -229,6 +290,12 @@ export const FormulariosDiligenciadosPage = () => {
 
     if (!token) {
       setRemoteLoaded(false);
+      setServerItems([]);
+      setServerTotal(0);
+      setServerOffset(0);
+      setServerHasMore(false);
+      serverItemsRef.current = [];
+      serverOffsetRef.current = 0;
       setPrecargas(precargasLocal);
       const mergedLocal = mergeFormsWithPrecargas(
         [],
@@ -236,24 +303,57 @@ export const FormulariosDiligenciadosPage = () => {
         precargasLocal,
       );
       setRows(mergedLocal);
+      if (append) {
+        setLoadingMore(false);
+      }
       return mergedLocal;
     }
 
     let visibleServerItems: FormReadItem[];
+    let totalServerItems = 0;
     try {
-      const serverItems = await listFormsFromApi(500);
+      const response = await searchFormsFromApi({
+        limit: SERVER_PAGE_SIZE,
+        offset: append ? serverOffsetRef.current : 0,
+        q: filtroBeneficiario,
+        municipio: filtroMunicipio,
+        fecha_desde: filtroDesde,
+        fecha_hasta: filtroHasta,
+      });
+      totalServerItems = response.total;
+      const fetchedPage = response.items.map(summaryToServerListItem);
       const hiddenIds = await loadHiddenFormIds();
-      visibleServerItems = serverItems.filter(
+      const visiblePage = fetchedPage.filter(
         (it) => !hiddenIds.has(it.id_formulario),
       );
+      visibleServerItems = append
+        ? [
+            ...serverItemsRef.current,
+            ...visiblePage.filter(
+              (it) =>
+                !serverItemsRef.current.some(
+                  (old) => old.id_formulario === it.id_formulario,
+                ),
+            ),
+          ]
+        : visiblePage;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      if (/\b401\b|forms_list_401/i.test(msg)) {
+      if (/\b401\b|forms_list_401|forms_search_401/i.test(msg)) {
         navigate("/login", { replace: true });
+        if (append) {
+          setLoadingMore(false);
+        }
         return [];
       }
       setRemoteError(msg);
       setRemoteLoaded(true);
+      setServerItems([]);
+      setServerTotal(0);
+      setServerOffset(0);
+      setServerHasMore(false);
+      serverItemsRef.current = [];
+      serverOffsetRef.current = 0;
       setPrecargas(precargasLocal);
       const mergedFull = mergeFormsWithPrecargas(
         [],
@@ -265,37 +365,64 @@ export const FormulariosDiligenciadosPage = () => {
         precargasLocal,
       );
       setRows(mergedOffline);
+      if (append) {
+        setLoadingMore(false);
+      }
       return mergedOffline;
     }
 
-    const reconciled = reconcileLocalStateWithTrustedServerList(
-      historialLocal,
-      visibleServerItems,
-      precargasLocal,
-    );
+    const hasServerFilters =
+      !!filtroBeneficiario.trim() ||
+      !!filtroMunicipio.trim() ||
+      !!filtroDesde.trim() ||
+      !!filtroHasta.trim();
+    let historialBase = historialLocal;
+    let precargasBase = precargasLocal;
+    if (!append && !hasServerFilters && totalServerItems <= visibleServerItems.length) {
+      const reconciled = reconcileLocalStateWithTrustedServerList(
+        historialLocal,
+        visibleServerItems,
+        precargasLocal,
+      );
 
-    await Promise.all([
-      ...reconciled.staleEnviadoIds.map((id) =>
-        db.historialFormularios.delete(id).catch(() => undefined),
-      ),
-      ...reconciled.orphanPrecargaIds.map((id) =>
-        db.precargas.delete(id).catch(() => undefined),
-      ),
-    ]);
+      await Promise.all([
+        ...reconciled.staleEnviadoIds.map((id) =>
+          db.historialFormularios.delete(id).catch(() => undefined),
+        ),
+        ...reconciled.orphanPrecargaIds.map((id) =>
+          db.precargas.delete(id).catch(() => undefined),
+        ),
+      ]);
 
-    const precargasFresh = await db.precargas.toArray();
-    const historialFresh = await db.historialFormularios.toArray();
+      historialBase = await db.historialFormularios.toArray();
+      precargasBase = await db.precargas.toArray();
+    }
 
-    setPrecargas(precargasFresh);
+    setServerItems(visibleServerItems);
+    setServerTotal(totalServerItems);
+    setServerOffset(visibleServerItems.length);
+    setServerHasMore(visibleServerItems.length < totalServerItems);
+    serverItemsRef.current = visibleServerItems;
+    serverOffsetRef.current = visibleServerItems.length;
+    setPrecargas(precargasBase);
     const merged = mergeFormsWithPrecargas(
       visibleServerItems,
-      historialFresh,
-      precargasFresh,
+      historialBase,
+      precargasBase,
     );
     setRows(merged);
     setRemoteLoaded(true);
+    if (append) {
+      setLoadingMore(false);
+    }
     return merged;
-  }, [navigate]);
+  }, [
+    filtroBeneficiario,
+    filtroDesde,
+    filtroHasta,
+    filtroMunicipio,
+    navigate,
+  ]);
 
   useEffect(() => {
     void loadList();
@@ -308,6 +435,14 @@ export const FormulariosDiligenciadosPage = () => {
     }
     wasOnlineRef.current = online;
   }, [online, loadList]);
+
+  const canLoadMore = remoteLoaded && !remoteError && online && serverHasMore;
+  const cargarMas = useCallback(() => {
+    if (!canLoadMore || loadingMore) {
+      return;
+    }
+    void loadList({ append: true });
+  }, [canLoadMore, loadList, loadingMore]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -374,9 +509,13 @@ export const FormulariosDiligenciadosPage = () => {
 
         if (row.server) {
           setDetailPrecarga(precargaLocal);
+          const serverDetail = await fetchFormFromApi(row.server.id_formulario);
+          if (!isStillThisRow()) {
+            return;
+          }
           const baseFotos = mapServerFotos(
-            row.server.id_formulario,
-            row.server.fotos ?? [],
+            serverDetail.id_formulario,
+            serverDetail.fotos ?? [],
           );
           const fotos: FotoForm[] = [];
           for (const foto of baseFotos) {
@@ -408,18 +547,18 @@ export const FormulariosDiligenciadosPage = () => {
           }
           await commitDetailSnapshot({
             id_perfil_encuestador: coalesceIdPerfilEncuestador(
-              row.server.id_perfil_encuestador,
+              serverDetail.id_perfil_encuestador,
               row.historial?.id_perfil_encuestador,
               precargaLocal?.id_perfil_encuestador,
             ),
-            datos_formulario: (row.server.datos_formulario ?? {}) as Record<
+            datos_formulario: (serverDetail.datos_formulario ?? {}) as Record<
               string,
               unknown
             >,
             gps: {
-              latitud: row.server.latitud,
-              longitud: row.server.longitud,
-              precision: row.server.precision ?? null,
+              latitud: serverDetail.latitud,
+              longitud: serverDetail.longitud,
+              precision: serverDetail.precision ?? null,
             },
             fotos,
           });
@@ -1585,6 +1724,21 @@ export const FormulariosDiligenciadosPage = () => {
                 </article>
               );
             })}
+            {canLoadMore ? (
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={loadingMore}
+                  onClick={cargarMas}
+                  className="w-full"
+                >
+                  {loadingMore
+                    ? "Cargando más formularios..."
+                    : `Cargar más (${rows.filter((r) => r.onServer).length}/${serverTotal})`}
+                </Button>
+              </div>
+            ) : null}
           </div>
         )}
       </div>

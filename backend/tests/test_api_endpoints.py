@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
@@ -201,6 +202,70 @@ def test_get_form_by_id_ok(monkeypatch):
     body = resp.json()
     assert body["id_formulario"] == "f-123"
     assert "id_usuario" not in body
+    app.dependency_overrides.clear()
+
+
+def test_search_forms_ok(monkeypatch):
+    from app.api.v1 import forms as forms_mod
+
+    app.dependency_overrides[get_session] = _fake_session
+    app.dependency_overrides[get_current_user] = _fake_user
+
+    async def fake_search(_session, **kwargs):
+        assert kwargs["limit"] == 20
+        assert kwargs["offset"] == 40
+        assert kwargs["q"] == "ana"
+        assert kwargs["municipio"] == "Popayan"
+        assert kwargs["fecha_desde"] == "2026-01-01"
+        assert kwargs["fecha_hasta"] == "2026-01-31"
+        return (
+            [
+                {
+                    "id_formulario": "f-1",
+                    "id_perfil_encuestador": 7,
+                    "fecha_hora": "2026-01-10T10:00:00+00:00",
+                    "fecha_actualizacion": "2026-01-10T10:10:00+00:00",
+                    "latitud": 2.4,
+                    "longitud": -76.6,
+                    "precision": None,
+                    "nombres_apellidos_encuestado": "Ana Gomez",
+                    "municipio": "Popayan",
+                    "fecha_visita": "2026-01-10",
+                    "resultado_validacion": "CUMPLE",
+                }
+            ],
+            77,
+        )
+
+    monkeypatch.setattr(forms_mod, "search_forms_summary", fake_search)
+    client = TestClient(app)
+    resp = client.get(
+        "/api/v1/forms/search?limit=20&offset=40&q=ana&municipio=Popayan&fecha_desde=2026-01-01&fecha_hasta=2026-01-31"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 77
+    assert body["limit"] == 20
+    assert body["offset"] == 40
+    assert body["items"][0]["id_formulario"] == "f-1"
+    app.dependency_overrides.clear()
+
+
+def test_search_forms_unauthorized(monkeypatch):
+    from app.api.v1 import forms as forms_mod
+
+    app.dependency_overrides[get_session] = _fake_session
+
+    async def _raise_401():
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=401, detail="invalid_token")
+
+    app.dependency_overrides[get_current_user] = _raise_401
+    monkeypatch.setattr(forms_mod, "search_forms_summary", AsyncMock(return_value=([], 0)))
+    client = TestClient(app)
+    resp = client.get("/api/v1/forms/search")
+    assert resp.status_code == 401
     app.dependency_overrides.clear()
 
 

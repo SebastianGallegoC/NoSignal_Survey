@@ -27,6 +27,35 @@ def resolve_fecha_actualizacion_dt(payload: FormPayload) -> datetime:
     return cand if cand >= fecha_envio else fecha_envio
 
 
+def _normalize_fecha_visita(raw: object) -> str | None:
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip()
+    if not value:
+        return ""
+    if len(value) == 10 and value[4] == "-" and value[7] == "-":
+        return value
+    if len(value) == 10 and value[2] == "/" and value[5] == "/":
+        dd, mm, yyyy = value.split("/")
+        if len(dd) == 2 and len(mm) == 2 and len(yyyy) == 4:
+            return f"{yyyy}-{mm}-{dd}"
+    try:
+        parsed = parse_fecha_hora_iso(value)
+        return parsed.date().isoformat()
+    except ValueError:
+        return None
+
+
+def normalize_datos_formulario_for_persist(
+    datos_formulario: dict[str, object],
+) -> dict[str, object]:
+    normalized = dict(datos_formulario)
+    normalized_fecha_visita = _normalize_fecha_visita(normalized.get("fecha_visita"))
+    if normalized_fecha_visita is not None:
+        normalized["fecha_visita"] = normalized_fecha_visita
+    return normalized
+
+
 async def persist_form(
     session: AsyncSession,
     payload: FormPayload,
@@ -34,6 +63,9 @@ async def persist_form(
 ) -> FormRecord:
     fecha_hora = parse_fecha_hora_iso(payload.fecha_hora)
     fecha_act = resolve_fecha_actualizacion_dt(payload)
+    datos_formulario = normalize_datos_formulario_for_persist(
+        dict(payload.datos_formulario)
+    )
     gps_point = WKTElement(f"POINT({payload.gps.longitud} {payload.gps.latitud})", srid=4326)
     existing = await get_form_by_id(session, payload.id_formulario)
     existing_profile_id = existing.id_perfil_encuestador if existing else None
@@ -61,7 +93,7 @@ async def persist_form(
         existing.fecha_actualizacion = fecha_act
         existing.id_perfil_encuestador = payload.id_perfil_encuestador
         existing.gps = gps_point
-        existing.datos_formulario = dict(payload.datos_formulario)
+        existing.datos_formulario = datos_formulario
         await session.commit()
         await session.refresh(existing)
         return existing
@@ -78,7 +110,7 @@ async def persist_form(
         fecha_hora=fecha_hora,
         fecha_actualizacion=fecha_act,
         gps=gps_point,
-        datos_formulario=payload.datos_formulario,
+        datos_formulario=datos_formulario,
         fotos=fotos,
     )
 

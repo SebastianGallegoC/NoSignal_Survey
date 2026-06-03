@@ -6,6 +6,7 @@ import {
   fetchFormStatsMonthlyFromApi,
   fetchFormStatsMunicipiosFromApi,
   listFormsFromApi,
+  searchFormsFromApi,
   loginApi,
 } from "./api";
 
@@ -88,6 +89,57 @@ describe("fetchFormStatsFromApi", () => {
     const url = String(fetchMock.mock.calls[0]?.[0]);
     expect(url).toContain("municipio=Cali");
     expect(url).toContain("fecha_desde=2026-01-01");
+  });
+});
+
+describe("searchFormsFromApi", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("envia filtros y retorna paginacion", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          items: [
+            {
+              id_formulario: "f-11",
+              fecha_hora: "2026-06-01T10:00:00Z",
+              fecha_actualizacion: "2026-06-01T10:30:00Z",
+              latitud: 2.1,
+              longitud: -76.6,
+              precision: null,
+              id_perfil_encuestador: 3,
+              nombres_apellidos_encuestado: "Ana",
+              municipio: "Popayan",
+              fecha_visita: "2026-06-01",
+              resultado_validacion: "CUMPLE",
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 40,
+        }),
+      }),
+    );
+    const result = await searchFormsFromApi({
+      limit: 20,
+      offset: 40,
+      q: "Ana",
+      municipio: "Popayan",
+      fecha_desde: "2026-06-01",
+      fecha_hasta: "2026-06-30",
+    });
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.id_formulario).toBe("f-11");
+    const url = String(vi.mocked(fetch).mock.calls[0]?.[0]);
+    expect(url).toContain("/api/v1/forms/search?");
+    expect(url).toContain("limit=20");
+    expect(url).toContain("offset=40");
+    expect(url).toContain("q=Ana");
+    expect(url).toContain("municipio=Popayan");
   });
 });
 
