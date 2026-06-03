@@ -225,7 +225,7 @@ export const DatosPage = () => {
         <DatosReportSection
           ariaLabel="Diligencias mensuales"
           title="Formularios diligenciados por mes"
-          description="Cantidad de formularios por mes del año elegido, según la fecha de visita de cada registro. Los filtros de abajo aplican solo a este gráfico."
+          description="Cantidad de formularios por mes del año elegido, según la fecha de visita de cada registro (solo formularios con esa fecha registrada). Los filtros de abajo aplican solo a este gráfico."
           filters={
             <MonthlyDiligenciasFilters
               anio={anioMensual}
@@ -264,7 +264,7 @@ export const DatosPage = () => {
           municipiosLoadState === "ready" &&
           municipioOptions.length === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-600">
-              No hay formularios con municipio registrado para mostrar este gráfico.
+              No hay municipios ni formularios sin asociar para mostrar este gráfico.
             </p>
           ) : null}
 
