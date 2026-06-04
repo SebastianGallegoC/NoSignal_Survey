@@ -194,6 +194,21 @@ export const FormularioPage = () => {
     };
   }, [draftUserKey, isOnline, selectedEncuestadorProfileId]);
 
+  useEffect(() => {
+    if (selectedEncuestadorProfileId == null || selectedEncuestadorProfileId <= 0) {
+      return;
+    }
+    const expected = String(selectedEncuestadorProfileId);
+    if (getValues("id_perfil_encuestador") !== expected) {
+      setValue("id_perfil_encuestador", expected, { shouldDirty: false });
+    }
+  }, [
+    encuestadorProfiles,
+    getValues,
+    selectedEncuestadorProfileId,
+    setValue,
+  ]);
+
   const isEditMode = originalFechaHora != null;
 
   const editBaselineRef = useRef<FormularioEditBaseline | null>(null);
@@ -624,15 +639,22 @@ export const FormularioPage = () => {
                       {...register("id_perfil_encuestador")}
                     >
                       <option value="">Seleccioná un perfil habilitado</option>
-                      {encuestadorProfiles.map((profile) => (
-                        <option
-                          key={profile.id}
-                          value={String(profile.id)}
-                          disabled={profile.assignedDisabled === true}
-                        >
-                          {profile.nombre}
-                        </option>
-                      ))}
+                      {encuestadorProfiles.map((profile) => {
+                        const isSelected =
+                          String(profile.id) ===
+                          String(formValues.id_perfil_encuestador || "");
+                        return (
+                          <option
+                            key={profile.id}
+                            value={String(profile.id)}
+                            disabled={
+                              profile.assignedDisabled === true && !isSelected
+                            }
+                          >
+                            {profile.nombre}
+                          </option>
+                        );
+                      })}
                     </select>
                     <span className="mt-1 text-xs text-slate-500">
                       Los perfiles habilitados se guardan en el dispositivo al iniciar sesión con

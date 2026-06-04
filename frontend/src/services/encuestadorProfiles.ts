@@ -213,13 +213,14 @@ export async function listEncuestadorProfilesForFormSelect(
   }
 
   const assigned = rows.find((row) => row.id === selectedProfileId);
-  const nombre = assigned?.nombre?.trim() || `Perfil ID ${selectedProfileId}`;
+  const nombre = assigned?.nombre?.trim() || `Perfil #${selectedProfileId}`;
+  const perfilDeshabilitado = assigned?.habilitado === false;
   return [
     ...enabled,
     {
       id: selectedProfileId,
-      nombre: `${nombre} (deshabilitado)`,
-      assignedDisabled: true,
+      nombre: perfilDeshabilitado ? `${nombre} (deshabilitado)` : nombre,
+      assignedDisabled: perfilDeshabilitado,
     },
   ];
 }

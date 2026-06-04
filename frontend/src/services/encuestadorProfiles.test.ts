@@ -217,6 +217,23 @@ describe("encuestadorProfiles", () => {
     await expect(resolveEncuestadorProfileNombre("u1", 99)).resolves.toBeNull();
   });
 
+  it("listEncuestadorProfilesForFormSelect agrega perfil asignado sin caché sin marcarlo deshabilitado", async () => {
+    cacheStore.push({
+      id: 1,
+      username: "u1",
+      nombre: "Ana Pérez",
+      habilitado: true,
+      updated_at: "2026-01-01T00:00:00Z",
+    });
+
+    const options = await listEncuestadorProfilesForFormSelect("u1", 99);
+
+    expect(options).toEqual([
+      { id: 1, nombre: "Ana Pérez" },
+      { id: 99, nombre: "Perfil #99", assignedDisabled: false },
+    ]);
+  });
+
   it("listEncuestadorProfilesForFormSelect incluye perfil asignado deshabilitado", async () => {
     cacheStore.push(
       {
