@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { RegistroFotoSlot } from "@/config/registroFotografico";
 import type { FotoForm, OfflineForm } from "@/services/db";
 import {
+  getSubmitGuardCopy,
   validateFormValues,
   validateFormValuesWithFieldDetails,
   validateOfflineFormPayload,
@@ -35,15 +36,17 @@ describe("formValidation — envío mínimo Survey", () => {
     expect(issues.filter((i) => i.code.startsWith("field_"))).toHaveLength(0);
   });
 
-  it("validateOfflineFormPayload exige nombre del encuestado", () => {
+  it("validateOfflineFormPayload exige nombre del encuestado y fecha de visita", () => {
     const form = baseForm(emptyValues());
     const issues = validateOfflineFormPayload(form);
     expect(issues.map((i) => i.code)).toContain("encuestado_required");
+    expect(issues.map((i) => i.code)).toContain("fecha_visita_required");
   });
 
-  it("validateOfflineFormPayload acepta solo nombre del encuestado", () => {
+  it("validateOfflineFormPayload acepta nombre y fecha de visita", () => {
     const datos = emptyValues();
     datos.nombres_apellidos_encuestado = "Ana Pérez";
+    datos.fecha_visita = "2026-05-01";
     const form = {
       ...baseForm(datos),
       id_perfil_encuestador: null,
@@ -57,6 +60,7 @@ describe("formValidation — envío mínimo Survey", () => {
   it("validateOfflineFormPayload no exige perfil ni fotos", () => {
     const datos = emptyValues();
     datos.nombres_apellidos_encuestado = "Ana Pérez";
+    datos.fecha_visita = "2026-05-01";
     const form = {
       ...baseForm(datos),
       id_perfil_encuestador: null,
@@ -71,6 +75,7 @@ describe("formValidation — envío mínimo Survey", () => {
   it("validateOfflineFormPayload rechaza fecha_actualizacion anterior a fecha_hora", () => {
     const datos = emptyValues();
     datos.nombres_apellidos_encuestado = "Ana Pérez";
+    datos.fecha_visita = "2026-05-01";
     const form = {
       ...baseForm(datos),
       fecha_hora: "2026-05-10T12:00:00.000Z",
@@ -78,6 +83,14 @@ describe("formValidation — envío mínimo Survey", () => {
     };
     const issues = validateOfflineFormPayload(form);
     expect(issues.map((i) => i.code)).toContain("fecha_actualizacion_before_envio");
+  });
+});
+
+describe("getSubmitGuardCopy", () => {
+  it("usa mensajes de actualizar en modo edición", () => {
+    const copy = getSubmitGuardCopy(true);
+    expect(copy.blockedTitle).toBe("No se puede actualizar");
+    expect(copy.fechaVisitaRequired).toMatch(/actualizar/i);
   });
 });
 

@@ -15,6 +15,9 @@ from app.services.forms import (
 )
 
 
+_FECHA_VISITA_ISO = "2026-06-01"
+
+
 def _six_photos_payload():
     return [
         {
@@ -60,6 +63,7 @@ async def test_persist_form_updates_datos_when_id_exists(monkeypatch):
         datos_formulario={
             "nombres_apellidos_beneficiario": "Nuevo",
             "nombres_apellidos_encuestado": "Encuestado",
+            "fecha_visita": _FECHA_VISITA_ISO,
         },
         fotos=_six_photos_payload(),
     )
@@ -81,7 +85,10 @@ def test_resolve_fecha_actualizacion_no_baja_de_fecha_hora():
         fecha_hora="2026-05-04T12:00:00Z",
         fecha_actualizacion="2026-01-01T00:00:00Z",
         gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
-        datos_formulario={"nombres_apellidos_encuestado": "Encuestado"},
+        datos_formulario={
+            "nombres_apellidos_encuestado": "Encuestado",
+            "fecha_visita": _FECHA_VISITA_ISO,
+        },
         fotos=_six_photos_payload(),
     )
     assert resolve_fecha_actualizacion_dt(p) == parse_fecha_hora_iso("2026-05-04T12:00:00Z")
@@ -119,7 +126,11 @@ async def test_persist_form_update_usa_fecha_actualizacion_explicita(monkeypatch
         fecha_hora="2026-01-01T00:00:00Z",
         fecha_actualizacion="2026-08-20T15:30:00Z",
         gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
-        datos_formulario={"k": "v", "nombres_apellidos_encuestado": "Encuestado"},
+        datos_formulario={
+            "k": "v",
+            "nombres_apellidos_encuestado": "Encuestado",
+            "fecha_visita": _FECHA_VISITA_ISO,
+        },
         fotos=_six_photos_payload(),
     )
 
@@ -219,7 +230,10 @@ async def test_persist_form_update_retains_disabled_profile_link(monkeypatch):
         id_perfil_encuestador=7,
         fecha_hora="2026-01-01T00:00:00Z",
         gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
-        datos_formulario={"nombres_apellidos_encuestado": "Ana actualizada"},
+        datos_formulario={
+            "nombres_apellidos_encuestado": "Ana actualizada",
+            "fecha_visita": _FECHA_VISITA_ISO,
+        },
         fotos=_six_photos_payload(),
     )
 
@@ -228,3 +242,40 @@ async def test_persist_form_update_retains_disabled_profile_link(monkeypatch):
     assert existing.id_perfil_encuestador == 7
     validate_mock.assert_awaited_once()
     assert validate_mock.await_args.kwargs["existing_profile_id"] == 7
+
+
+@pytest.mark.asyncio
+async def test_persist_form_update_rejects_cleared_fecha_visita(monkeypatch):
+    existing = SimpleNamespace(
+        id_formulario="f-clear-fecha",
+        id_perfil_encuestador=None,
+        fecha_hora=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        fecha_actualizacion=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        gps=None,
+        datos_formulario={
+            "nombres_apellidos_encuestado": "Ana",
+            "fecha_visita": _FECHA_VISITA_ISO,
+        },
+        fotos=_six_photos_payload(),
+    )
+
+    async def fake_get(_session, form_id):
+        return existing if form_id == "f-clear-fecha" else None
+
+    monkeypatch.setattr("app.services.forms.get_form_by_id", fake_get)
+
+    payload = FormPayload(
+        id_formulario="f-clear-fecha",
+        id_perfil_encuestador=1,
+        fecha_hora="2026-01-01T00:00:00Z",
+        fecha_actualizacion="2026-06-10T12:00:00Z",
+        gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
+        datos_formulario={
+            "nombres_apellidos_encuestado": "Ana",
+            "fecha_visita": "",
+        },
+        fotos=_six_photos_payload(),
+    )
+
+    with pytest.raises(ValueError, match="fecha_visita_required"):
+        await persist_form(AsyncMock(), payload, "tester")

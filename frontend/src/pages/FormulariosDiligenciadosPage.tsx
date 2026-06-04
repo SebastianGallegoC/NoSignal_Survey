@@ -70,6 +70,7 @@ import { StatusBanners } from "@/pages/formulariosDiligenciados/StatusBanners";
 import { FormularioRespuestaReadOnly } from "@/components/form/FormularioRespuestaReadOnly";
 import { useFormExports } from "@/pages/formulariosDiligenciados/useFormExports";
 import { isBulkDeleteAllPasswordValid } from "@/pages/formulariosDiligenciados/bulkDeleteAllFormularios";
+import { formatSyncErrorForUser } from "@/lib/syncErrorMessages";
 
 // Helpers moved to pages/formulariosDiligenciados/helpers.ts
 const SERVER_PAGE_SIZE = 100;
@@ -1467,6 +1468,7 @@ export const FormulariosDiligenciadosPage = () => {
                 isOpen && detailSource != null
                   ? detailSource
                   : previewDetailSourceForRow(row, precarga);
+              const syncErrorMessage = formatSyncErrorForUser(h?.ultimo_error);
               return (
                 <article
                   key={row.id_formulario}
@@ -1535,9 +1537,9 @@ export const FormulariosDiligenciadosPage = () => {
                             Copia guardada en este dispositivo para uso sin red
                           </p>
                         ) : null}
-                        {h?.ultimo_error ? (
+                        {syncErrorMessage ? (
                           <p className="text-xs leading-snug text-rose-700 sm:text-sm sm:leading-normal">
-                            Error: {h.ultimo_error}
+                            No se subió al servidor: {syncErrorMessage}
                           </p>
                         ) : null}
                       </div>

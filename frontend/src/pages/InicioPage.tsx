@@ -113,28 +113,30 @@ export const InicioPage = () => {
             </Card>
           </Link>
 
-          <Link
-            to="/perfil-encuestador"
-            className="group block h-full rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring sm:rounded-2xl"
-          >
-            <Card className="h-full border-indigo-100 bg-white/90 shadow-[0_18px_40px_-35px_rgba(79,70,229,0.6)] transition group-hover:-translate-y-0.5">
-              <CardHeader className="gap-3">
-                <div className="flex items-start gap-3 max-md:flex-row md:flex-col md:gap-2.5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 md:h-11 md:w-11">
-                    <UserRound className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1 space-y-1 md:space-y-1.5">
-                    <CardTitle className="text-base leading-snug text-indigo-800 md:text-sm md:leading-snug lg:text-base lg:leading-snug">
-                      Perfil encuestador
-                    </CardTitle>
-                    <CardDescription className="text-xs leading-snug text-slate-600 md:leading-snug lg:text-sm lg:leading-normal">
-                      Crea, edita, deshabilita o elimina perfiles para diligenciar más rápido.
-                    </CardDescription>
+          {online ? (
+            <Link
+              to="/perfil-encuestador"
+              className="group block h-full rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring sm:rounded-2xl"
+            >
+              <Card className="h-full border-indigo-100 bg-white/90 shadow-[0_18px_40px_-35px_rgba(79,70,229,0.6)] transition group-hover:-translate-y-0.5">
+                <CardHeader className="gap-3">
+                  <div className="flex items-start gap-3 max-md:flex-row md:flex-col md:gap-2.5">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 md:h-11 md:w-11">
+                      <UserRound className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-1 md:space-y-1.5">
+                      <CardTitle className="text-base leading-snug text-indigo-800 md:text-sm md:leading-snug lg:text-base lg:leading-snug">
+                        Perfil encuestador
+                      </CardTitle>
+                      <CardDescription className="text-xs leading-snug text-slate-600 md:leading-snug lg:text-sm lg:leading-normal">
+                        Crea, edita, deshabilita o elimina perfiles para diligenciar más rápido.
+                      </CardDescription>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-            </Card>
-          </Link>
+                </CardHeader>
+              </Card>
+            </Link>
+          ) : null}
 
           {online ? (
             <Link

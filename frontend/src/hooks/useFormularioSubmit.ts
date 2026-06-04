@@ -13,7 +13,9 @@ import {
   syncPendingForms,
 } from "@/services/sync";
 import {
+  getSubmitGuardCopy,
   joinValidationMessages,
+  sectionsToOpenForValidationIssues,
   validateOfflineFormPayload,
 } from "@/services/formValidation";
 import { formatCuentaConCocinaForStorage } from "@/lib/cuentaConCocina";
@@ -174,6 +176,9 @@ export const useFormularioSubmit = ({
   setFocus,
   requiredFields,
 }: Args) => {
+  const isEditMode = _originalFechaHora != null;
+  const submitGuard = getSubmitGuardCopy(isEditMode);
+
   const showEnvioBloqueadoModal = (title: string, message: string) => {
     setBanner(null);
     setEnvioModal({
@@ -190,8 +195,18 @@ export const useFormularioSubmit = ({
       setOpenSections((prev) => new Set([...prev, "encuestado"]));
       setFocus("nombres_apellidos_encuestado");
       showEnvioBloqueadoModal(
-        "No se puede enviar",
-        "Completá el nombre del encuestado antes de guardar o enviar el formulario.",
+        submitGuard.blockedTitle,
+        submitGuard.encuestadoRequired,
+      );
+      return;
+    }
+    const fechaVisita = (values.fecha_visita ?? "").trim();
+    if (!fechaVisita) {
+      setOpenSections((prev) => new Set([...prev, "visita"]));
+      setFocus("fecha_visita");
+      showEnvioBloqueadoModal(
+        submitGuard.blockedTitle,
+        submitGuard.fechaVisitaRequired,
       );
       return;
     }
@@ -207,10 +222,23 @@ export const useFormularioSubmit = ({
 
     const validationIssues = validateOfflineFormPayload(payload);
     if (validationIssues.length > 0) {
+      const sections = sectionsToOpenForValidationIssues(validationIssues);
+      if (sections.length > 0) {
+        setOpenSections((prev) => new Set([...prev, ...sections]));
+      }
+      if (
+        validationIssues.some(
+          (i) => i.code === "fecha_visita_required" || i.code === "fecha_invalid",
+        )
+      ) {
+        setFocus("fecha_visita");
+      } else if (validationIssues.some((i) => i.code === "encuestado_required")) {
+        setFocus("nombres_apellidos_encuestado");
+      }
       const message =
         joinValidationMessages(validationIssues) ||
         "Hay validaciones pendientes. Revisá los datos e intentá de nuevo.";
-      showEnvioBloqueadoModal("No se puede enviar", message);
+      showEnvioBloqueadoModal(submitGuard.blockedTitle, message);
       return;
     }
 
@@ -316,11 +344,17 @@ export const useFormularioSubmit = ({
       lines.length > 0
         ? lines.join("\n")
         : "Revisá los campos del formulario e intentá nuevamente.";
-    const first = fields[0];
-    if (first) {
-      setFocus(first);
+    if (formErrors.fecha_visita) {
+      setFocus("fecha_visita");
+    } else if (formErrors.nombres_apellidos_encuestado) {
+      setFocus("nombres_apellidos_encuestado");
+    } else {
+      const first = fields[0];
+      if (first) {
+        setFocus(first);
+      }
     }
-    showEnvioBloqueadoModal("No se puede enviar", message);
+    showEnvioBloqueadoModal(submitGuard.blockedTitle, message);
   };
 
   return { onValid, onInvalid };

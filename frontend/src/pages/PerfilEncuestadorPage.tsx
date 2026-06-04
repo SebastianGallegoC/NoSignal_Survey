@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 import { EncuestadorProfileDetailModal } from "@/components/encuestador/EncuestadorProfileDetailModal";
 import {
@@ -29,6 +29,7 @@ import {
   encuestadorProfileCanBeDeleted,
   syncEnabledEncuestadorProfiles,
 } from "@/services/encuestadorProfiles";
+import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const emptyProfileForm = (): EncuestadorProfileFormState => ({
@@ -43,6 +44,7 @@ const emptyProfileForm = (): EncuestadorProfileFormState => ({
 });
 
 export const PerfilEncuestadorPage = () => {
+  const online = useConnectivityStatus();
   const authUsername = useAuthStore((s) => s.username);
   const [profiles, setProfiles] = useState<EncuestadorProfileRead[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
@@ -181,6 +183,10 @@ export const PerfilEncuestadorPage = () => {
       setProfileDeleteConfirming(false);
     }
   }, [editingProfileId, profilePendingDelete, refreshProfiles, resetProfileForm]);
+
+  if (!online) {
+    return <Navigate to="/inicio" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#e2f2ee_0,_#f6f7f5_45%,_#f6f7f5_100%)] px-3 py-4 text-slate-900 sm:px-4 sm:py-10">

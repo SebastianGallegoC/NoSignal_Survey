@@ -16,6 +16,7 @@ function snapshot(overrides: Partial<FormularioEditBaseline> = {}): FormularioEd
     formValues: {
       ...emptyValues(),
       nombres_apellidos_encuestado: "Juan Pérez",
+      fecha_visita: "2026-06-01",
       municipio: "Cúcuta",
       latitud: "4.600000",
       longitud: "-74.080000",
@@ -52,6 +53,17 @@ describe("flujo editar formulario → Actualizar", () => {
       disabled: true,
       showNoChangesHint: true,
     });
+  });
+
+  it("tras borrar fecha de visita: Actualizar habilitado (validación al enviar)", () => {
+    const base = snapshot();
+    const current = snapshot({
+      formValues: {
+        ...base.formValues,
+        fecha_visita: "",
+      },
+    });
+    expect(submitUiForEditSession(base, current).disabled).toBe(false);
   });
 
   it("tras cambiar un campo de texto: Actualizar habilitado", () => {

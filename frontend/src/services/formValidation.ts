@@ -52,7 +52,7 @@ function parseDateSafe(value: unknown): number | null {
 
 /**
  * Validación por campo (y mensajes de fila) para mostrar errores en UI de importación.
- * El envío a cola solo exige nombre del encuestado (vía `validateOfflineFormPayload`);
+ * El envío a cola exige nombre del encuestado y fecha de visita (vía `validateOfflineFormPayload`);
  * el resto de campos puede ir vacío.
  */
 export const validateFormValuesWithFieldDetails = (
@@ -212,15 +212,17 @@ const toFormValuesFromPayload = (payload: OfflineForm): FormValues => {
 export const validateOfflineFormPayload = (form: OfflineForm): ValidationIssue[] => {
   const issues = validateFormValues(toFormValuesFromPayload(form));
 
-  if (
-    isBlank(
-      (form.datos_formulario as Record<string, unknown>)
-        .nombres_apellidos_encuestado,
-    )
-  ) {
+  const datos = form.datos_formulario as Record<string, unknown>;
+  if (isBlank(datos.nombres_apellidos_encuestado)) {
     issues.push({
       code: "encuestado_required",
       message: "El nombre del encuestado es obligatorio para enviar.",
+    });
+  }
+  if (isBlank(datos.fecha_visita)) {
+    issues.push({
+      code: "fecha_visita_required",
+      message: "La fecha de la visita es obligatoria para enviar.",
     });
   }
   const tsEnvio = parseDateSafe(form.fecha_hora);
@@ -250,3 +252,47 @@ export const validateOfflineFormPayload = (form: OfflineForm): ValidationIssue[]
 
 export const joinValidationMessages = (issues: ValidationIssue[]): string =>
   issues.map((i) => i.message).join(" ");
+
+/** Títulos y textos del modal al bloquear guardar o actualizar. */
+export function getSubmitGuardCopy(isEdit: boolean): {
+  blockedTitle: string;
+  encuestadoRequired: string;
+  fechaVisitaRequired: string;
+} {
+  if (isEdit) {
+    return {
+      blockedTitle: "No se puede actualizar",
+      encuestadoRequired:
+        "Completá el nombre del encuestado antes de actualizar el formulario.",
+      fechaVisitaRequired:
+        "Completá la fecha de la visita antes de actualizar el formulario.",
+    };
+  }
+  return {
+    blockedTitle: "No se puede enviar",
+    encuestadoRequired:
+      "Completá el nombre del encuestado antes de guardar o enviar el formulario.",
+    fechaVisitaRequired:
+      "Completá la fecha de la visita antes de guardar o enviar el formulario.",
+  };
+}
+
+const FECHA_VISITA_ISSUE_CODES = new Set([
+  "fecha_visita_required",
+  "fecha_invalid",
+]);
+
+/** Secciones a abrir cuando falla la validación previa al envío. */
+export function sectionsToOpenForValidationIssues(
+  issues: ValidationIssue[],
+): string[] {
+  const codes = new Set(issues.map((i) => i.code));
+  const sections: string[] = [];
+  if (codes.has("encuestado_required")) {
+    sections.push("encuestado");
+  }
+  if ([...codes].some((c) => FECHA_VISITA_ISSUE_CODES.has(c))) {
+    sections.push("visita");
+  }
+  return sections;
+}

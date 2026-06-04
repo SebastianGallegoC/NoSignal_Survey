@@ -56,6 +56,17 @@ def normalize_datos_formulario_for_persist(
     return normalized
 
 
+def _require_fecha_visita_in_datos(datos_formulario: dict[str, object]) -> None:
+    raw = datos_formulario.get("fecha_visita")
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError("fecha_visita_required")
+    normalized = _normalize_fecha_visita(raw)
+    if normalized is None:
+        raise ValueError("fecha_visita_invalid")
+    if normalized == "":
+        raise ValueError("fecha_visita_required")
+
+
 async def persist_form(
     session: AsyncSession,
     payload: FormPayload,
@@ -66,6 +77,7 @@ async def persist_form(
     datos_formulario = normalize_datos_formulario_for_persist(
         dict(payload.datos_formulario)
     )
+    _require_fecha_visita_in_datos(datos_formulario)
     gps_point = WKTElement(f"POINT({payload.gps.longitud} {payload.gps.latitud})", srid=4326)
     existing = await get_form_by_id(session, payload.id_formulario)
     existing_profile_id = existing.id_perfil_encuestador if existing else None

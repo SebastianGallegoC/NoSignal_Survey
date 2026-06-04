@@ -30,33 +30,40 @@ async function renderInicio() {
 }
 
 describe("InicioPage", () => {
-  it("oculta enlace a Datos cuando está offline", async () => {
+  it("oculta enlaces a Datos y Perfil encuestador cuando está offline", async () => {
     mockUseConnectivity.mockReturnValue(false);
     await renderInicio();
     expect(screen.queryByRole("link", { name: /Datos/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Perfil encuestador/i }),
+    ).not.toBeInTheDocument();
     mockUseConnectivity.mockReturnValue(true);
   });
 
-  it("muestra enlace a Datos cuando está online", async () => {
+  it("muestra enlaces a Datos y Perfil encuestador cuando está online", async () => {
     mockUseConnectivity.mockReturnValue(true);
     await renderInicio();
-    const datos = screen.getByRole("link", { name: /Datos/i });
-    expect(datos).toHaveAttribute("href", "/datos");
+    expect(screen.getByRole("link", { name: /Datos/i })).toHaveAttribute(
+      "href",
+      "/datos",
+    );
+    expect(screen.getByRole("link", { name: /Perfil encuestador/i })).toHaveAttribute(
+      "href",
+      "/perfil-encuestador",
+    );
   });
 
-  it("renderiza enlaces a formulario, diligenciados, perfil y plantilla", async () => {
+  it("renderiza enlaces a formulario, diligenciados y plantilla", async () => {
     await renderInicio();
 
     const formulario = screen.getByRole("link", { name: /Completar encuesta/i });
     const diligenciados = screen.getByRole("link", {
       name: /Ver encuestas diligenciadas/i,
     });
-    const perfil = screen.getByRole("link", { name: /Perfil encuestador/i });
     const plantilla = screen.getByRole("link", { name: /Descargar plantilla vacía/i });
 
     expect(formulario).toHaveAttribute("href", "/formulario");
     expect(diligenciados).toHaveAttribute("href", "/formularios-diligenciados");
-    expect(perfil).toHaveAttribute("href", "/perfil-encuestador");
     expect(plantilla).toHaveAttribute("href", MATRIZ_TEMPLATE_PUBLIC_PATH);
   });
 

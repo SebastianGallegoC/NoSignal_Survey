@@ -12,6 +12,7 @@ import {
   fotosConSlotDesdeDetalleExport,
   type DetailSourceKind,
 } from "@/pages/formulariosDiligenciados/helpers";
+import { formatSyncErrorForUser } from "@/lib/syncErrorMessages";
 
 interface FormRowCardProps {
   row: DisplayRow;
@@ -75,6 +76,7 @@ export const FormRowCard = ({
   onDescargarFotosDelRegistro,
 }: FormRowCardProps) => {
   const precargado = !!precarga;
+  const syncErrorMessage = formatSyncErrorForUser(historial?.ultimo_error);
 
   return (
     <article
@@ -143,9 +145,9 @@ export const FormRowCard = ({
                 Copia guardada en este dispositivo para uso sin red
               </p>
             ) : null}
-            {historial?.ultimo_error ? (
+            {syncErrorMessage ? (
               <p className="text-xs leading-snug text-rose-700 sm:text-sm sm:leading-normal">
-                Error: {historial.ultimo_error}
+                No se subió al servidor: {syncErrorMessage}
               </p>
             ) : null}
           </div>

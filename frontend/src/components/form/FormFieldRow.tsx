@@ -15,7 +15,12 @@ import {
   normalizeTelefonoStoredValue,
   TELEFONO_NO_TIENE_VALUE,
 } from "@/lib/telefonoNormalize";
-import type { FormFieldKey, FormValues } from "@/types/formFields";
+import { FECHA_FORMATO_MSG } from "@/services/formValidation";
+import {
+  FIELDS_REQUIRED_TO_SUBMIT,
+  type FormFieldKey,
+  type FormValues,
+} from "@/types/formFields";
 
 import { PlainSelect } from "./PlainSelect";
 import { SearchableSelect, type SelectOption } from "./SearchableSelect";
@@ -84,6 +89,35 @@ const AutoGrowTextarea = ({
 };
 
 const SELECT_FALLBACK: SelectOption[] = [{ value: "", label: "" }];
+
+const REQUIRED_SUBMIT_SET = new Set<string>(FIELDS_REQUIRED_TO_SUBMIT);
+
+function registerRulesForField(name: FormFieldKey) {
+  if (!REQUIRED_SUBMIT_SET.has(name)) {
+    return undefined;
+  }
+  if (name === "fecha_visita") {
+    return {
+      required: "La fecha de la visita es obligatoria.",
+      validate: (value: string) => {
+        const trimmed = String(value ?? "").trim();
+        if (!trimmed) {
+          return "La fecha de la visita es obligatoria.";
+        }
+        const ts = Date.parse(trimmed);
+        return Number.isNaN(ts) ? FECHA_FORMATO_MSG : true;
+      },
+    };
+  }
+  if (name === "nombres_apellidos_encuestado") {
+    return {
+      required: "El nombre del encuestado es obligatorio.",
+      validate: (value: string) =>
+        String(value ?? "").trim() ? true : "El nombre del encuestado es obligatorio.",
+    };
+  }
+  return { required: "Este campo es obligatorio." };
+}
 
 const TRIO_OPTIONS_LIST: SelectOption[] = triOptions.map((o) => ({
   value: o.value,
@@ -328,7 +362,7 @@ export const FormFieldRow = ({
             ? "Este campo se actualiza al tomar ubicación GPS (6 decimales)."
             : undefined
         }
-        {...register(name)}
+        {...register(name, registerRulesForField(name))}
       />
       {error ? (
         <span className="mt-1 text-xs text-red-600">{error}</span>
