@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -618,109 +618,111 @@ export const FormularioPage = () => {
           />
 
           {formSectionsWithoutCoordinates.map((section) => (
-            <details
-              key={section.id}
-              open={openSections.has(section.id)}
-              onToggle={(e) => {
-                const isOpen = (e.currentTarget as HTMLDetailsElement).open;
-                setOpenSections((prev) => {
-                  const next = new Set(prev);
-                  if (isOpen) {
-                    next.add(section.id);
-                  } else {
-                    next.delete(section.id);
-                  }
-                  return next;
-                });
-              }}
-              className="form-section-panel group"
-            >
-              <summary className="cursor-pointer text-sm font-semibold text-slate-900">
-                {section.title}
-              </summary>
-              {section.id === "encuestador" ? (
-                <div className="form-fields-grid">
-                  <label className="flex min-w-0 max-w-full flex-col text-sm font-medium text-slate-800">
-                    Perfil de encuestador
-                    <select
-                      className="mt-1 block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm form-control-focus"
-                      {...register("id_perfil_encuestador")}
-                    >
-                      <option value="">Seleccioná un perfil habilitado</option>
-                      {encuestadorProfiles.map((profile) => {
-                        const isSelected =
-                          String(profile.id) ===
-                          String(formValues.id_perfil_encuestador || "");
-                        return (
-                          <option
-                            key={profile.id}
-                            value={String(profile.id)}
-                            disabled={
-                              profile.assignedDisabled === true && !isSelected
-                            }
-                          >
-                            {profile.nombre}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <span className="mt-1 text-xs text-slate-500">
-                      Los perfiles habilitados se guardan en el dispositivo al iniciar sesión con
-                      internet; sin red se usa la última copia guardada.
-                    </span>
-                    {errors.id_perfil_encuestador?.message ? (
-                      <span className="mt-1 text-xs text-red-600">
-                        {String(errors.id_perfil_encuestador.message)}
+            <Fragment key={section.id}>
+              <details
+                open={openSections.has(section.id)}
+                onToggle={(e) => {
+                  const isOpen = (e.currentTarget as HTMLDetailsElement).open;
+                  setOpenSections((prev) => {
+                    const next = new Set(prev);
+                    if (isOpen) {
+                      next.add(section.id);
+                    } else {
+                      next.delete(section.id);
+                    }
+                    return next;
+                  });
+                }}
+                className="form-section-panel group"
+              >
+                <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+                  {section.title}
+                </summary>
+                {section.id === "encuestador" ? (
+                  <div className="form-fields-grid">
+                    <label className="flex min-w-0 max-w-full flex-col text-sm font-medium text-slate-800">
+                      Perfil de encuestador
+                      <select
+                        className="mt-1 block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm form-control-focus"
+                        {...register("id_perfil_encuestador")}
+                      >
+                        <option value="">Seleccioná un perfil habilitado</option>
+                        {encuestadorProfiles.map((profile) => {
+                          const isSelected =
+                            String(profile.id) ===
+                            String(formValues.id_perfil_encuestador || "");
+                          return (
+                            <option
+                              key={profile.id}
+                              value={String(profile.id)}
+                              disabled={
+                                profile.assignedDisabled === true && !isSelected
+                              }
+                            >
+                              {profile.nombre}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <span className="mt-1 text-xs text-slate-500">
+                        Los perfiles habilitados se guardan en el dispositivo al iniciar sesión con
+                        internet; sin red se usa la última copia guardada.
                       </span>
-                    ) : null}
-                  </label>
-                </div>
-              ) : (
-                <div className="form-fields-grid">
-                  {visibleSectionFields(section.fields).map((field) => (
-                    <FormFieldRow
-                      key={field}
-                      name={field}
-                      register={register}
-                      control={control}
-                      error={errors[field]?.message as string | undefined}
-                      editableGpsFields={modoCoordenadas === "manual"}
-                    />
-                  ))}
-                </div>
-              )}
-            </details>
+                      {errors.id_perfil_encuestador?.message ? (
+                        <span className="mt-1 text-xs text-red-600">
+                          {String(errors.id_perfil_encuestador.message)}
+                        </span>
+                      ) : null}
+                    </label>
+                  </div>
+                ) : (
+                  <div className="form-fields-grid">
+                    {visibleSectionFields(section.fields).map((field) => (
+                      <FormFieldRow
+                        key={field}
+                        name={field}
+                        register={register}
+                        control={control}
+                        error={errors[field]?.message as string | undefined}
+                        editableGpsFields={modoCoordenadas === "manual"}
+                      />
+                    ))}
+                  </div>
+                )}
+              </details>
+              {section.id === "desplazamiento" ? (
+                <RegistroFotograficoSection
+                  fotos={fotos}
+                  activeSlot={activeFotoSlot}
+                  onActiveSlotChange={setActiveFotoSlot}
+                  pickerInputRefs={pickerInputRefs}
+                  cameraOpen={cameraOpen}
+                  cameraVideoRef={cameraVideoRef}
+                  captureFlash={captureFlash}
+                  captureBadge={captureBadge}
+                  onOpenCameraForSlot={openCameraForSlot}
+                  onStopCamera={stopCamera}
+                  onCaptureFromCamera={() => void captureFromCamera()}
+                  onFotoFileForSlot={(slot, event) => void onFotoFileForSlot(slot, event)}
+                  onQuitarFotoSlot={quitarFotoSlot}
+                  onPreviewFoto={setPreviewFoto}
+                  cameraNotice={cameraOpen ? banner : null}
+                  open={openSections.has("registro-fotografico")}
+                  onToggle={(isOpen) => {
+                    setOpenSections((prev) => {
+                      const next = new Set(prev);
+                      if (isOpen) {
+                        next.add("registro-fotografico");
+                      } else {
+                        next.delete("registro-fotografico");
+                      }
+                      return next;
+                    });
+                  }}
+                />
+              ) : null}
+            </Fragment>
           ))}
-
-          <RegistroFotograficoSection
-            fotos={fotos}
-            activeSlot={activeFotoSlot}
-            onActiveSlotChange={setActiveFotoSlot}
-            pickerInputRefs={pickerInputRefs}
-            cameraOpen={cameraOpen}
-            cameraVideoRef={cameraVideoRef}
-            captureFlash={captureFlash}
-            captureBadge={captureBadge}
-            onOpenCameraForSlot={openCameraForSlot}
-            onStopCamera={stopCamera}
-            onCaptureFromCamera={() => void captureFromCamera()}
-            onFotoFileForSlot={(slot, event) => void onFotoFileForSlot(slot, event)}
-            onQuitarFotoSlot={quitarFotoSlot}
-            onPreviewFoto={setPreviewFoto}
-            cameraNotice={cameraOpen ? banner : null}
-            open={openSections.has("registro-fotografico")}
-            onToggle={(isOpen) => {
-              setOpenSections((prev) => {
-                const next = new Set(prev);
-                if (isOpen) {
-                  next.add("registro-fotografico");
-                } else {
-                  next.delete("registro-fotografico");
-                }
-                return next;
-              });
-            }}
-          />
 
           <div className="sticky bottom-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur">
             {submitButton.showNoChangesHint ? (

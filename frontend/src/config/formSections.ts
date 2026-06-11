@@ -49,11 +49,6 @@ export const FORM_SECTIONS: readonly FormSectionDef[] = [
     ],
   },
   {
-    id: 'validacion',
-    title: 'Validación',
-    fields: ['resultado_validacion', 'observaciones'],
-  },
-  {
     id: 'desplazamiento',
     title: 'Desplazamiento',
     fields: [
@@ -62,6 +57,11 @@ export const FORM_SECTIONS: readonly FormSectionDef[] = [
       'medio_transporte',
       'comentarios_desplazamiento',
     ],
+  },
+  {
+    id: 'validacion',
+    title: 'Validación',
+    fields: ['resultado_validacion', 'observaciones'],
   },
   {
     id: 'encuestador',

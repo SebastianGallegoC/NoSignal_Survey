@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import { FotoServidorAutenticada } from "@/components/form/FotoServidorAutenticada";
 import {
@@ -155,6 +155,96 @@ export const FormularioRespuestaReadOnly = ({
     setRemoteSrcMap((prev) => ({ ...prev, [photoKey]: src }));
   };
 
+  const registroFotograficoPanel =
+    fotos.length > 0 ? (
+      <details className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md">
+        <summary className="cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
+          Registro fotográfico ({fotos.length})
+        </summary>
+        <div className="border-t border-slate-100 px-4 pb-4">
+          {REGISTRO_FOTO_SLOTS.map(({ slot, label }) => {
+            const items = fotos.filter((f) => slotDeFoto(f) === slot);
+            if (items.length === 0) {
+              return null;
+            }
+            return (
+              <div key={slot} className="mt-4">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  {label} ({items.length})
+                </h4>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                  {items.map((f, idx) => (
+                    <button
+                      key={`${slot}-${f.nombre_archivo}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        if (f.data) {
+                          openPreview({
+                            nombre_archivo: f.nombre_archivo,
+                            src: f.data,
+                          });
+                          return;
+                        }
+                        const photoKey = `${slot}-${f.nombre_archivo}-${idx}`;
+                        const remoteSrc = remoteSrcMap[photoKey];
+                        if (remoteSrc) {
+                          openPreview({
+                            nombre_archivo: f.nombre_archivo,
+                            src: remoteSrc,
+                          });
+                        }
+                      }}
+                      className="group overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-left"
+                    >
+                      <figure className="overflow-hidden">
+                        {f.data ? (
+                          <img
+                            src={f.data}
+                            alt={registroFotoLabel(slot)}
+                            className="aspect-square w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                            loading="lazy"
+                          />
+                        ) : f.serverFormId != null && f.serverIndex != null ? (
+                          <FotoServidorAutenticada
+                            formId={f.serverFormId}
+                            photoIndex={f.serverIndex}
+                            alt={registroFotoLabel(slot)}
+                            loadDeferred={f.serverIndex > 0}
+                            onSrcChange={(src) =>
+                              resolveRemoteSrc(
+                                `${slot}-${f.nombre_archivo}-${idx}`,
+                                src,
+                              )
+                            }
+                            className="transition-transform duration-200 group-hover:scale-[1.02]"
+                          />
+                        ) : (
+                          <div className="flex aspect-square flex-col items-center justify-center gap-1 bg-slate-100 p-2 text-center text-[11px] text-slate-600">
+                            <span className="font-medium text-slate-700">
+                              Sin vista previa
+                            </span>
+                            <span className="break-all font-mono text-[9px] leading-tight text-slate-500">
+                              {(f.path ?? f.nombre_archivo).split(/[/\\]/).pop()}
+                            </span>
+                          </div>
+                        )}
+                        <figcaption
+                          className="truncate px-1.5 py-1 text-center text-[10px] text-slate-600"
+                          title={f.nombre_archivo}
+                        >
+                          {f.nombre_archivo}
+                        </figcaption>
+                      </figure>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </details>
+    ) : null;
+
   return (
     <div className="space-y-4 text-slate-800">
       {gps ? (
@@ -187,95 +277,6 @@ export const FormularioRespuestaReadOnly = ({
         </section>
       ) : null}
 
-      {fotos.length > 0 ? (
-        <details className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md">
-          <summary className="cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
-            Registro fotográfico ({fotos.length})
-          </summary>
-          <div className="border-t border-slate-100 px-4 pb-4">
-            {REGISTRO_FOTO_SLOTS.map(({ slot, label }) => {
-              const items = fotos.filter((f) => slotDeFoto(f) === slot);
-              if (items.length === 0) {
-                return null;
-              }
-              return (
-                <div key={slot} className="mt-4">
-                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    {label} ({items.length})
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {items.map((f, idx) => (
-                      <button
-                        key={`${slot}-${f.nombre_archivo}-${idx}`}
-                        type="button"
-                        onClick={() => {
-                          if (f.data) {
-                            openPreview({
-                              nombre_archivo: f.nombre_archivo,
-                              src: f.data,
-                            });
-                            return;
-                          }
-                          const photoKey = `${slot}-${f.nombre_archivo}-${idx}`;
-                          const remoteSrc = remoteSrcMap[photoKey];
-                          if (remoteSrc) {
-                            openPreview({
-                              nombre_archivo: f.nombre_archivo,
-                              src: remoteSrc,
-                            });
-                          }
-                        }}
-                        className="group overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-left"
-                      >
-                        <figure className="overflow-hidden">
-                          {f.data ? (
-                            <img
-                              src={f.data}
-                              alt={registroFotoLabel(slot)}
-                              className="aspect-square w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-                              loading="lazy"
-                            />
-                          ) : f.serverFormId != null && f.serverIndex != null ? (
-                            <FotoServidorAutenticada
-                              formId={f.serverFormId}
-                              photoIndex={f.serverIndex}
-                              alt={registroFotoLabel(slot)}
-                              loadDeferred={f.serverIndex > 0}
-                              onSrcChange={(src) =>
-                                resolveRemoteSrc(
-                                  `${slot}-${f.nombre_archivo}-${idx}`,
-                                  src,
-                                )
-                              }
-                              className="transition-transform duration-200 group-hover:scale-[1.02]"
-                            />
-                          ) : (
-                            <div className="flex aspect-square flex-col items-center justify-center gap-1 bg-slate-100 p-2 text-center text-[11px] text-slate-600">
-                              <span className="font-medium text-slate-700">
-                                Sin vista previa
-                              </span>
-                              <span className="break-all font-mono text-[9px] leading-tight text-slate-500">
-                                {(f.path ?? f.nombre_archivo).split(/[/\\]/).pop()}
-                              </span>
-                            </div>
-                          )}
-                          <figcaption
-                            className="truncate px-1.5 py-1 text-center text-[10px] text-slate-600"
-                            title={f.nombre_archivo}
-                          >
-                            {f.nombre_archivo}
-                          </figcaption>
-                        </figure>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </details>
-      ) : null}
-
       <ImagePreviewModal
         image={previewFoto}
         onClose={() => setPreviewFoto(null)}
@@ -283,40 +284,41 @@ export const FormularioRespuestaReadOnly = ({
       />
 
       <div className="space-y-2">
-        {FORM_SECTIONS.map((section, idx) =>
-          section.id === "encuestador" ? (
-            <details
-              key={section.id}
-              className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md"
-              open={idx === 0}
-            >
-              <summary className="cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
-                {section.title}
-              </summary>
-              <dl className="border-t border-slate-100 px-4 pb-3 pt-1">
-                <div className={rowClass}>
-                  <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500 sm:w-[42%]">
-                    {fieldLabel("id_perfil_encuestador")}
-                  </dt>
-                  <dd className="min-w-0 break-words text-sm text-slate-900 [overflow-wrap:anywhere] sm:text-right">
-                    {formatPerfilEncuestadorDisplay(
-                      snapshot.id_perfil_encuestador,
-                      snapshot.encuestador_perfil_nombre,
-                    )}
-                  </dd>
-                </div>
-              </dl>
-            </details>
-          ) : (
-            <ReadOnlySection
-              key={section.id}
-              sectionTitle={section.title}
-              fieldKeys={section.fields}
-              datos={datos}
-              initiallyOpen={idx === 0}
-            />
-          ),
-        )}
+        {FORM_SECTIONS.map((section, idx) => (
+          <Fragment key={section.id}>
+            {section.id === "encuestador" ? (
+              <details
+                className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md"
+                open={idx === 0}
+              >
+                <summary className="cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
+                  {section.title}
+                </summary>
+                <dl className="border-t border-slate-100 px-4 pb-3 pt-1">
+                  <div className={rowClass}>
+                    <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500 sm:w-[42%]">
+                      {fieldLabel("id_perfil_encuestador")}
+                    </dt>
+                    <dd className="min-w-0 break-words text-sm text-slate-900 [overflow-wrap:anywhere] sm:text-right">
+                      {formatPerfilEncuestadorDisplay(
+                        snapshot.id_perfil_encuestador,
+                        snapshot.encuestador_perfil_nombre,
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              </details>
+            ) : (
+              <ReadOnlySection
+                sectionTitle={section.title}
+                fieldKeys={section.fields}
+                datos={datos}
+                initiallyOpen={idx === 0}
+              />
+            )}
+            {section.id === "desplazamiento" ? registroFotograficoPanel : null}
+          </Fragment>
+        ))}
       </div>
     </div>
   );
