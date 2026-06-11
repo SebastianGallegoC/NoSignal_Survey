@@ -405,6 +405,43 @@ export function coalesceIdPerfilEncuestador(
   return null;
 }
 
+/** Snapshot liviano para calcular campos faltantes en el listado de diligenciados. */
+export function buildListPreviewSnapshot(
+  row: DisplayRow,
+  opts?: {
+    precarga?: PrecargaForm | null;
+    queued?: OfflineForm | null;
+    serverPreview?: FormularioSnapshot | null;
+  },
+): FormularioSnapshot | null {
+  const queued = opts?.queued ?? null;
+  if (queued) {
+    return {
+      id_perfil_encuestador: queued.id_perfil_encuestador ?? null,
+      datos_formulario: queued.datos_formulario ?? {},
+      gps: queued.gps ?? null,
+      fotos: queued.fotos ?? [],
+    };
+  }
+  if (opts?.serverPreview) {
+    return opts.serverPreview;
+  }
+  const precarga = opts?.precarga ?? row.precargaSolo ?? null;
+  if (precarga) {
+    return precargaToSnapshot(precarga);
+  }
+  const historialDatos = row.historial?.datos_formulario;
+  if (historialDatos && Object.keys(historialDatos).length > 0) {
+    return {
+      id_perfil_encuestador: row.historial?.id_perfil_encuestador ?? null,
+      datos_formulario: historialDatos,
+      gps: row.historial?.gps ?? null,
+      fotos: row.historial?.fotos ?? [],
+    };
+  }
+  return null;
+}
+
 export function precargaToSnapshot(precarga: {
   id_perfil_encuestador?: number | null;
   encuestador_perfil_nombre?: string | null;

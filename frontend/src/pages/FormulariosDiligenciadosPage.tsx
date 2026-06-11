@@ -28,7 +28,7 @@ import {
   type FormSummaryItem,
 } from "@/services/api";
 import { saveFormDraft, type FormDraftV1 } from "@/services/formDraftStorage";
-import { db, type FotoForm, type PrecargaForm } from "@/services/db";
+import { db, type FotoForm, type OfflineForm, type PrecargaForm } from "@/services/db";
 import {
   clearAllPrecargas,
   eliminarCopiaLocalFormulario,
@@ -38,6 +38,7 @@ import {
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import {
   buildFormValuesFromSnapshot,
+  buildListPreviewSnapshot,
   coalesceIdPerfilEncuestador,
   collectMunicipiosFromRows,
   getBeneficiarioDisplayName,
@@ -54,6 +55,7 @@ import {
   precargaToSnapshot,
   type DisplayRow,
 } from "@/services/formHistory";
+import { countMissingFormFieldsFromSnapshot } from "@/lib/formCompleteness";
 import { enrichFormularioSnapshotEncuestador } from "@/services/encuestadorProfiles";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -127,7 +129,14 @@ export const FormulariosDiligenciadosPage = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const serverItemsRef = useRef<FormReadItem[]>([]);
   const serverOffsetRef = useRef(0);
+  const serverPreviewFetchRef = useRef(new Set<string>());
   const [precargas, setPrecargas] = useState<PrecargaForm[]>([]);
+  const [queuedById, setQueuedById] = useState<Map<string, OfflineForm>>(
+    () => new Map(),
+  );
+  const [serverPreviewById, setServerPreviewById] = useState<
+    Map<string, FormularioSnapshot>
+  >(() => new Map());
   const [precargaLoadingId, setPrecargaLoadingId] = useState<string | null>(
     null,
   );
@@ -250,6 +259,25 @@ export const FormulariosDiligenciadosPage = () => {
     remoteLoaded,
   ]);
 
+  const missingFieldsById = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of rowsFiltrados) {
+      const snapshot = buildListPreviewSnapshot(row, {
+        precarga: precargaMap.get(row.id_formulario) ?? null,
+        queued: queuedById.get(row.id_formulario) ?? null,
+        serverPreview: serverPreviewById.get(row.id_formulario) ?? null,
+      });
+      if (!snapshot) {
+        continue;
+      }
+      const missing = countMissingFormFieldsFromSnapshot(snapshot);
+      if (missing > 0) {
+        counts.set(row.id_formulario, missing);
+      }
+    }
+    return counts;
+  }, [rowsFiltrados, precargaMap, queuedById, serverPreviewById]);
+
   /** Total en servidor; `sin_red` = sin Wi‑Fi/datos: no se muestra ningún mensaje en UI. */
   const contadorServidor = useMemo(() => {
     const navOnLine =
@@ -283,6 +311,8 @@ export const FormulariosDiligenciadosPage = () => {
 
     const precargasLocal = await db.precargas.toArray();
     const historialLocal = await db.historialFormularios.toArray();
+    const queuedLocal = await db.formularios.toArray();
+    setQueuedById(new Map(queuedLocal.map((q) => [q.id_formulario, q])));
 
     const token =
       typeof localStorage !== "undefined"
@@ -429,6 +459,70 @@ export const FormulariosDiligenciadosPage = () => {
     void loadList();
   }, [loadList]);
 
+  useEffect(() => {
+    if (!online) {
+      return;
+    }
+    let cancelled = false;
+    const pending = rowsFiltrados.filter((row) => {
+      if (!row.onServer) {
+        return false;
+      }
+      if (serverPreviewFetchRef.current.has(row.id_formulario)) {
+        return false;
+      }
+      if (queuedById.has(row.id_formulario)) {
+        return false;
+      }
+      if (precargaMap.has(row.id_formulario)) {
+        return false;
+      }
+      const historialDatos = row.historial?.datos_formulario;
+      if (historialDatos && Object.keys(historialDatos).length > 0) {
+        return false;
+      }
+      return true;
+    });
+
+    void (async () => {
+      for (const row of pending.slice(0, 24)) {
+        if (cancelled || !row.server) {
+          return;
+        }
+        serverPreviewFetchRef.current.add(row.id_formulario);
+        try {
+          const detail = await fetchFormFromApi(row.server.id_formulario);
+          if (cancelled) {
+            return;
+          }
+          setServerPreviewById((prev) => {
+            const next = new Map(prev);
+            next.set(row.id_formulario, {
+              id_perfil_encuestador: detail.id_perfil_encuestador ?? null,
+              datos_formulario: (detail.datos_formulario ?? {}) as Record<
+                string,
+                unknown
+              >,
+              gps: {
+                latitud: detail.latitud,
+                longitud: detail.longitud,
+                precision: detail.precision ?? null,
+              },
+              fotos: [],
+            });
+            return next;
+          });
+        } catch {
+          // omitir filas que no se puedan leer
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rowsFiltrados, online, precargaMap, queuedById]);
+
   const wasOnlineRef = useRef(online);
   useEffect(() => {
     if (online && !wasOnlineRef.current) {
@@ -514,6 +608,24 @@ export const FormulariosDiligenciadosPage = () => {
           if (!isStillThisRow()) {
             return;
           }
+          serverPreviewFetchRef.current.add(row.id_formulario);
+          setServerPreviewById((prev) => {
+            const next = new Map(prev);
+            next.set(row.id_formulario, {
+              id_perfil_encuestador: serverDetail.id_perfil_encuestador ?? null,
+              datos_formulario: (serverDetail.datos_formulario ?? {}) as Record<
+                string,
+                unknown
+              >,
+              gps: {
+                latitud: serverDetail.latitud,
+                longitud: serverDetail.longitud,
+                precision: serverDetail.precision ?? null,
+              },
+              fotos: [],
+            });
+            return next;
+          });
           const baseFotos = mapServerFotos(
             serverDetail.id_formulario,
             serverDetail.fotos ?? [],
@@ -1469,6 +1581,7 @@ export const FormulariosDiligenciadosPage = () => {
                   ? detailSource
                   : previewDetailSourceForRow(row, precarga);
               const syncErrorMessage = formatSyncErrorForUser(h?.ultimo_error);
+              const missingFields = missingFieldsById.get(row.id_formulario);
               return (
                 <article
                   key={row.id_formulario}
@@ -1512,6 +1625,15 @@ export const FormulariosDiligenciadosPage = () => {
                           >
                             Origen: {DETAIL_SOURCE_LABEL[effectiveDetailSource]}
                           </span>
+                          {missingFields != null && missingFields > 0 ? (
+                            <span
+                              className="rounded-full bg-amber-100 px-2 py-px text-[9px] font-semibold text-amber-900 sm:text-[10px]"
+                              title="Campos del formulario sin diligenciar"
+                            >
+                              Faltan {missingFields}{" "}
+                              {missingFields === 1 ? "campo" : "campos"}
+                            </span>
+                          ) : null}
                         </div>
                         <p className="text-sm font-medium leading-snug text-slate-900 sm:text-base sm:leading-normal">
                           Encuestado: {tituloUsuario}
