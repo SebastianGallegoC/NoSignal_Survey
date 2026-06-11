@@ -1,3 +1,5 @@
+import { toIsoDateStringLocal } from "@/lib/isoDateLocal";
+
 /** Rango ISO (YYYY-MM-DD) del mes calendario actual en hora local. */
 export function getCurrentMonthIsoDateRange(): { desde: string; hasta: string } {
   const now = new Date();
@@ -6,16 +8,9 @@ export function getCurrentMonthIsoDateRange(): { desde: string; hasta: string } 
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
   return {
-    desde: toIsoDateString(first),
-    hasta: toIsoDateString(last),
+    desde: toIsoDateStringLocal(first),
+    hasta: toIsoDateStringLocal(last),
   };
-}
-
-function toIsoDateString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
 }
 
 export function getCurrentCalendarYear(): number {

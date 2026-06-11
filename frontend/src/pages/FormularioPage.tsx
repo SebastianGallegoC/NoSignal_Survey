@@ -28,8 +28,10 @@ import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { useGPS } from "@/hooks/useGPS";
 import { useFormularioSubmit } from "@/hooks/useFormularioSubmit";
 import type { RegistroFotoSlot } from "@/config/registroFotografico";
+import { getTodayIsoDateLocal } from "@/lib/isoDateLocal";
 import {
   clearFormDraft,
+  isEditFormDraft,
   loadFormDraft,
   resolveInitialFormDraft,
   shouldPersistFormDraft,
@@ -70,20 +72,26 @@ export const FormularioPage = () => {
     return resolved;
   }, [draftUserKey, draftNavigation]);
 
-  const defaults = useMemo(() => {
-    return Object.fromEntries(
+  const defaults = useMemo((): FormValues => {
+    const values = Object.fromEntries(
       REQUIRED_FIELDS.map((k) => [k, ""]),
     ) as FormValues;
+    values.fecha_visita = getTodayIsoDateLocal();
+    return values;
   }, []);
 
   const initialFormValues = useMemo(() => {
     if (!loadedDraft?.formValues) {
       return defaults;
     }
-    return applyCuentaConCocinaToFormValues({
+    const merged = applyCuentaConCocinaToFormValues({
       ...defaults,
       ...loadedDraft.formValues,
     } as FormValues);
+    if (!isEditFormDraft(loadedDraft) && !merged.fecha_visita.trim()) {
+      merged.fecha_visita = getTodayIsoDateLocal();
+    }
+    return merged;
   }, [defaults, loadedDraft]);
 
   const {
