@@ -32,6 +32,7 @@ export const FORM_SECTIONS: readonly FormSectionDef[] = [
     title: 'Encuestado',
     fields: [
       'datos_encuestado',
+      'datos_encuestado_otro',
       'nombres_apellidos_encuestado',
       'tipo_documento_encuestado',
       'numero_documento_encuestado',

@@ -18,6 +18,7 @@ import {
   registroFotoLabel,
 } from "@/config/registroFotografico";
 import { displayCuentaConCocinaValue } from "@/lib/cuentaConCocina";
+import { displayDatosEncuestadoValue } from "@/lib/datosEncuestado";
 import { formatPerfilEncuestadorDisplay } from "@/services/encuestadorProfiles";
 import type { FormFieldKey } from "@/types/formFields";
 
@@ -27,6 +28,10 @@ const rowClass =
 function displayFieldValue(key: FormFieldKey, raw: unknown, datos: Record<string, unknown>): string {
   if (key === "cuenta_con_cocina") {
     const combined = displayCuentaConCocinaValue(raw, datos.cuenta_con_cocina_otro);
+    return combined || "—";
+  }
+  if (key === "datos_encuestado") {
+    const combined = displayDatosEncuestadoValue(raw, datos.datos_encuestado_otro);
     return combined || "—";
   }
   const s = raw == null ? "" : String(raw).trim();
@@ -92,7 +97,9 @@ function ReadOnlySection({
       </summary>
       <dl className="border-t border-slate-100 px-4 pb-3 pt-1">
         {fieldKeys
-          .filter((key) => key !== "cuenta_con_cocina_otro")
+          .filter(
+            (key) => key !== "cuenta_con_cocina_otro" && key !== "datos_encuestado_otro",
+          )
           .map((key) => (
           <div key={key} className={rowClass}>
             <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500 sm:w-[42%]">

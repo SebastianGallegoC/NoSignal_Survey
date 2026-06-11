@@ -20,6 +20,7 @@ describe("formFieldMeta — Survey", () => {
     expect(inputKindForField("observaciones")).toBe("textarea");
     expect(inputKindForField("comentarios_desplazamiento")).toBe("textarea");
     expect(inputKindForField("cuenta_con_cocina_otro")).toBe("textarea");
+    expect(inputKindForField("datos_encuestado_otro")).toBe("textarea");
   });
 
   it("mantiene etiquetas específicas de columnas duplicadas", () => {

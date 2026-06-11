@@ -8,6 +8,7 @@ const TEXTAREA_FIELDS = new Set<FormFieldKey>([
   'observaciones',
   'comentarios_desplazamiento',
   'cuenta_con_cocina_otro',
+  'datos_encuestado_otro',
 ]);
 
 const NUMBER_FIELDS = new Set<FormFieldKey>([
@@ -62,6 +63,7 @@ export const fieldLabel = (field: FormFieldKey): string =>
       autoriza_tratamiento_datos: 'Tratamiento de datos',
       fecha_visita: 'Fecha de la visita',
       datos_encuestado: 'Datos del encuestado',
+      datos_encuestado_otro: 'Especifique cuál',
       nombres_apellidos_encuestado: 'Nombres y apellidos',
       tipo_documento_encuestado: 'Identificación',
       numero_documento_encuestado: 'N°',

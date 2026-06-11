@@ -46,7 +46,16 @@ describe("matrizCaracterizacionExport — Survey", () => {
       }
     }
     for (const k of REQUIRED_FIELDS) {
-      if (["longitud", "latitud", "cuenta_con_cocina", "cuenta_con_cocina_otro", "id_perfil_encuestador"].includes(k)) {
+      if (
+        [
+          "longitud",
+          "latitud",
+          "cuenta_con_cocina",
+          "cuenta_con_cocina_otro",
+          "datos_encuestado_otro",
+          "id_perfil_encuestador",
+        ].includes(k)
+      ) {
         continue;
       }
       expect(keysInSources.has(k), `falta en plantilla Survey: ${k}`).toBe(true);

@@ -9,6 +9,7 @@ export const REQUIRED_FIELDS = [
   'vereda',
   'nombre_predio',
   'datos_encuestado',
+  'datos_encuestado_otro',
   'nombres_apellidos_encuestado',
   'tipo_documento_encuestado',
   'numero_documento_encuestado',

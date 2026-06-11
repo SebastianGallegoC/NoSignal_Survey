@@ -19,6 +19,7 @@ import {
   validateOfflineFormPayload,
 } from "@/services/formValidation";
 import { formatCuentaConCocinaForStorage } from "@/lib/cuentaConCocina";
+import { formatDatosEncuestadoForStorage } from "@/lib/datosEncuestado";
 import { applyDistanciaSeguridadRule } from "@/lib/distanciaSeguridadValidacion";
 import {
   formatCoordForDatosFormulario,
@@ -74,7 +75,12 @@ export const buildDatosFormulario = (
           : raw;
       continue;
     }
-    if (key === "cuenta_con_cocina" || key === "cuenta_con_cocina_otro") {
+    if (
+      key === "cuenta_con_cocina" ||
+      key === "cuenta_con_cocina_otro" ||
+      key === "datos_encuestado" ||
+      key === "datos_encuestado_otro"
+    ) {
       continue;
     }
     if (key === "id_perfil_encuestador") {
@@ -88,6 +94,12 @@ export const buildDatosFormulario = (
   );
   datos_formulario.cuenta_con_cocina = cocina.cuenta_con_cocina;
   datos_formulario.cuenta_con_cocina_otro = cocina.cuenta_con_cocina_otro;
+  const datosEncuestado = formatDatosEncuestadoForStorage(
+    String(values.datos_encuestado ?? ""),
+    String(values.datos_encuestado_otro ?? ""),
+  );
+  datos_formulario.datos_encuestado = datosEncuestado.datos_encuestado;
+  datos_formulario.datos_encuestado_otro = datosEncuestado.datos_encuestado_otro;
   const resultado = applyDistanciaSeguridadRule(values);
   datos_formulario.resultado_validacion = resultado.resultado_validacion;
   return datos_formulario;

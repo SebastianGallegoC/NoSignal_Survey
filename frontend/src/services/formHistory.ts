@@ -1,5 +1,6 @@
 import type { FormularioSnapshot } from "@/components/form/FormularioRespuestaReadOnly";
 import { applyCuentaConCocinaToFormValues } from "@/lib/cuentaConCocina";
+import { applyDatosEncuestadoToFormValues } from "@/lib/datosEncuestado";
 import { parseISODate } from "@/lib/formatDateTime";
 import { isRegistroFotoSlot } from "@/config/registroFotografico";
 import type { FormReadItem } from "@/services/api";
@@ -442,5 +443,5 @@ export function buildFormValuesFromSnapshot(snapshot: FormularioSnapshot): FormV
   ) {
     base.id_perfil_encuestador = String(snapshot.id_perfil_encuestador);
   }
-  return applyCuentaConCocinaToFormValues(base);
+  return applyDatosEncuestadoToFormValues(applyCuentaConCocinaToFormValues(base));
 }

@@ -45,6 +45,10 @@ import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/for
 import { buildExternalMapUrl, buildMapUrl } from "@/pages/formulario/mapUtils";
 import { applyCuentaConCocinaToFormValues, isCuentaConCocinaOtroSelection } from "@/lib/cuentaConCocina";
 import {
+  applyDatosEncuestadoToFormValues,
+  isDatosEncuestadoOtroSelection,
+} from "@/lib/datosEncuestado";
+import {
   distanciaSeguridadImpideCumplir,
   RESULTADO_NO_CUMPLE,
 } from "@/lib/distanciaSeguridadValidacion";
@@ -89,10 +93,12 @@ export const FormularioPage = () => {
     if (!loadedDraft?.formValues) {
       return defaults;
     }
-    const merged = applyCuentaConCocinaToFormValues({
-      ...defaults,
-      ...loadedDraft.formValues,
-    } as FormValues);
+    const merged = applyDatosEncuestadoToFormValues(
+      applyCuentaConCocinaToFormValues({
+        ...defaults,
+        ...loadedDraft.formValues,
+      } as FormValues),
+    );
     if (!isEditFormDraft(loadedDraft) && !merged.fecha_visita.trim()) {
       merged.fecha_visita = getTodayIsoDateLocal();
     }
@@ -157,6 +163,9 @@ export const FormularioPage = () => {
 
   const formValues = watch();
   const showCocinaOtro = isCuentaConCocinaOtroSelection(formValues.cuenta_con_cocina);
+  const showDatosEncuestadoOtro = isDatosEncuestadoOtroSelection(
+    formValues.datos_encuestado,
+  );
   const distanciaSeguridadBloqueaCumplir = distanciaSeguridadImpideCumplir(
     formValues.cumple_distancia_seguridad,
   );
@@ -166,6 +175,12 @@ export const FormularioPage = () => {
       setValue("cuenta_con_cocina_otro", "");
     }
   }, [showCocinaOtro, formValues.cuenta_con_cocina_otro, setValue]);
+
+  useEffect(() => {
+    if (!showDatosEncuestadoOtro && formValues.datos_encuestado_otro.trim() !== "") {
+      setValue("datos_encuestado_otro", "");
+    }
+  }, [showDatosEncuestadoOtro, formValues.datos_encuestado_otro, setValue]);
 
   useEffect(() => {
     if (
@@ -192,10 +207,16 @@ export const FormularioPage = () => {
 
   const visibleSectionFields = useCallback(
     (fields: readonly FormFieldKey[]) =>
-      fields.filter(
-        (field) => field !== "cuenta_con_cocina_otro" || showCocinaOtro,
-      ),
-    [showCocinaOtro],
+      fields.filter((field) => {
+        if (field === "cuenta_con_cocina_otro") {
+          return showCocinaOtro;
+        }
+        if (field === "datos_encuestado_otro") {
+          return showDatosEncuestadoOtro;
+        }
+        return true;
+      }),
+    [showCocinaOtro, showDatosEncuestadoOtro],
   );
 
   const selectedEncuestadorProfileId =

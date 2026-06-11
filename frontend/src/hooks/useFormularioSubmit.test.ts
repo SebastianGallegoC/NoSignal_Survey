@@ -46,6 +46,17 @@ describe("useFormularioSubmit helpers", () => {
     expect(data.resultado_validacion).toBe("NO CUMPLE");
   });
 
+  it("buildDatosFormulario combina OTRO con texto en datos_encuestado", () => {
+    const values = buildEmptyValues();
+    values.datos_encuestado = "OTRO";
+    values.datos_encuestado_otro = "Familiar";
+
+    const data = buildDatosFormulario(values, REQUIRED_FIELDS);
+
+    expect(data.datos_encuestado).toBe("OTRO - Familiar");
+    expect(data.datos_encuestado_otro).toBe("");
+  });
+
   it("buildDatosFormulario combina OTRO con texto en cuenta_con_cocina", () => {
     const values = buildEmptyValues();
     values.cuenta_con_cocina = "OTRO";
