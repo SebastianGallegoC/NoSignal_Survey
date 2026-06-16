@@ -96,10 +96,14 @@ function isFieldMissing(
   return isBlank(values[key]);
 }
 
-function resolveFotoSlot(foto: {
-  slot?: unknown;
-  visita?: unknown;
-}): RegistroFotoSlot | null {
+function resolveFotoSlot(
+  foto: {
+    slot?: unknown;
+    visita?: unknown;
+    serverIndex?: number;
+  },
+  orderedIndex?: number,
+): RegistroFotoSlot | null {
   if (isRegistroFotoSlot(foto.slot)) {
     return foto.slot;
   }
@@ -110,6 +114,20 @@ function resolveFotoSlot(foto: {
     foto.visita === 4
   ) {
     return foto.visita as RegistroFotoSlot;
+  }
+  if (
+    typeof foto.serverIndex === "number" &&
+    foto.serverIndex >= 0 &&
+    foto.serverIndex < REGISTRO_FOTO_SLOT_NUMBERS.length
+  ) {
+    return REGISTRO_FOTO_SLOT_NUMBERS[foto.serverIndex] ?? null;
+  }
+  if (
+    typeof orderedIndex === "number" &&
+    orderedIndex >= 0 &&
+    orderedIndex < REGISTRO_FOTO_SLOT_NUMBERS.length
+  ) {
+    return REGISTRO_FOTO_SLOT_NUMBERS[orderedIndex] ?? null;
   }
   return null;
 }
@@ -137,14 +155,34 @@ function fotoSlotHasContent(foto: {
 export function getMissingPhotoSlots(
   fotos: FormularioSnapshot["fotos"] | undefined,
 ): RegistroFotoSlot[] {
+  const list = fotos ?? [];
   const present = new Set<RegistroFotoSlot>();
-  for (const foto of fotos ?? []) {
-    const slot = resolveFotoSlot(foto);
-    if (slot == null || !fotoSlotHasContent(foto)) {
+
+  for (const [index, foto] of list.entries()) {
+    if (!fotoSlotHasContent(foto)) {
       continue;
     }
-    present.add(slot);
+    const slot = resolveFotoSlot(foto, index);
+    if (slot != null) {
+      present.add(slot);
+    }
   }
+
+  const unresolvedWithContent = list.filter(
+    (foto, index) =>
+      fotoSlotHasContent(foto) && resolveFotoSlot(foto, index) == null,
+  );
+  const missingSlots = REGISTRO_FOTO_SLOT_NUMBERS.filter(
+    (slot) => !present.has(slot),
+  );
+  for (
+    let i = 0;
+    i < unresolvedWithContent.length && i < missingSlots.length;
+    i += 1
+  ) {
+    present.add(missingSlots[i]);
+  }
+
   return REGISTRO_FOTO_SLOT_NUMBERS.filter((slot) => !present.has(slot));
 }
 

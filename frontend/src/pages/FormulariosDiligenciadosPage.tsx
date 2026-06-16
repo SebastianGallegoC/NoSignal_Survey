@@ -56,6 +56,7 @@ import {
   type DisplayRow,
 } from "@/services/formHistory";
 import {
+  countMissingPhotoSlots,
   formatMissingPendingListBadge,
   getMissingPendingSummary,
 } from "@/lib/formCompleteness";
@@ -476,17 +477,21 @@ export const FormulariosDiligenciadosPage = () => {
       if (serverPreviewFetchRef.current.has(row.id_formulario)) {
         return false;
       }
+      if (serverPreviewById.has(row.id_formulario)) {
+        return false;
+      }
       if (queuedById.has(row.id_formulario)) {
         return false;
       }
-      if (precargaMap.has(row.id_formulario)) {
-        return false;
+      const previewSinDetalle = buildListPreviewSnapshot(row, {
+        precarga: precargaMap.get(row.id_formulario) ?? null,
+        queued: null,
+        serverPreview: null,
+      });
+      if (!previewSinDetalle) {
+        return true;
       }
-      const historialDatos = row.historial?.datos_formulario;
-      if (historialDatos && Object.keys(historialDatos).length > 0) {
-        return false;
-      }
-      return true;
+      return countMissingPhotoSlots(previewSinDetalle.fotos) > 0;
     });
 
     void (async () => {
@@ -526,7 +531,7 @@ export const FormulariosDiligenciadosPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [rowsFiltrados, online, precargaMap, queuedById]);
+  }, [rowsFiltrados, online, precargaMap, queuedById, serverPreviewById]);
 
   const wasOnlineRef = useRef(online);
   useEffect(() => {

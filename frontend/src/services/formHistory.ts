@@ -2,7 +2,10 @@ import type { FormularioSnapshot } from "@/components/form/FormularioRespuestaRe
 import { applyCuentaConCocinaToFormValues } from "@/lib/cuentaConCocina";
 import { applyDatosEncuestadoToFormValues } from "@/lib/datosEncuestado";
 import { parseISODate } from "@/lib/formatDateTime";
-import { isRegistroFotoSlot } from "@/config/registroFotografico";
+import {
+  isRegistroFotoSlot,
+  REGISTRO_FOTO_SLOT_NUMBERS,
+} from "@/config/registroFotografico";
 import type { FormReadItem } from "@/services/api";
 import type { HistorialForm, OfflineForm, PrecargaForm } from "@/services/db";
 import { REQUIRED_FIELDS, type FormValues } from "@/types/formFields";
@@ -181,6 +184,10 @@ export function mapServerFotos(
         })()
       : [];
   return list.map((p, i) => {
+    const slotFromIndex =
+      i >= 0 && i < REGISTRO_FOTO_SLOT_NUMBERS.length
+        ? REGISTRO_FOTO_SLOT_NUMBERS[i]
+        : null;
     if (typeof p === "string") {
       const base = p.split(/[/\\]/).pop() || `foto_${i + 1}.jpg`;
       return {
@@ -188,6 +195,7 @@ export function mapServerFotos(
         path: p,
         serverFormId: formId,
         serverIndex: i,
+        ...(slotFromIndex != null ? { slot: slotFromIndex } : {}),
       };
     }
     if (p !== null && typeof p === "object" && "path" in p) {
@@ -209,12 +217,14 @@ export function mapServerFotos(
           slot = legacyNum;
         }
       }
+      const resolvedSlot =
+        slot != null && isRegistroFotoSlot(slot) ? slot : slotFromIndex;
       return {
         nombre_archivo: base,
         path,
         serverFormId: formId,
         serverIndex: i,
-        ...(slot != null && isRegistroFotoSlot(slot) ? { slot } : {}),
+        ...(resolvedSlot != null ? { slot: resolvedSlot } : {}),
       };
     }
     return {
@@ -222,6 +232,7 @@ export function mapServerFotos(
       path: String(p),
       serverFormId: formId,
       serverIndex: i,
+      ...(slotFromIndex != null ? { slot: slotFromIndex } : {}),
     };
   });
 }
@@ -406,6 +417,59 @@ export function coalesceIdPerfilEncuestador(
 }
 
 /** Snapshot liviano para calcular campos faltantes en el listado de diligenciados. */
+type ListPreviewFoto = NonNullable<FormularioSnapshot["fotos"]>[number];
+
+function listPreviewFotoHasContent(foto: ListPreviewFoto): boolean {
+  if (typeof foto.data === "string" && foto.data.trim() !== "") {
+    return true;
+  }
+  if (typeof foto.path === "string" && foto.path.trim() !== "") {
+    return true;
+  }
+  return (
+    typeof foto.serverFormId === "string" &&
+    foto.serverFormId.trim() !== "" &&
+    typeof foto.serverIndex === "number" &&
+    Number.isFinite(foto.serverIndex)
+  );
+}
+
+function coalesceFotosForListPreview(
+  row: DisplayRow,
+  opts?: {
+    precarga?: PrecargaForm | null;
+    queued?: OfflineForm | null;
+    serverPreview?: FormularioSnapshot | null;
+  },
+): FormularioSnapshot["fotos"] {
+  const candidates: Array<FormularioSnapshot["fotos"] | undefined> = [
+    opts?.queued?.fotos,
+    row.historial?.fotos,
+    opts?.precarga?.fotos,
+    row.precargaSolo?.fotos,
+    opts?.serverPreview?.fotos,
+  ];
+  if (row.server?.fotos?.length) {
+    candidates.push(mapServerFotos(row.server.id_formulario, row.server.fotos));
+  }
+
+  let best: FormularioSnapshot["fotos"] = [];
+  let bestContent = 0;
+  for (const candidate of candidates) {
+    if (!candidate?.length) {
+      continue;
+    }
+    const contentCount = candidate.filter((foto) =>
+      listPreviewFotoHasContent(foto),
+    ).length;
+    if (contentCount > bestContent) {
+      bestContent = contentCount;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
 export function buildListPreviewSnapshot(
   row: DisplayRow,
   opts?: {
@@ -421,36 +485,40 @@ export function buildListPreviewSnapshot(
       id_perfil_encuestador: queued.id_perfil_encuestador ?? null,
       datos_formulario: queued.datos_formulario ?? {},
       gps: queued.gps ?? null,
-      fotos: queued.fotos ?? [],
+      fotos: [],
     };
   } else if (opts?.serverPreview) {
-    snapshot = opts.serverPreview;
+    snapshot = {
+      id_perfil_encuestador: opts.serverPreview.id_perfil_encuestador ?? null,
+      encuestador_perfil_nombre: opts.serverPreview.encuestador_perfil_nombre ?? null,
+      datos_formulario: opts.serverPreview.datos_formulario ?? {},
+      gps: opts.serverPreview.gps ?? null,
+      fotos: [],
+    };
   } else {
-    const precarga = opts?.precarga ?? row.precargaSolo ?? null;
-    if (precarga) {
-      snapshot = precargaToSnapshot(precarga);
+    const historialDatos = row.historial?.datos_formulario;
+    if (historialDatos && Object.keys(historialDatos).length > 0) {
+      snapshot = {
+        id_perfil_encuestador: row.historial?.id_perfil_encuestador ?? null,
+        datos_formulario: historialDatos,
+        gps: row.historial?.gps ?? null,
+        fotos: [],
+      };
     } else {
-      const historialDatos = row.historial?.datos_formulario;
-      if (historialDatos && Object.keys(historialDatos).length > 0) {
-        snapshot = {
-          id_perfil_encuestador: row.historial?.id_perfil_encuestador ?? null,
-          datos_formulario: historialDatos,
-          gps: row.historial?.gps ?? null,
-          fotos: row.historial?.fotos ?? [],
-        };
+      const precarga = opts?.precarga ?? row.precargaSolo ?? null;
+      if (precarga) {
+        snapshot = precargaToSnapshot(precarga);
+        snapshot = { ...snapshot, fotos: [] };
       }
     }
   }
   if (!snapshot) {
     return null;
   }
-  if ((snapshot.fotos?.length ?? 0) === 0 && row.server?.fotos?.length) {
-    return {
-      ...snapshot,
-      fotos: mapServerFotos(row.server.id_formulario, row.server.fotos),
-    };
-  }
-  return snapshot;
+  return {
+    ...snapshot,
+    fotos: coalesceFotosForListPreview(row, opts),
+  };
 }
 
 export function precargaToSnapshot(precarga: {

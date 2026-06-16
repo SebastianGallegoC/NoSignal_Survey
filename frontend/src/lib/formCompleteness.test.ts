@@ -137,6 +137,16 @@ describe("formCompleteness", () => {
     ).toBe(4);
   });
 
+  it("reconoce fotos del servidor por serverIndex aunque falte slot", () => {
+    const fotos = Array.from({ length: 6 }, (_, index) => ({
+      nombre_archivo: `foto_${index + 1}.jpg`,
+      path: `uploads/2026/foto_${index + 1}.jpg`,
+      serverFormId: "form-1",
+      serverIndex: index,
+    }));
+    expect(countMissingPhotoSlots(fotos)).toBe(0);
+  });
+
   it("suma fotos faltantes al conteo del listado", () => {
     const values = emptyValues();
     fillAllFields(values);

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import type { FormReadItem } from "@/services/api";
 import type { HistorialForm, PrecargaForm } from "@/services/db";
+import { countMissingPhotoSlots } from "@/lib/formCompleteness";
 import {
+  buildListPreviewSnapshot,
   coalesceIdPerfilEncuestador,
   collectMunicipiosFromRows,
   filterDisplayRowsWithPrecarga,
@@ -195,7 +197,7 @@ describe("formHistory — beneficiario", () => {
     expect(b).toBeDefined();
     expect(a!.slot).toBe(2);
     expect(a!.path).toContain("foto_1.jpg");
-    expect(b!.slot).toBeUndefined();
+    expect(b!.slot).toBe(2);
   });
 
   it("mapServerFotos normaliza visita legacy a slot", () => {
@@ -434,6 +436,65 @@ describe("formHistory — beneficiario", () => {
     expect(merged).toHaveLength(1);
     expect(merged[0].historial).toEqual(h);
     expect(merged[0].precargaSolo).toBeUndefined();
+  });
+});
+
+describe("buildListPreviewSnapshot", () => {
+  it("prioriza fotos del historial sobre precarga vacía", () => {
+    const row = {
+      id_formulario: "con-fotos",
+      onServer: true,
+      server: itemServidor("con-fotos"),
+      historial: {
+        id_formulario: "con-fotos",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        estado: "ENVIADO" as const,
+        datos_formulario: { nombres_apellidos_encuestado: "Ana" },
+        fotos: Array.from({ length: 6 }, (_, index) => ({
+          nombre_archivo: `f${index + 1}.jpg`,
+          data: `data:image/jpeg;base64,${index}`,
+          slot: (index + 1) as 1 | 2 | 3 | 4 | 5 | 6,
+        })),
+      },
+    };
+    const snapshot = buildListPreviewSnapshot(row, {
+      precarga: {
+        id_formulario: "con-fotos",
+        fecha_precarga: "2026-05-01T12:00:00Z",
+        datos_formulario: { nombres_apellidos_encuestado: "Ana" },
+        fotos: [],
+      },
+    });
+    expect(snapshot).not.toBeNull();
+    expect(countMissingPhotoSlots(snapshot?.fotos)).toBe(0);
+  });
+
+  it("usa rutas del servidor cuando la copia local no trae fotos", () => {
+    const serverFotos = Array.from(
+      { length: 6 },
+      (_, index) => `uploads/2026/foto_${index + 1}.jpg`,
+    );
+    const row = {
+      id_formulario: "srv-fotos",
+      onServer: true,
+      server: {
+        ...itemServidor("srv-fotos"),
+        fotos: serverFotos,
+      },
+      historial: {
+        id_formulario: "srv-fotos",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        estado: "ENVIADO" as const,
+        datos_formulario: { nombres_apellidos_encuestado: "Ana" },
+        fotos: [],
+      },
+    };
+    const snapshot = buildListPreviewSnapshot(row);
+    expect(snapshot).not.toBeNull();
+    expect(countMissingPhotoSlots(snapshot?.fotos)).toBe(0);
+    expect(mapServerFotos("srv-fotos", serverFotos).every((f) => f.slot != null)).toBe(
+      true,
+    );
   });
 });
 
