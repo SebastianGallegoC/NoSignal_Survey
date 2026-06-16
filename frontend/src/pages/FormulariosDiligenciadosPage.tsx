@@ -508,7 +508,7 @@ export const FormulariosDiligenciadosPage = () => {
                 longitud: detail.longitud,
                 precision: detail.precision ?? null,
               },
-              fotos: [],
+              fotos: mapServerFotos(detail.id_formulario, detail.fotos ?? []),
             });
             return next;
           });

@@ -1,4 +1,9 @@
 import type { FormularioSnapshot } from "@/components/form/FormularioRespuestaReadOnly";
+import {
+  isRegistroFotoSlot,
+  REGISTRO_FOTO_SLOT_NUMBERS,
+  type RegistroFotoSlot,
+} from "@/config/registroFotografico";
 import { GPS_PLACEHOLDER_WHEN_NOT_CAPTURED } from "@/constants/gpsConfig";
 import {
   isCuentaConCocinaOtroSelection,
@@ -11,6 +16,13 @@ import {
 import { normalizeCoordNumericCell } from "@/lib/coordNumericToken";
 import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/formFields";
 import { buildFormValuesFromSnapshot } from "@/services/formHistory";
+
+const MEDIO_TRANSPORTE_OTRO = "OTRO";
+
+function isMedioTransporteOtroSelection(value: string): boolean {
+  const v = value.trim().toUpperCase();
+  return v === MEDIO_TRANSPORTE_OTRO || v.startsWith("OTRO -");
+}
 
 function isBlank(value: string): boolean {
   return value.trim() === "";
@@ -88,13 +100,80 @@ function isFieldMissing(
     return isBlank(parsed.datos_encuestado);
   }
 
+  if (key === "medio_transporte") {
+    if (isMedioTransporteOtroSelection(values.medio_transporte)) {
+      return isBlank(values.comentarios_desplazamiento);
+    }
+    return isBlank(values.medio_transporte);
+  }
+
   return isBlank(values[key]);
+}
+
+function resolveFotoSlot(foto: {
+  slot?: unknown;
+  visita?: unknown;
+}): RegistroFotoSlot | null {
+  if (isRegistroFotoSlot(foto.slot)) {
+    return foto.slot;
+  }
+  if (
+    foto.visita === 1 ||
+    foto.visita === 2 ||
+    foto.visita === 3 ||
+    foto.visita === 4
+  ) {
+    return foto.visita as RegistroFotoSlot;
+  }
+  return null;
+}
+
+function fotoSlotHasContent(foto: {
+  data?: string;
+  path?: string;
+  serverFormId?: string;
+  serverIndex?: number;
+}): boolean {
+  if (typeof foto.data === "string" && foto.data.trim() !== "") {
+    return true;
+  }
+  if (typeof foto.path === "string" && foto.path.trim() !== "") {
+    return true;
+  }
+  return (
+    typeof foto.serverFormId === "string" &&
+    foto.serverFormId.trim() !== "" &&
+    typeof foto.serverIndex === "number" &&
+    Number.isFinite(foto.serverIndex)
+  );
+}
+
+export function countMissingPhotoSlots(
+  fotos: FormularioSnapshot["fotos"] | undefined,
+): number {
+  const present = new Set<RegistroFotoSlot>();
+  for (const foto of fotos ?? []) {
+    const slot = resolveFotoSlot(foto);
+    if (slot == null || !fotoSlotHasContent(foto)) {
+      continue;
+    }
+    present.add(slot);
+  }
+  return REGISTRO_FOTO_SLOT_NUMBERS.filter((slot) => !present.has(slot)).length;
+}
+
+function shouldSkipFieldInCompletenessLoop(key: FormFieldKey): boolean {
+  return (
+    key === "cuenta_con_cocina_otro" ||
+    key === "datos_encuestado_otro" ||
+    key === "comentarios_desplazamiento"
+  );
 }
 
 export function countMissingFormFields(values: FormValues): number {
   let missing = 0;
   for (const key of REQUIRED_FIELDS) {
-    if (key === "cuenta_con_cocina_otro" || key === "datos_encuestado_otro") {
+    if (shouldSkipFieldInCompletenessLoop(key)) {
       continue;
     }
     if (isFieldMissing(key, values, null)) {
@@ -111,12 +190,12 @@ export function countMissingFormFieldsFromSnapshot(
   const gps = isGpsPlaceholder(snapshot.gps) ? null : snapshot.gps;
   let missing = 0;
   for (const key of REQUIRED_FIELDS) {
-    if (key === "cuenta_con_cocina_otro" || key === "datos_encuestado_otro") {
+    if (shouldSkipFieldInCompletenessLoop(key)) {
       continue;
     }
     if (isFieldMissing(key, values, gps)) {
       missing += 1;
     }
   }
-  return missing;
+  return missing + countMissingPhotoSlots(snapshot.fotos);
 }

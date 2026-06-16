@@ -415,31 +415,42 @@ export function buildListPreviewSnapshot(
   },
 ): FormularioSnapshot | null {
   const queued = opts?.queued ?? null;
+  let snapshot: FormularioSnapshot | null = null;
   if (queued) {
-    return {
+    snapshot = {
       id_perfil_encuestador: queued.id_perfil_encuestador ?? null,
       datos_formulario: queued.datos_formulario ?? {},
       gps: queued.gps ?? null,
       fotos: queued.fotos ?? [],
     };
+  } else if (opts?.serverPreview) {
+    snapshot = opts.serverPreview;
+  } else {
+    const precarga = opts?.precarga ?? row.precargaSolo ?? null;
+    if (precarga) {
+      snapshot = precargaToSnapshot(precarga);
+    } else {
+      const historialDatos = row.historial?.datos_formulario;
+      if (historialDatos && Object.keys(historialDatos).length > 0) {
+        snapshot = {
+          id_perfil_encuestador: row.historial?.id_perfil_encuestador ?? null,
+          datos_formulario: historialDatos,
+          gps: row.historial?.gps ?? null,
+          fotos: row.historial?.fotos ?? [],
+        };
+      }
+    }
   }
-  if (opts?.serverPreview) {
-    return opts.serverPreview;
+  if (!snapshot) {
+    return null;
   }
-  const precarga = opts?.precarga ?? row.precargaSolo ?? null;
-  if (precarga) {
-    return precargaToSnapshot(precarga);
-  }
-  const historialDatos = row.historial?.datos_formulario;
-  if (historialDatos && Object.keys(historialDatos).length > 0) {
+  if ((snapshot.fotos?.length ?? 0) === 0 && row.server?.fotos?.length) {
     return {
-      id_perfil_encuestador: row.historial?.id_perfil_encuestador ?? null,
-      datos_formulario: historialDatos,
-      gps: row.historial?.gps ?? null,
-      fotos: row.historial?.fotos ?? [],
+      ...snapshot,
+      fotos: mapServerFotos(row.server.id_formulario, row.server.fotos),
     };
   }
-  return null;
+  return snapshot;
 }
 
 export function precargaToSnapshot(precarga: {

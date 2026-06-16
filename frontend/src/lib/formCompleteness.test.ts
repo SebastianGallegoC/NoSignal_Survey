@@ -3,22 +3,45 @@ import { describe, expect, it } from "vitest";
 import {
   countMissingFormFields,
   countMissingFormFieldsFromSnapshot,
+  countMissingPhotoSlots,
 } from "@/lib/formCompleteness";
 import { REQUIRED_FIELDS, type FormValues } from "@/types/formFields";
 
 const emptyValues = (): FormValues =>
   Object.fromEntries(REQUIRED_FIELDS.map((k) => [k, ""])) as FormValues;
 
+const fillAllFields = (values: FormValues): void => {
+  for (const key of REQUIRED_FIELDS) {
+    if (key === "latitud") {
+      values.latitud = "4.5";
+      continue;
+    }
+    if (key === "longitud") {
+      values.longitud = "-72.5";
+      continue;
+    }
+    if (key === "edad_encuestado") {
+      values.edad_encuestado = "30";
+      continue;
+    }
+    if (key === "id_perfil_encuestador") {
+      values.id_perfil_encuestador = "1";
+      continue;
+    }
+    values[key] = `valor-${key}`;
+  }
+};
+
 describe("formCompleteness", () => {
   it("cuenta todos los campos vacíos en un formulario nuevo", () => {
-    expect(countMissingFormFields(emptyValues())).toBe(REQUIRED_FIELDS.length - 2);
+    expect(countMissingFormFields(emptyValues())).toBe(REQUIRED_FIELDS.length - 3);
   });
 
   it("no exige cuenta_con_cocina_otro si no eligió OTRO", () => {
     const values = emptyValues();
     values.cuenta_con_cocina = "SI";
     const missing = countMissingFormFields(values);
-    expect(missing).toBeLessThan(REQUIRED_FIELDS.length - 2);
+    expect(missing).toBeLessThan(REQUIRED_FIELDS.length - 3);
   });
 
   it("exige texto si datos_encuestado es OTRO", () => {
@@ -32,6 +55,57 @@ describe("formCompleteness", () => {
     expect(completeOtro).toBeLessThan(withOtro);
   });
 
+  it("exige texto si cuenta_con_cocina es OTRO", () => {
+    const values = emptyValues();
+    fillAllFields(values);
+    values.cuenta_con_cocina = "OTRO";
+    values.cuenta_con_cocina_otro = "";
+    const withOtro = countMissingFormFields(values);
+    values.cuenta_con_cocina_otro = "Cocina de leña";
+    const completeOtro = countMissingFormFields(values);
+    expect(withOtro).toBe(1);
+    expect(completeOtro).toBe(0);
+  });
+
+  it("exige comentarios si medio_transporte es OTRO", () => {
+    const values = emptyValues();
+    fillAllFields(values);
+    values.medio_transporte = "OTRO";
+    values.comentarios_desplazamiento = "";
+    expect(countMissingFormFields(values)).toBe(1);
+    values.comentarios_desplazamiento = "Bicicleta";
+    expect(countMissingFormFields(values)).toBe(0);
+  });
+
+  it("no exige comentarios si medio_transporte no es OTRO", () => {
+    const values = emptyValues();
+    fillAllFields(values);
+    values.medio_transporte = "CAMINANDO";
+    values.comentarios_desplazamiento = "";
+    expect(countMissingFormFields(values)).toBe(0);
+  });
+
+  it("cuenta fotos faltantes desde snapshot", () => {
+    expect(countMissingPhotoSlots([])).toBe(6);
+    expect(
+      countMissingPhotoSlots([
+        { nombre_archivo: "f1.jpg", data: "data:image/jpeg;base64,abc", slot: 1 },
+        { nombre_archivo: "f2.jpg", path: "/uploads/f2.jpg", slot: 2 },
+      ]),
+    ).toBe(4);
+  });
+
+  it("suma fotos faltantes al conteo del listado", () => {
+    const values = emptyValues();
+    fillAllFields(values);
+    const missing = countMissingFormFieldsFromSnapshot({
+      datos_formulario: values,
+      gps: { latitud: 7.5, longitud: -72.25, precision: 4 },
+      fotos: [],
+    });
+    expect(missing).toBe(6);
+  });
+
   it("cuenta desde snapshot con datos parciales", () => {
     const missing = countMissingFormFieldsFromSnapshot({
       datos_formulario: {
@@ -42,6 +116,6 @@ describe("formCompleteness", () => {
       gps: { latitud: 7.5, longitud: -72.25, precision: 4 },
     });
     expect(missing).toBeGreaterThan(0);
-    expect(missing).toBeLessThan(REQUIRED_FIELDS.length);
+    expect(missing).toBeLessThan(REQUIRED_FIELDS.length + 6);
   });
 });
