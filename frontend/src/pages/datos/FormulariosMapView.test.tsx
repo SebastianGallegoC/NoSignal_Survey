@@ -15,8 +15,6 @@ vi.mock("react-leaflet", () => ({
   }),
 }));
 
-vi.mock("leaflet.markercluster", () => ({}));
-
 import { FormulariosMapView } from "@/pages/datos/FormulariosMapView";
 
 describe("FormulariosMapView", () => {

@@ -1,13 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import L from "leaflet";
-import "leaflet.markercluster";
 import "leaflet/dist/leaflet.css";
-import "leaflet.markercluster/dist/MarkerCluster.css";
-import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 
 import { municipioFilterLabel } from "@/constants/formStatsMunicipio";
 import type { FormMapPointItem } from "@/services/api";
+import { spreadMapPoints } from "@/pages/datos/mapPointSpread";
 
 interface FormulariosMapViewProps {
   points: FormMapPointItem[];
@@ -34,6 +32,17 @@ function markerColor(resultado: string): string {
   return "#64748b";
 }
 
+function createMarkerIcon(resultado: string): L.DivIcon {
+  return L.divIcon({
+    className: "",
+    html: `<span style="display:block;width:12px;height:12px;border-radius:9999px;background:${markerColor(
+      resultado,
+    )};border:2px solid #fff;box-shadow:0 0 0 1px rgba(15,23,42,0.22);"></span>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
+}
+
 function createPopupContent(point: FormMapPointItem): HTMLElement {
   const container = document.createElement("div");
   const title = document.createElement("strong");
@@ -55,35 +64,26 @@ function createPopupContent(point: FormMapPointItem): HTMLElement {
   return container;
 }
 
-function MapMarkersCluster({ points }: { points: FormMapPointItem[] }) {
+function MapMarkers({ points }: { points: FormMapPointItem[] }) {
   const map = useMap();
+  const displayPoints = useMemo(() => spreadMapPoints(points), [points]);
 
   useEffect(() => {
-    const clusterGroup = L.markerClusterGroup({
-      showCoverageOnHover: false,
-      removeOutsideVisibleBounds: true,
-      maxClusterRadius: 60,
-    });
+    const layerGroup = L.layerGroup();
 
-    for (const point of points) {
-      const icon = L.divIcon({
-        className: "",
-        html: `<span style="display:block;width:12px;height:12px;border-radius:9999px;background:${markerColor(
-          point.resultado_validacion,
-        )};border:2px solid #fff;box-shadow:0 0 0 1px rgba(15,23,42,0.22);"></span>`,
-        iconSize: [12, 12],
-        iconAnchor: [6, 6],
+    for (const point of displayPoints) {
+      const marker = L.marker([point.displayLat, point.displayLng], {
+        icon: createMarkerIcon(point.resultado_validacion),
       });
-      const marker = L.marker([point.latitud, point.longitud], { icon });
       marker.bindPopup(createPopupContent(point));
-      clusterGroup.addLayer(marker);
+      layerGroup.addLayer(marker);
     }
 
-    map.addLayer(clusterGroup);
+    map.addLayer(layerGroup);
     return () => {
-      map.removeLayer(clusterGroup);
+      map.removeLayer(layerGroup);
     };
-  }, [map, points]);
+  }, [displayPoints, map]);
 
   return null;
 }
@@ -172,12 +172,13 @@ export const FormulariosMapView = ({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapMarkersCluster points={points} />
+          <MapMarkers points={points} />
           <MapFitBounds points={points} />
         </MapContainer>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        Colores: verde (cumple), rojo (no cumple), gris (sin resultado).
+        Colores: verde (cumple), rojo (no cumple), gris (sin resultado). Puntos en la misma
+        ubicación se muestran ligeramente separados para facilitar la selección.
       </p>
     </div>
   );
