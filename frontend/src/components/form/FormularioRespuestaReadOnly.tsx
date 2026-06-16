@@ -168,11 +168,40 @@ export const FormularioRespuestaReadOnly = ({
     setRemoteSrcMap((prev) => ({ ...prev, [photoKey]: src }));
   };
 
+  const badgeForSection = (
+    fieldKeys: readonly FormFieldKey[],
+  ): string | null => {
+    const missingFieldsCount = fieldKeys.filter((k) =>
+      missingFieldKeys.has(k),
+    ).length;
+    if (missingFieldsCount === 0) {
+      return null;
+    }
+    return missingFieldsCount === 1
+      ? "Falta 1 campo"
+      : `Faltan ${missingFieldsCount} campos`;
+  };
+
+  const badgeForRegistroFotografico = (): string | null => {
+    const count = missingPhotoSlots.length;
+    if (count === 0) {
+      return null;
+    }
+    return count === 1 ? "Falta 1 foto" : `Faltan ${count} fotos`;
+  };
+
+  const registroFotoBadge = badgeForRegistroFotografico();
+
   const registroFotograficoPanel =
     (
       <details className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md">
-        <summary className="cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
-          Registro fotográfico ({fotos.length})
+        <summary className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
+          <span>Registro fotográfico ({fotos.length})</span>
+          {registroFotoBadge ? (
+            <span className="shrink-0 rounded-md bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-900">
+              {registroFotoBadge}
+            </span>
+          ) : null}
         </summary>
         <div className="border-t border-slate-100 px-4 pb-4">
           {REGISTRO_FOTO_SLOTS.map(({ slot, label }) => {
@@ -261,34 +290,6 @@ export const FormularioRespuestaReadOnly = ({
       </details>
     );
 
-  const badgeForSection = (
-    sectionId: string,
-    fieldKeys: readonly FormFieldKey[],
-  ): string | null => {
-    const missingFieldsCount = fieldKeys.filter((k) =>
-      missingFieldKeys.has(k),
-    ).length;
-    const missingPhotosCount =
-      sectionId === "desplazamiento" ? missingPhotoSlots.length : 0;
-
-    if (missingFieldsCount === 0 && missingPhotosCount === 0) {
-      return null;
-    }
-    if (missingPhotosCount > 0 && missingFieldsCount === 0) {
-      return missingPhotosCount === 1
-        ? "Falta 1 foto"
-        : `Faltan ${missingPhotosCount} fotos`;
-    }
-    if (missingFieldsCount > 0 && missingPhotosCount === 0) {
-      return missingFieldsCount === 1
-        ? "Falta 1 campo"
-        : `Faltan ${missingFieldsCount} campos`;
-    }
-    // Ambos.
-    const total = missingFieldsCount + missingPhotosCount;
-    return total === 1 ? "Falta 1 pendiente" : `Faltan ${total} pendientes`;
-  };
-
   return (
     <div className="space-y-4 text-slate-800">
       {gps ? (
@@ -334,9 +335,9 @@ export const FormularioRespuestaReadOnly = ({
               <details className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md">
                 <summary className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
                   <span>{section.title}</span>
-                  {badgeForSection(section.id, section.fields) ? (
+                  {badgeForSection(section.fields) ? (
                     <span className="shrink-0 rounded-md bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-900">
-                      {badgeForSection(section.id, section.fields)}
+                      {badgeForSection(section.fields)}
                     </span>
                   ) : null}
                 </summary>
@@ -359,7 +360,7 @@ export const FormularioRespuestaReadOnly = ({
                 sectionTitle={section.title}
                 fieldKeys={section.fields}
                 datos={datos}
-                missingSummary={badgeForSection(section.id, section.fields)}
+                missingSummary={badgeForSection(section.fields)}
               />
             )}
             {section.id === "desplazamiento" ? registroFotograficoPanel : null}
