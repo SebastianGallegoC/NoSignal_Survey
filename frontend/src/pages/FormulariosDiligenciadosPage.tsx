@@ -55,7 +55,10 @@ import {
   precargaToSnapshot,
   type DisplayRow,
 } from "@/services/formHistory";
-import { countMissingFormFieldsFromSnapshot } from "@/lib/formCompleteness";
+import {
+  formatMissingPendingListBadge,
+  getMissingPendingSummary,
+} from "@/lib/formCompleteness";
 import { enrichFormularioSnapshotEncuestador } from "@/services/encuestadorProfiles";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -259,8 +262,8 @@ export const FormulariosDiligenciadosPage = () => {
     remoteLoaded,
   ]);
 
-  const missingFieldsById = useMemo(() => {
-    const counts = new Map<string, number>();
+  const missingBadgeById = useMemo(() => {
+    const labels = new Map<string, string>();
     for (const row of rowsFiltrados) {
       const snapshot = buildListPreviewSnapshot(row, {
         precarga: precargaMap.get(row.id_formulario) ?? null,
@@ -270,12 +273,14 @@ export const FormulariosDiligenciadosPage = () => {
       if (!snapshot) {
         continue;
       }
-      const missing = countMissingFormFieldsFromSnapshot(snapshot);
-      if (missing > 0) {
-        counts.set(row.id_formulario, missing);
+      const label = formatMissingPendingListBadge(
+        getMissingPendingSummary(snapshot),
+      );
+      if (label) {
+        labels.set(row.id_formulario, label);
       }
     }
-    return counts;
+    return labels;
   }, [rowsFiltrados, precargaMap, queuedById, serverPreviewById]);
 
   /** Total en servidor; `sin_red` = sin Wi‑Fi/datos: no se muestra ningún mensaje en UI. */
@@ -1581,7 +1586,7 @@ export const FormulariosDiligenciadosPage = () => {
                   ? detailSource
                   : previewDetailSourceForRow(row, precarga);
               const syncErrorMessage = formatSyncErrorForUser(h?.ultimo_error);
-              const missingFields = missingFieldsById.get(row.id_formulario);
+              const missingBadge = missingBadgeById.get(row.id_formulario);
               return (
                 <article
                   key={row.id_formulario}
@@ -1625,13 +1630,12 @@ export const FormulariosDiligenciadosPage = () => {
                           >
                             Origen: {DETAIL_SOURCE_LABEL[effectiveDetailSource]}
                           </span>
-                          {missingFields != null && missingFields > 0 ? (
+                          {missingBadge ? (
                             <span
                               className="rounded-full bg-amber-100 px-2 py-px text-[9px] font-semibold text-amber-900 sm:text-[10px]"
-                              title="Campos del formulario sin diligenciar"
+                              title="Campos o fotos del formulario sin diligenciar"
                             >
-                              Faltan {missingFields}{" "}
-                              {missingFields === 1 ? "campo" : "campos"}
+                              {missingBadge}
                             </span>
                           ) : null}
                         </div>

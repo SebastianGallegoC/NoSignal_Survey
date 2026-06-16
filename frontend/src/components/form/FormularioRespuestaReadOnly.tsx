@@ -20,6 +20,9 @@ import {
 import { displayCuentaConCocinaValue } from "@/lib/cuentaConCocina";
 import { displayDatosEncuestadoValue } from "@/lib/datosEncuestado";
 import {
+  countMissingFieldsInSection,
+  formatMissingFieldsBadge,
+  formatMissingPhotosBadge,
   getMissingFormFieldKeysFromSnapshot,
   getMissingPhotoSlots,
 } from "@/lib/formCompleteness";
@@ -170,27 +173,12 @@ export const FormularioRespuestaReadOnly = ({
 
   const badgeForSection = (
     fieldKeys: readonly FormFieldKey[],
-  ): string | null => {
-    const missingFieldsCount = fieldKeys.filter((k) =>
-      missingFieldKeys.has(k),
-    ).length;
-    if (missingFieldsCount === 0) {
-      return null;
-    }
-    return missingFieldsCount === 1
-      ? "Falta 1 campo"
-      : `Faltan ${missingFieldsCount} campos`;
-  };
+  ): string | null =>
+    formatMissingFieldsBadge(
+      countMissingFieldsInSection(fieldKeys, missingFieldKeys),
+    );
 
-  const badgeForRegistroFotografico = (): string | null => {
-    const count = missingPhotoSlots.length;
-    if (count === 0) {
-      return null;
-    }
-    return count === 1 ? "Falta 1 foto" : `Faltan ${count} fotos`;
-  };
-
-  const registroFotoBadge = badgeForRegistroFotografico();
+  const registroFotoBadge = formatMissingPhotosBadge(missingPhotoSlots.length);
 
   const registroFotograficoPanel =
     (

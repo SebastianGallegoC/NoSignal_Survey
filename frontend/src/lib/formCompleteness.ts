@@ -17,13 +17,6 @@ import { normalizeCoordNumericCell } from "@/lib/coordNumericToken";
 import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/formFields";
 import { buildFormValuesFromSnapshot } from "@/services/formHistory";
 
-const MEDIO_TRANSPORTE_OTRO = "OTRO";
-
-function isMedioTransporteOtroSelection(value: string): boolean {
-  const v = value.trim().toUpperCase();
-  return v === MEDIO_TRANSPORTE_OTRO || v.startsWith("OTRO -");
-}
-
 function isBlank(value: string): boolean {
   return value.trim() === "";
 }
@@ -100,13 +93,6 @@ function isFieldMissing(
     return isBlank(parsed.datos_encuestado);
   }
 
-  if (key === "medio_transporte") {
-    if (isMedioTransporteOtroSelection(values.medio_transporte)) {
-      return isBlank(values.comentarios_desplazamiento);
-    }
-    return isBlank(values.medio_transporte);
-  }
-
   return isBlank(values[key]);
 }
 
@@ -169,11 +155,7 @@ export function countMissingPhotoSlots(
 }
 
 function shouldSkipFieldInCompletenessLoop(key: FormFieldKey): boolean {
-  return (
-    key === "cuenta_con_cocina_otro" ||
-    key === "datos_encuestado_otro" ||
-    key === "comentarios_desplazamiento"
-  );
+  return key === "cuenta_con_cocina_otro" || key === "datos_encuestado_otro";
 }
 
 export function countMissingFormFields(values: FormValues): number {
@@ -213,4 +195,60 @@ export function countMissingFormFieldsFromSnapshot(
     getMissingFormFieldKeysFromSnapshot(snapshot).size +
     countMissingPhotoSlots(snapshot.fotos)
   );
+}
+
+export type MissingPendingSummary = {
+  missingFieldCount: number;
+  missingPhotoCount: number;
+};
+
+export function getMissingPendingSummary(
+  snapshot: FormularioSnapshot,
+): MissingPendingSummary {
+  return {
+    missingFieldCount: getMissingFormFieldKeysFromSnapshot(snapshot).size,
+    missingPhotoCount: countMissingPhotoSlots(snapshot.fotos),
+  };
+}
+
+export function formatMissingFieldsBadge(count: number): string | null {
+  if (count <= 0) {
+    return null;
+  }
+  return count === 1 ? "Falta 1 campo" : `Faltan ${count} campos`;
+}
+
+export function formatMissingPhotosBadge(count: number): string | null {
+  if (count <= 0) {
+    return null;
+  }
+  return count === 1 ? "Falta 1 foto" : `Faltan ${count} fotos`;
+}
+
+export function countMissingFieldsInSection(
+  fieldKeys: readonly FormFieldKey[],
+  missingFieldKeys: Set<FormFieldKey>,
+): number {
+  return fieldKeys.filter((key) => missingFieldKeys.has(key)).length;
+}
+
+/** Texto del badge en el listado de diligenciados (campos y fotos por separado). */
+export function formatMissingPendingListBadge(
+  summary: MissingPendingSummary,
+): string | null {
+  const { missingFieldCount, missingPhotoCount } = summary;
+  if (missingFieldCount === 0 && missingPhotoCount === 0) {
+    return null;
+  }
+  if (missingFieldCount > 0 && missingPhotoCount === 0) {
+    return formatMissingFieldsBadge(missingFieldCount);
+  }
+  if (missingFieldCount === 0 && missingPhotoCount > 0) {
+    return formatMissingPhotosBadge(missingPhotoCount);
+  }
+  const fieldsLabel =
+    missingFieldCount === 1 ? "1 campo" : `${missingFieldCount} campos`;
+  const photosLabel =
+    missingPhotoCount === 1 ? "1 foto" : `${missingPhotoCount} fotos`;
+  return `Faltan ${fieldsLabel} y ${photosLabel}`;
 }

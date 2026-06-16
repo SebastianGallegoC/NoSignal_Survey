@@ -4,6 +4,9 @@ import {
   countMissingFormFields,
   countMissingFormFieldsFromSnapshot,
   countMissingPhotoSlots,
+  formatMissingPendingListBadge,
+  getMissingFormFieldKeysFromSnapshot,
+  getMissingPendingSummary,
 } from "@/lib/formCompleteness";
 import { REQUIRED_FIELDS, type FormValues } from "@/types/formFields";
 
@@ -34,14 +37,14 @@ const fillAllFields = (values: FormValues): void => {
 
 describe("formCompleteness", () => {
   it("cuenta todos los campos vacíos en un formulario nuevo", () => {
-    expect(countMissingFormFields(emptyValues())).toBe(REQUIRED_FIELDS.length - 3);
+    expect(countMissingFormFields(emptyValues())).toBe(REQUIRED_FIELDS.length - 2);
   });
 
   it("no exige cuenta_con_cocina_otro si no eligió OTRO", () => {
     const values = emptyValues();
     values.cuenta_con_cocina = "SI";
     const missing = countMissingFormFields(values);
-    expect(missing).toBeLessThan(REQUIRED_FIELDS.length - 3);
+    expect(missing).toBeLessThan(REQUIRED_FIELDS.length - 2);
   });
 
   it("exige texto si datos_encuestado es OTRO", () => {
@@ -77,12 +80,51 @@ describe("formCompleteness", () => {
     expect(countMissingFormFields(values)).toBe(0);
   });
 
-  it("no exige comentarios si medio_transporte no es OTRO", () => {
+  it("exige comentarios aunque medio_transporte no sea OTRO", () => {
     const values = emptyValues();
     fillAllFields(values);
     values.medio_transporte = "CAMINANDO";
     values.comentarios_desplazamiento = "";
+    expect(countMissingFormFields(values)).toBe(1);
+    values.comentarios_desplazamiento = "Sin observaciones";
     expect(countMissingFormFields(values)).toBe(0);
+  });
+
+  it("cuenta los 4 campos de desplazamiento vacíos", () => {
+    const values = emptyValues();
+    fillAllFields(values);
+    values.tiempo_desplazamiento_horas = "";
+    values.tiempo_desplazamiento_minutos = "";
+    values.medio_transporte = "";
+    values.comentarios_desplazamiento = "";
+    const missing = getMissingFormFieldKeysFromSnapshot({
+      datos_formulario: values,
+      gps: { latitud: 7.5, longitud: -72.25, precision: 4 },
+      fotos: [],
+    });
+    expect(missing.has("tiempo_desplazamiento_horas")).toBe(true);
+    expect(missing.has("tiempo_desplazamiento_minutos")).toBe(true);
+    expect(missing.has("medio_transporte")).toBe(true);
+    expect(missing.has("comentarios_desplazamiento")).toBe(true);
+  });
+
+  it("resume campos y fotos por separado en el listado", () => {
+    const values = emptyValues();
+    fillAllFields(values);
+    values.tiempo_desplazamiento_horas = "";
+    values.tiempo_desplazamiento_minutos = "";
+    values.medio_transporte = "";
+    values.comentarios_desplazamiento = "";
+    const summary = getMissingPendingSummary({
+      datos_formulario: values,
+      gps: { latitud: 7.5, longitud: -72.25, precision: 4 },
+      fotos: [],
+    });
+    expect(summary.missingFieldCount).toBe(4);
+    expect(summary.missingPhotoCount).toBe(6);
+    expect(formatMissingPendingListBadge(summary)).toBe(
+      "Faltan 4 campos y 6 fotos",
+    );
   });
 
   it("cuenta fotos faltantes desde snapshot", () => {
