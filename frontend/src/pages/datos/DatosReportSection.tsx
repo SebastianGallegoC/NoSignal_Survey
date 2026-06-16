@@ -5,6 +5,7 @@ interface DatosReportSectionProps {
   description: string;
   ariaLabel: string;
   filters: ReactNode;
+  filtersLabel?: string;
   children: ReactNode;
 }
 
@@ -13,6 +14,7 @@ export const DatosReportSection = ({
   description,
   ariaLabel,
   filters,
+  filtersLabel = "Filtros de este gráfico",
   children,
 }: DatosReportSectionProps) => {
   return (
@@ -27,7 +29,7 @@ export const DatosReportSection = ({
 
       <div className="border-b border-slate-100 px-4 py-4 sm:px-6">
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          Filtros de este gráfico
+          {filtersLabel}
         </p>
         {filters}
       </div>

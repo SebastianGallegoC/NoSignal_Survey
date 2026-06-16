@@ -262,6 +262,34 @@ export interface FormStatsMonthlyQuery {
   municipios: string[];
 }
 
+export interface FormMapPointItem {
+  id_formulario: string;
+  latitud: number;
+  longitud: number;
+  municipio: string;
+  fecha_visita: string;
+  nombres_apellidos_encuestado: string;
+  resultado_validacion: string;
+}
+
+export interface FormMapPointsFiltersApplied {
+  municipios: string[];
+  fecha_desde: string | null;
+  fecha_hasta: string | null;
+}
+
+export interface FormMapPointsResponse {
+  items: FormMapPointItem[];
+  total: number;
+  filtros_aplicados: FormMapPointsFiltersApplied;
+}
+
+export interface FormMapPointsQuery {
+  municipios?: string[];
+  fecha_desde?: string;
+  fecha_hasta?: string;
+}
+
 /** Elimina el formulario en el servidor (requiere JWT). */
 export const deleteFormFromApi = async (formId: string): Promise<void> => {
   const url = `${API_BASE}/api/v1/forms/${encodeURIComponent(formId)}`;
@@ -409,6 +437,36 @@ export const fetchFormStatsMunicipiosFromApi = async (): Promise<string[]> => {
   }
   const body = (await response.json()) as FormStatsMunicipiosResponse;
   return Array.isArray(body.municipios) ? body.municipios : [];
+};
+
+/** Puntos para visor de mapa en Datos (`GET /api/v1/forms/map-points`). */
+export const fetchFormMapPointsFromApi = async (
+  params: FormMapPointsQuery = {},
+): Promise<FormMapPointsResponse> => {
+  const search = new URLSearchParams();
+  for (const municipio of params.municipios ?? []) {
+    const trimmed = municipio.trim();
+    if (trimmed) {
+      search.append("municipios", trimmed);
+    }
+  }
+  if (params.fecha_desde?.trim()) {
+    search.set("fecha_desde", params.fecha_desde.trim());
+  }
+  if (params.fecha_hasta?.trim()) {
+    search.set("fecha_hasta", params.fecha_hasta.trim());
+  }
+  const qs = search.toString();
+  const url = `${API_BASE}/api/v1/forms/map-points${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url, {
+    headers: { ...authHeaders() },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `forms_map_points_${response.status}`);
+  }
+  return (await response.json()) as FormMapPointsResponse;
 };
 
 /** Devuelve detalle de un formulario por id (incluye fotos como rutas en `fotos`). */

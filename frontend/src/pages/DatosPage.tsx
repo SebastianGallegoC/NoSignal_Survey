@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 
@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { useFormStats } from "@/hooks/useFormStats";
+import { useFormMapPoints } from "@/hooks/useFormMapPoints";
 import { useFormStatsMunicipios } from "@/hooks/useFormStatsMunicipios";
 import { useFormStatsMonthly } from "@/hooks/useFormStatsMonthly";
+import { DatosMapFilters } from "@/pages/datos/DatosMapFilters";
 import { DatosFilters } from "@/pages/datos/DatosFilters";
 import { DatosOfflineBanner } from "@/pages/datos/DatosOfflineBanner";
 import { DatosReportSection } from "@/pages/datos/DatosReportSection";
@@ -26,6 +28,11 @@ import {
   getDefaultMonthlyAnio,
 } from "@/pages/datos/datosDateDefaults";
 
+const FormulariosMapView = lazy(async () => {
+  const mod = await import("@/pages/datos/FormulariosMapView");
+  return { default: mod.FormulariosMapView };
+});
+
 export const DatosPage = () => {
   const online = useConnectivityStatus();
   const [municipio, setMunicipio] = useState("");
@@ -38,6 +45,14 @@ export const DatosPage = () => {
 
   const [anioMensual, setAnioMensual] = useState(() => getCurrentCalendarYear());
   const [municipioMensual, setMunicipioMensual] = useState(MUNICIPIO_MENSUAL_TODOS);
+  const [mapMunicipios, setMapMunicipios] = useState<string[]>([]);
+  const [mapMunicipiosInitialized, setMapMunicipiosInitialized] = useState(false);
+  const [mapFechaDesde, setMapFechaDesde] = useState(
+    () => getCurrentMonthIsoDateRange().desde,
+  );
+  const [mapFechaHasta, setMapFechaHasta] = useState(
+    () => getCurrentMonthIsoDateRange().hasta,
+  );
 
   const filters = useMemo((): FormStatsQuery => {
     const q: FormStatsQuery = {};
@@ -91,6 +106,22 @@ export const DatosPage = () => {
     return monthlyData;
   }, [monthlyData, municipioMensual]);
 
+  const mapFilters = useMemo(
+    () => ({
+      municipios: [...mapMunicipios],
+      fecha_desde: mapFechaDesde.trim(),
+      fecha_hasta: mapFechaHasta.trim(),
+    }),
+    [mapMunicipios, mapFechaDesde, mapFechaHasta],
+  );
+  const {
+    points: mapPoints,
+    total: mapTotal,
+    loadState: mapLoadState,
+    error: mapError,
+    reload: reloadMapPoints,
+  } = useFormMapPoints(mapFilters, online);
+
   useEffect(() => {
     if (
       municipio &&
@@ -120,6 +151,23 @@ export const DatosPage = () => {
     }
   }, [municipioMensual, municipioOptions, municipiosLoadState]);
 
+  useEffect(() => {
+    if (municipiosLoadState !== "ready") {
+      return;
+    }
+    if (!mapMunicipiosInitialized) {
+      setMapMunicipios([...municipioOptions]);
+      setMapMunicipiosInitialized(true);
+      return;
+    }
+
+    setMapMunicipios((prev) => prev.filter((municipio) => municipioOptions.includes(municipio)));
+  }, [
+    mapMunicipiosInitialized,
+    municipioOptions,
+    municipiosLoadState,
+  ]);
+
   const clearValidationFilters = () => {
     const { desde, hasta } = getCurrentMonthIsoDateRange();
     setMunicipio("");
@@ -132,15 +180,32 @@ export const DatosPage = () => {
     setMunicipioMensual(MUNICIPIO_MENSUAL_TODOS);
   };
 
+  const clearMapFilters = () => {
+    const { desde, hasta } = getCurrentMonthIsoDateRange();
+    setMapFechaDesde(desde);
+    setMapFechaHasta(hasta);
+    setMapMunicipios([...municipioOptions]);
+  };
+
+  const toggleMapMunicipio = (municipioName: string) => {
+    setMapMunicipios((prev) =>
+      prev.includes(municipioName)
+        ? prev.filter((item) => item !== municipioName)
+        : [...prev, municipioName],
+    );
+  };
+
   const refreshAll = () => {
     void reloadMunicipios();
     void reloadAnios();
     void reload();
     void reloadMonthly();
+    void reloadMapPoints();
   };
 
   const anyLoading =
     loadState === "loading" ||
+    mapLoadState === "loading" ||
     monthlyLoadState === "loading" ||
     municipiosLoadState === "loading";
 
@@ -183,6 +248,45 @@ export const DatosPage = () => {
             Iniciá sesión para ver estadísticas del servidor.
           </div>
         ) : null}
+
+        <DatosReportSection
+          ariaLabel="Mapa de formularios"
+          title="Ubicación de formularios"
+          description="Mapa con la coordenada GPS de cada formulario sincronizado. Los filtros de abajo aplican solo a este mapa."
+          filtersLabel="Filtros del mapa"
+          filters={
+            <DatosMapFilters
+              municipioOptions={municipioOptions}
+              selectedMunicipios={mapMunicipios}
+              municipiosLoading={municipiosLoadState === "loading"}
+              fechaDesde={mapFechaDesde}
+              fechaHasta={mapFechaHasta}
+              disabled={!online}
+              onToggleMunicipio={toggleMapMunicipio}
+              onSelectAllMunicipios={() => setMapMunicipios([...municipioOptions])}
+              onClearMunicipios={() => setMapMunicipios([])}
+              onChangeFechaDesde={setMapFechaDesde}
+              onChangeFechaHasta={setMapFechaHasta}
+              onClear={clearMapFilters}
+            />
+          }
+        >
+          <Suspense
+            fallback={
+              <p className="py-8 text-center text-sm text-slate-600">
+                Cargando mapa…
+              </p>
+            }
+          >
+            <FormulariosMapView
+              points={mapPoints}
+              total={mapTotal}
+              loadState={mapLoadState}
+              error={mapError}
+              onRetry={() => void reloadMapPoints()}
+            />
+          </Suspense>
+        </DatosReportSection>
 
         <DatosReportSection
           ariaLabel="Validación"

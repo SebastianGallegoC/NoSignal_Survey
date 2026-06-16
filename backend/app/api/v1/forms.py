@@ -18,6 +18,7 @@ from app.repository.forms import (
     search_forms_summary,
 )
 from app.schemas.form_payload import FormPayload
+from app.schemas.form_map import FormMapPointsQueryParams, FormMapPointsResponse
 from app.schemas.form_read import FormListResponse, FormReadItem, FormSearchResponse
 from app.schemas.form_stats import (
     FormStatsAniosResponse,
@@ -33,6 +34,7 @@ from app.services.form_stats import (
     get_monthly_diligencias,
     get_validation_stats,
 )
+from app.services.form_map import get_form_map_points
 from app.services.forms import persist_form
 from app.services.storage import media_type_for_image, validated_photo_path
 
@@ -211,6 +213,43 @@ async def form_validation_stats(
         )
     except SQLAlchemyError:
         logger.exception("form_validation_stats DB error user=%r", _current_user)
+        raise
+
+
+@router.get("/map-points", response_model=FormMapPointsResponse)
+async def form_map_points(
+    municipios: list[str] = Query(default=[]),
+    fecha_desde: date | None = Query(default=None),
+    fecha_hasta: date | None = Query(default=None),
+    session: AsyncSession = Depends(get_session),
+    _current_user: str = Depends(get_current_user),
+):
+    """Puntos geográficos para visor de mapa en Datos."""
+    try:
+        params = FormMapPointsQueryParams(
+            municipios=municipios,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+        )
+    except ValidationError as exc:
+        detail = "invalid_map_points_query"
+        for err in exc.errors():
+            if err.get("type") == "value_error" and "fecha_desde_must_be_lte" in str(
+                err.get("msg", "")
+            ):
+                detail = "fecha_desde_must_be_lte_fecha_hasta"
+                break
+        raise HTTPException(status_code=422, detail=detail) from exc
+
+    try:
+        return await get_form_map_points(
+            session,
+            municipios=params.municipios,
+            fecha_desde=params.fecha_desde,
+            fecha_hasta=params.fecha_hasta,
+        )
+    except SQLAlchemyError:
+        logger.exception("form_map_points DB error user=%r", _current_user)
         raise
 
 

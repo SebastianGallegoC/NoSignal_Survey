@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MUNICIPIO_SIN_ASOCIAR } from "@/constants/formStatsMunicipio";
@@ -7,6 +7,7 @@ const mockFetchFormStats = vi.fn();
 const mockFetchFormStatsMunicipios = vi.fn();
 const mockFetchFormStatsMonthly = vi.fn();
 const mockFetchFormStatsAnios = vi.fn();
+const mockFetchFormMapPoints = vi.fn();
 const mockUseConnectivity = vi.fn(() => true);
 
 vi.mock("@/hooks/useConnectivityStatus", () => ({
@@ -22,8 +23,24 @@ vi.mock("@/services/api", async (importOriginal) => {
     fetchFormStatsMonthlyFromApi: (...args: unknown[]) =>
       mockFetchFormStatsMonthly(...args),
     fetchFormStatsAniosFromApi: () => mockFetchFormStatsAnios(),
+    fetchFormMapPointsFromApi: (...args: unknown[]) =>
+      mockFetchFormMapPoints(...args),
   };
 });
+
+vi.mock("@/pages/datos/FormulariosMapView", () => ({
+  FormulariosMapView: ({
+    total,
+    loadState,
+  }: {
+    total: number;
+    loadState: string;
+  }) => (
+    <div data-testid="map-view-mock">
+      mapa:{loadState}:{total}
+    </div>
+  ),
+}));
 
 vi.mock("@/lib/authStorage", () => ({
   ACCESS_TOKEN_KEY: "nosignal_access_token",
@@ -55,6 +72,25 @@ describe("DatosPage", () => {
       MUNICIPIO_SIN_ASOCIAR,
     ]);
     mockFetchFormStatsAnios.mockResolvedValue([2026, 2025]);
+    mockFetchFormMapPoints.mockResolvedValue({
+      items: [
+        {
+          id_formulario: "f-1",
+          latitud: 7.889,
+          longitud: -72.496,
+          municipio: "Cúcuta",
+          fecha_visita: "2026-06-15",
+          nombres_apellidos_encuestado: "Ana Perez",
+          resultado_validacion: "CUMPLE",
+        },
+      ],
+      total: 1,
+      filtros_aplicados: {
+        municipios: ["Cúcuta"],
+        fecha_desde: "2026-06-01",
+        fecha_hasta: "2026-06-30",
+      },
+    });
     mockFetchFormStatsMonthly.mockResolvedValue({
       anio: 2026,
       municipios: ["Cúcuta"],
@@ -94,6 +130,22 @@ describe("DatosPage", () => {
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(mockFetchFormStats).not.toHaveBeenCalled();
+      expect(mockFetchFormMapPoints).not.toHaveBeenCalled();
+    });
+  });
+
+  it("muestra sección de mapa y consulta puntos online", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Ubicación de formularios")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockFetchFormMapPoints).toHaveBeenCalled();
+      expect(screen.getByTestId("map-view-mock")).toBeInTheDocument();
     });
   });
 
@@ -134,10 +186,12 @@ describe("DatosPage", () => {
     const monthlySelect = screen.getByRole("combobox", {
       name: /Municipio para gráfico mensual/i,
     });
-    const options = Array.from(monthlySelect.querySelectorAll("option")).map(
-      (o) => o.textContent,
-    );
-    expect(options).toContain("Sin asociar");
+    await waitFor(() => {
+      const options = Array.from(monthlySelect.querySelectorAll("option")).map(
+        (o) => o.textContent,
+      );
+      expect(options).toContain("Sin asociar");
+    });
   });
 
   it("aplica rango del mes actual por defecto en validación", async () => {
@@ -154,8 +208,13 @@ describe("DatosPage", () => {
       const lastCall = mockFetchFormStats.mock.calls.at(-1)?.[0];
       expect(lastCall).toMatchObject({ fecha_desde: desde, fecha_hasta: hasta });
     });
-    const desdeInput = screen.getByLabelText(/^Desde$/i) as HTMLInputElement;
-    const hastaInput = screen.getByLabelText(/^Hasta$/i) as HTMLInputElement;
+    const validationSection = screen.getByRole("region", { name: /Validación/i });
+    const desdeInput = within(validationSection).getByLabelText(
+      /^Desde$/i,
+    ) as HTMLInputElement;
+    const hastaInput = within(validationSection).getByLabelText(
+      /^Hasta$/i,
+    ) as HTMLInputElement;
     expect(desdeInput.value).toBe(desde);
     expect(hastaInput.value).toBe(hasta);
   });
