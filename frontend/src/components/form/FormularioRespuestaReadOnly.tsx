@@ -82,22 +82,15 @@ function ReadOnlySection({
   sectionTitle,
   fieldKeys,
   datos,
-  initiallyOpen,
   missingSummary,
 }: {
   sectionTitle: string;
   fieldKeys: readonly FormFieldKey[];
   datos: Record<string, unknown>;
-  initiallyOpen: boolean;
   missingSummary?: string | null;
 }) {
-  const [open, setOpen] = useState(initiallyOpen);
   return (
-    <details
-      className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md"
-      open={open}
-      onToggle={(e) => setOpen(e.currentTarget.open)}
-    >
+    <details className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md">
       <summary className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
         <span>{sectionTitle}</span>
         {missingSummary ? (
@@ -296,10 +289,6 @@ export const FormularioRespuestaReadOnly = ({
     return total === 1 ? "Falta 1 pendiente" : `Faltan ${total} pendientes`;
   };
 
-  const firstMissingSectionId =
-    FORM_SECTIONS.find((s) => badgeForSection(s.id, s.fields) != null)
-      ?.id ?? null;
-
   return (
     <div className="space-y-4 text-slate-800">
       {gps ? (
@@ -339,13 +328,10 @@ export const FormularioRespuestaReadOnly = ({
       />
 
       <div className="space-y-2">
-        {FORM_SECTIONS.map((section, idx) => (
+        {FORM_SECTIONS.map((section) => (
           <Fragment key={section.id}>
             {section.id === "encuestador" ? (
-              <details
-                className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md"
-                open={idx === 0 || section.id === firstMissingSectionId}
-              >
+              <details className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md">
                 <summary className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
                   <span>{section.title}</span>
                   {badgeForSection(section.id, section.fields) ? (
@@ -373,7 +359,6 @@ export const FormularioRespuestaReadOnly = ({
                 sectionTitle={section.title}
                 fieldKeys={section.fields}
                 datos={datos}
-                initiallyOpen={idx === 0 || section.id === firstMissingSectionId}
                 missingSummary={badgeForSection(section.id, section.fields)}
               />
             )}
