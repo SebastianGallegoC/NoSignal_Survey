@@ -33,8 +33,13 @@ const FormulariosMapView = lazy(async () => {
   return { default: mod.FormulariosMapView };
 });
 
+const DATOS_SECTIONS = ["mapa", "validacion", "mensual"] as const;
+
 export const DatosPage = () => {
   const online = useConnectivityStatus();
+  const [openSections, setOpenSections] = useState(
+    () => new Set<string>(DATOS_SECTIONS),
+  );
   const [municipio, setMunicipio] = useState("");
   const [fechaDesde, setFechaDesde] = useState(
     () => getCurrentMonthIsoDateRange().desde,
@@ -196,6 +201,18 @@ export const DatosPage = () => {
     );
   };
 
+  const setSectionOpen = (sectionId: string, isOpen: boolean) => {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (isOpen) {
+        next.add(sectionId);
+      } else {
+        next.delete(sectionId);
+      }
+      return next;
+    });
+  };
+
   const refreshAll = () => {
     void reloadMunicipios();
     void reloadAnios();
@@ -254,6 +271,8 @@ export const DatosPage = () => {
           ariaLabel="Mapa de formularios"
           title="Ubicación de formularios"
           description="Mapa con la coordenada GPS de cada formulario sincronizado. Los filtros de abajo aplican solo a este mapa."
+          open={openSections.has("mapa")}
+          onOpenChange={(isOpen) => setSectionOpen("mapa", isOpen)}
           filtersLabel="Filtros del mapa"
           filters={
             <DatosMapFilters
@@ -294,6 +313,8 @@ export const DatosPage = () => {
           ariaLabel="Validación"
           title="Resultado de validación"
           description="Distribución de formularios según el campo «Resultado de validación». Los filtros de abajo aplican solo a este gráfico."
+          open={openSections.has("validacion")}
+          onOpenChange={(isOpen) => setSectionOpen("validacion", isOpen)}
           filters={
             <DatosFilters
               municipio={municipio}
@@ -343,6 +364,8 @@ export const DatosPage = () => {
           ariaLabel="Diligencias mensuales"
           title="Formularios diligenciados por mes"
           description="Cantidad de formularios por mes del año elegido, según la fecha de visita de cada registro (solo formularios con esa fecha registrada). Los filtros de abajo aplican solo a este gráfico."
+          open={openSections.has("mensual")}
+          onOpenChange={(isOpen) => setSectionOpen("mensual", isOpen)}
           filters={
             <MonthlyDiligenciasFilters
               anio={anioMensual}

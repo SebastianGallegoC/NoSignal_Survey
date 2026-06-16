@@ -208,7 +208,7 @@ describe("DatosPage", () => {
       const lastCall = mockFetchFormStats.mock.calls.at(-1)?.[0];
       expect(lastCall).toMatchObject({ fecha_desde: desde, fecha_hasta: hasta });
     });
-    const validationSection = screen.getByRole("region", { name: /Validación/i });
+    const validationSection = screen.getByLabelText("Validación");
     const desdeInput = within(validationSection).getByLabelText(
       /^Desde$/i,
     ) as HTMLInputElement;
