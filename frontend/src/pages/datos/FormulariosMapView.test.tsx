@@ -18,7 +18,7 @@ vi.mock("react-leaflet", () => ({
 import { FormulariosMapView } from "@/pages/datos/FormulariosMapView";
 
 describe("FormulariosMapView", () => {
-  it("muestra mensaje cuando no hay municipios seleccionados", () => {
+  it("mantiene el mapa montado cuando faltan municipios seleccionados", () => {
     render(
       <FormulariosMapView
         points={[]}
@@ -28,12 +28,13 @@ describe("FormulariosMapView", () => {
         onRetry={vi.fn()}
       />,
     );
+    expect(screen.getByTestId("map-container")).toBeInTheDocument();
     expect(
       screen.getByText(/Seleccioná al menos un municipio/i),
     ).toBeInTheDocument();
   });
 
-  it("muestra estado vacío cuando no hay puntos", () => {
+  it("mantiene el mapa montado cuando no hay puntos para los filtros", () => {
     render(
       <FormulariosMapView
         points={[]}
@@ -43,8 +44,34 @@ describe("FormulariosMapView", () => {
         onRetry={vi.fn()}
       />,
     );
+    expect(screen.getByTestId("map-container")).toBeInTheDocument();
     expect(
       screen.getByText(/No hay formularios con coordenadas válidas/i),
     ).toBeInTheDocument();
+  });
+
+  it("muestra aviso de actualización sin desmontar el mapa", () => {
+    render(
+      <FormulariosMapView
+        points={[
+          {
+            id_formulario: "f-1",
+            latitud: 7.89,
+            longitud: -72.49,
+            municipio: "Cúcuta",
+            fecha_visita: "2026-06-01",
+            nombres_apellidos_encuestado: "Ana",
+            resultado_validacion: "CUMPLE",
+          },
+        ]}
+        total={1}
+        loadState="ready"
+        isRefreshing
+        error={null}
+        onRetry={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("map-container")).toBeInTheDocument();
+    expect(screen.getByText(/Actualizando puntos/i)).toBeInTheDocument();
   });
 });

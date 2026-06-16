@@ -118,6 +118,7 @@ export const DatosPage = () => {
     points: mapPoints,
     total: mapTotal,
     loadState: mapLoadState,
+    isRefreshing: mapIsRefreshing,
     error: mapError,
     reload: reloadMapPoints,
   } = useFormMapPoints(mapFilters, online);
@@ -205,7 +206,7 @@ export const DatosPage = () => {
 
   const anyLoading =
     loadState === "loading" ||
-    mapLoadState === "loading" ||
+    (mapLoadState === "loading" && mapPoints.length === 0) ||
     monthlyLoadState === "loading" ||
     municipiosLoadState === "loading";
 
@@ -282,6 +283,7 @@ export const DatosPage = () => {
               points={mapPoints}
               total={mapTotal}
               loadState={mapLoadState}
+              isRefreshing={mapIsRefreshing}
               error={mapError}
               onRetry={() => void reloadMapPoints()}
             />

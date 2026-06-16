@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
@@ -18,6 +18,7 @@ interface FormulariosMapViewProps {
     | "offline"
     | "needs_municipios"
     | "no_session";
+  isRefreshing?: boolean;
   error: string | null;
   onRetry: () => void;
 }
@@ -88,13 +89,17 @@ function MapMarkers({ points }: { points: FormMapPointItem[] }) {
   return null;
 }
 
-function MapFitBounds({ points }: { points: FormMapPointItem[] }) {
+/** Ajusta la vista solo la primera vez que hay puntos; no al cambiar filtros. */
+function MapFitBoundsOnce({ points }: { points: FormMapPointItem[] }) {
   const map = useMap();
+  const hasFittedRef = useRef(false);
 
   useEffect(() => {
-    if (points.length === 0) {
+    if (hasFittedRef.current || points.length === 0) {
       return;
     }
+    hasFittedRef.current = true;
+
     if (points.length === 1) {
       const one = points[0];
       map.setView([one.latitud, one.longitud], 14);
@@ -112,29 +117,36 @@ export const FormulariosMapView = ({
   points,
   total,
   loadState,
+  isRefreshing = false,
   error,
   onRetry,
 }: FormulariosMapViewProps) => {
   if (loadState === "offline") {
-    return <p className="py-6 text-center text-sm text-slate-500">Conectate a internet para ver este mapa.</p>;
-  }
-  if (loadState === "no_session") {
-    return <p className="py-6 text-center text-sm text-slate-500">Iniciá sesión para ver el mapa del servidor.</p>;
-  }
-  if (loadState === "needs_municipios") {
     return (
       <p className="py-6 text-center text-sm text-slate-500">
-        Seleccioná al menos un municipio para visualizar puntos.
+        Conectate a internet para ver este mapa.
       </p>
     );
   }
-  if (loadState === "loading") {
-    return <p className="py-8 text-center text-sm text-slate-600">Cargando mapa…</p>;
+  if (loadState === "no_session") {
+    return (
+      <p className="py-6 text-center text-sm text-slate-500">
+        Iniciá sesión para ver el mapa del servidor.
+      </p>
+    );
   }
-  if (loadState === "idle") {
-    return <p className="py-8 text-center text-sm text-slate-600">Cargando mapa…</p>;
-  }
-  if (loadState === "error") {
+
+  const initialLoading =
+    (loadState === "loading" || loadState === "idle") && points.length === 0;
+  const blockingError = loadState === "error" && points.length === 0;
+  const showNeedsMunicipios = loadState === "needs_municipios";
+  const showEmpty =
+    loadState === "ready" &&
+    points.length === 0 &&
+    !isRefreshing &&
+    !showNeedsMunicipios;
+
+  if (blockingError) {
     return (
       <div className="rounded-xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-900">
         No se pudieron cargar los puntos del mapa: {error ?? "error desconocido"}.
@@ -148,20 +160,50 @@ export const FormulariosMapView = ({
       </div>
     );
   }
-  if (points.length === 0) {
-    return (
-      <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-600">
-        No hay formularios con coordenadas válidas para los filtros seleccionados.
-      </p>
-    );
-  }
 
   return (
     <div>
       <p className="mb-3 text-xs text-slate-500">
-        Mostrando {total} formularios con coordenadas válidas.
+        {initialLoading
+          ? "Cargando formularios en el mapa…"
+          : `Mostrando ${total} formularios con coordenadas válidas.`}
       </p>
-      <div className="h-[320px] overflow-hidden rounded-xl border border-slate-200 sm:h-[420px]">
+
+      <div className="relative h-[320px] overflow-hidden rounded-xl border border-slate-200 sm:h-[420px]">
+        {(isRefreshing || initialLoading) && (
+          <div
+            className="pointer-events-none absolute inset-x-0 top-2 z-[1000] mx-auto w-fit rounded-full bg-white/95 px-3 py-1 text-xs text-slate-600 shadow-sm"
+            aria-live="polite"
+          >
+            Actualizando puntos…
+          </div>
+        )}
+
+        {error && points.length > 0 ? (
+          <div className="absolute inset-x-2 top-2 z-[1000] rounded-lg border border-rose-200 bg-rose-50/95 px-3 py-2 text-xs text-rose-900">
+            No se pudieron actualizar los puntos: {error}.
+            <button
+              type="button"
+              onClick={onRetry}
+              className="ml-1 font-medium underline"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : null}
+
+        {showNeedsMunicipios ? (
+          <div className="pointer-events-none absolute inset-0 z-[999] flex items-center justify-center bg-white/75 px-4 text-center text-sm text-slate-600">
+            Seleccioná al menos un municipio para visualizar puntos.
+          </div>
+        ) : null}
+
+        {showEmpty ? (
+          <div className="pointer-events-none absolute inset-0 z-[999] flex items-center justify-center bg-white/75 px-4 text-center text-sm text-slate-600">
+            No hay formularios con coordenadas válidas para los filtros seleccionados.
+          </div>
+        ) : null}
+
         <MapContainer
           center={[4.570868, -74.297333]}
           zoom={6}
@@ -173,9 +215,10 @@ export const FormulariosMapView = ({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <MapMarkers points={points} />
-          <MapFitBounds points={points} />
+          <MapFitBoundsOnce points={points} />
         </MapContainer>
       </div>
+
       <p className="mt-2 text-xs text-slate-500">
         Colores: verde (cumple), rojo (no cumple), gris (sin resultado). Puntos en la misma
         ubicación se muestran ligeramente separados para facilitar la selección.

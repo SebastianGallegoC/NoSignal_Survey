@@ -25,14 +25,17 @@ export function useFormMapPoints(
   points: FormMapPointItem[];
   total: number;
   loadState: FormMapPointsLoadState;
+  isRefreshing: boolean;
   error: string | null;
   reload: () => void;
 } {
   const [points, setPoints] = useState<FormMapPointItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loadState, setLoadState] = useState<FormMapPointsLoadState>("idle");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const hasLoadedOnceRef = useRef(false);
 
   const queryKey = JSON.stringify(query);
 
@@ -45,27 +48,38 @@ export function useFormMapPoints(
     if (!online) {
       setPoints([]);
       setTotal(0);
+      setIsRefreshing(false);
       setLoadState("offline");
       setError(null);
+      hasLoadedOnceRef.current = false;
       return;
     }
     if (!token) {
       setPoints([]);
       setTotal(0);
+      setIsRefreshing(false);
       setLoadState("no_session");
       setError(null);
+      hasLoadedOnceRef.current = false;
       return;
     }
     if (!query.municipios?.length) {
       setPoints([]);
       setTotal(0);
+      setIsRefreshing(false);
       setLoadState("needs_municipios");
       setError(null);
       return;
     }
 
     const reqId = ++requestIdRef.current;
-    setLoadState("loading");
+    const background = hasLoadedOnceRef.current;
+
+    if (background) {
+      setIsRefreshing(true);
+    } else {
+      setLoadState("loading");
+    }
     setError(null);
 
     try {
@@ -75,21 +89,32 @@ export function useFormMapPoints(
       }
       setPoints(data.items);
       setTotal(data.total);
+      setIsRefreshing(false);
       setLoadState("ready");
+      hasLoadedOnceRef.current = true;
     } catch (e) {
       if (reqId !== requestIdRef.current) {
+        return;
+      }
+      setIsRefreshing(false);
+      const message =
+        e instanceof Error ? e.message : "Error al cargar puntos del mapa";
+      if (background) {
+        setError(message);
+        setLoadState("ready");
         return;
       }
       setPoints([]);
       setTotal(0);
       setLoadState("error");
-      setError(e instanceof Error ? e.message : "Error al cargar puntos del mapa");
+      setError(message);
     }
   }, [online, query]);
 
   useEffect(() => {
     if (!online) {
       setLoadState("offline");
+      setIsRefreshing(false);
       setError(null);
       return;
     }
@@ -115,5 +140,5 @@ export function useFormMapPoints(
     };
   }, [online, load]);
 
-  return { points, total, loadState, error, reload: load };
+  return { points, total, loadState, isRefreshing, error, reload: load };
 }
