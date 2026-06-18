@@ -12,13 +12,12 @@ PWA offline-first para encuestas de visita con GPS, fotos, sincronización y exp
 - `frontend/`: React 19 + Vite + TypeScript + PWA + Dexie (`NoSignalSurveyDB`).
 - `backend/`: FastAPI + SQLAlchemy async + Alembic.
 - `db`: PostgreSQL/PostGIS (`nosignal_survey`), independiente de Huertas.
-- `traefik/`: subdominios `survey.nosignal.site` y `api.survey.nosignal.site`.
+- `traefik/`: dominios `percens.site` y `api.percens.site` (Traefik en perfil `production` del compose).
 
-## Aislamiento frente a NoSignal_Huertas
+## Despliegue
 
-- No compartir BD, JWT, usuarios, volúmenes ni IndexedDB con Huertas.
-- No copiar lógica de campos Huertas ni reintroducir importación Excel.
-- Cambios mínimos y localizados; reutilizar patrones existentes, no mezclar dominios.
+- Servidor dedicado PERCENS; no depende de NoSignal_Huertas.
+- No compartir BD, JWT, usuarios ni volúmenes con otros proyectos.
 
 ## Modelo de formulario
 

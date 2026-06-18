@@ -6,25 +6,20 @@ Aplicación PWA offline-first para diligenciar encuestas de visita con GPS, foto
 
 - `frontend/`: React + Vite + TypeScript + PWA + Dexie.
 - `backend/`: FastAPI + SQLAlchemy async + Alembic.
-- `db`: PostgreSQL/PostGIS independiente para Survey.
-- `traefik/`: reglas dinámicas para publicar Survey con la instancia Traefik compartida del servidor.
+- `db`: PostgreSQL/PostGIS.
+- `traefik/`: proxy TLS y rutas para `percens.site` y `api.percens.site`.
 
-Survey replica la arquitectura de `NoSignal_Huertas`, pero usa un formulario distinto y no incluye importación Excel.
+## Producción
 
-## Aislamiento frente a Huertas
+| Recurso | Valor |
+|---------|-------|
+| Frontend | `https://percens.site` |
+| API | `https://api.percens.site` |
+| BD | `nosignal_survey` |
+| Contenedores | `nosignal-survey-*`, `percens-traefik` |
+| Volúmenes | `nosignal_survey_db`, `nosignal_survey_uploads`, `percens_traefik_certs` |
 
-Aunque Survey puede correr en el mismo VPS y bajo el mismo dominio raíz, sus datos no se comparten con Huertas:
-
-- Frontend: `https://survey.nosignal.site`
-- API: `https://api.survey.nosignal.site`
-- BD: `nosignal_survey`
-- Contenedores: `nosignal-survey-*`
-- Volúmenes: `nosignal_survey_db`, `nosignal_survey_uploads`
-- JWT, usuarios y `.env`: independientes
-
-Lo único compartido en producción es Traefik en el puerto `443`.
-
-## Formulario Survey
+## Formulario
 
 La plantilla `PlantillaSurvey.xlsx` define 29 columnas visibles en Excel y una clave interna `id_formulario` que no se muestra al usuario ni se exporta. Ese ID se conserva en IndexedDB, API, base de datos, historial y precargas para editar y sincronizar sin duplicados.
 
@@ -63,25 +58,22 @@ cp .env.example .env
 
 Variables clave:
 
-- `VITE_API_URL=https://api.survey.nosignal.site`
-- `CORS_ORIGINS=https://survey.nosignal.site`
-- `SURVEY_DATABASE_URL` (opcional, solo si no usarás la DB local de Survey)
+- `VITE_API_URL=https://api.percens.site`
+- `CORS_ORIGINS=https://percens.site`
+- `ACME_EMAIL` (Let's Encrypt)
 - `POSTGRES_PASSWORD`
 - `JWT_SECRET`
 - `NOSIGNAL_AUTH_USERS`
 
 ## Desarrollo local
 
-El compose expone puertos locales para pruebas:
+El compose expone puertos locales para pruebas (sin Traefik):
 
 - Frontend: `http://localhost:8081`
 - Backend: `http://localhost:8001`
 - Postgres: `localhost:5434`
 
-Antes de levantar el stack, crear la red compartida si no existe:
-
 ```bash
-docker network create traefik-public
 docker compose build
 docker compose up -d
 ```
@@ -96,31 +88,31 @@ npm run dev
 
 Para ejecutar backend fuera de Docker, usar `backend/.env.example` como base y apuntar `DATABASE_URL` a `localhost:5434`.
 
-## Producción en el mismo VPS que Huertas
+## Producción en VPS dedicado
 
 1. Crear registros DNS A:
-   - `survey.nosignal.site` → IP pública del VPS
-   - `api.survey.nosignal.site` → IP pública del VPS
-2. Crear o verificar la red Docker (la misma que usa Traefik/Huertas):
-   ```bash
-   docker network create nosignal-network
-   ```
-3. Levantar Survey:
-   ```bash
-   docker compose build
-   docker compose up -d
-   ```
-4. Tras `git pull` que cambie código o migraciones Alembic, **reconstruir el backend** (las migraciones van copiadas en la imagen, no se leen del host):
-   ```bash
-   docker compose build backend
-   docker compose up -d backend
-   docker compose exec backend python -m alembic upgrade head
-   ```
-5. En `NoSignal_Huertas`, Traefik debe cargar `traefik/dynamic.survey.yml` de este repo (ver `traefik/README.md`). Tras `git pull` en Huertas: `docker compose up -d traefik`.
+   - `percens.site` → IP pública del VPS
+   - `api.percens.site` → IP pública del VPS
+2. Configurar `.env` (ver arriba).
+3. Levantar stack con Traefik:
 
-**Importante:** Survey se sirve por dominio vía Traefik (`https://survey.nosignal.site`), no por el puerto 8081 del host. Si al abrir el dominio ves otra aplicación, revisá conflicto en puerto 80 y la red `nosignal-network`.
+```bash
+docker compose --profile production build
+docker compose --profile production up -d
+docker compose exec backend python -m alembic upgrade head
+```
 
-**BD en Docker:** el backend Survey comparte `nosignal-network` con Huertas, donde también existe un servicio llamado `db`. Configurá `SURVEY_DATABASE_URL` (si lo usás) con host `nosignal-survey-db` (nombre del contenedor), no `db`, o el API puede autenticarse contra la Postgres de Huertas y fallar con `InvalidPasswordError` para el usuario `nosignal_survey`.
+4. Tras `git pull` que cambie código o migraciones Alembic, **reconstruir el backend**:
+
+```bash
+docker compose build backend
+docker compose --profile production up -d backend
+docker compose exec backend python -m alembic upgrade head
+```
+
+Detalle de Traefik y comprobaciones: `traefik/README.md`.
+
+**Importante:** en producción PERCENS se sirve por dominio vía Traefik (`https://percens.site`), no por el puerto `8081` del host.
 
 ## Verificación
 

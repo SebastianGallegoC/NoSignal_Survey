@@ -100,7 +100,7 @@ Copiá los archivos generados **fuera del mismo disco** cuando puedas (rsync, ob
 Si solo querés ejecutar los scripts sueltos sin borrar viejos (no recomendado a largo plazo):
 
 ```cron
-15 3 * * * cd /opt/NoSignal_Huertas && sh scripts/backup-nosignal.sh && sh scripts/backup-uploads.sh
+15 3 * * * cd /opt/PERCENS && sh scripts/backup-nosignal.sh && sh scripts/backup-uploads.sh
 ```
 
 ## Retención manual

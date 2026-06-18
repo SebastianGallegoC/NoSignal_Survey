@@ -1,59 +1,69 @@
-# Traefik y Survey en el mismo VPS
-
-Survey **no** se publica por los puertos `8081` / `8001` del host. Esos puertos son solo para depuración local en el servidor (`127.0.0.1`).
+# Traefik y PERCENS (servidor dedicado)
 
 En producción el tráfico entra así:
 
 ```
-Internet → Traefik (:443, red nosignal-network) → nosignal-survey-frontend / nosignal-survey-backend
+Internet → Traefik (:443, red percens-network) → nosignal-survey-frontend / nosignal-survey-backend
 ```
 
-## Requisitos en el servidor
+PERCENS incluye su propio Traefik en `docker-compose.yml` (perfil `production`). No depende de Huertas ni de otra instancia compartida.
 
-1. **Misma red Docker que Huertas/Traefik**  
-   Los contenedores Survey deben estar en `nosignal-network` (ya configurado en `docker-compose.yml`).
+## Dominios
 
-2. **Traefik debe cargar `dynamic.survey.yml`**  
-   En el repo `NoSignal_Huertas`, Traefik monta este archivo:
+| Servicio | URL |
+|----------|-----|
+| Frontend | `https://percens.site` |
+| API | `https://api.percens.site` |
 
-   `../NoSignal_Survey/traefik/dynamic.survey.yml` → `/etc/traefik/dynamic/survey.yml`
+Configurá en `.env`:
 
-   Tras cambiar rutas Traefik:
+- `VITE_API_URL=https://api.percens.site`
+- `CORS_ORIGINS=https://percens.site`
+- `ACME_EMAIL` (correo válido para Let's Encrypt)
 
-   ```bash
-   cd ~/NoSignal_Huertas
-   git pull
-   docker compose up -d traefik
-   ```
+Las rutas TLS están en `traefik/dynamic.yml`. Tras cambiar dominios, recreá Traefik:
 
-3. **Recrear Survey** (para unirse a `nosignal-network`):
+```bash
+docker compose --profile production up -d traefik
+```
 
-   ```bash
-   cd ~/NoSignal_Survey
-   git pull
-   docker compose up -d --force-recreate frontend backend
-   ```
+## Despliegue en el VPS
 
-4. **Usar HTTPS**  
-   Abrí `https://survey.nosignal.site`, no `http://` a secas.
+1. Registros DNS A apuntando a la IP del servidor:
+   - `percens.site`
+   - `api.percens.site`
+2. Copiar `.env.example` → `.env` y completar secretos.
+3. Levantar el stack con Traefik:
 
-## Conflicto con puerto 80 (otra app, p. ej. finanzas)
+```bash
+docker compose --profile production build
+docker compose --profile production up -d
+docker compose exec backend python -m alembic upgrade head
+```
 
-Si otro stack publica `0.0.0.0:80->80` (como `finanzas_frontend`), las peticiones **HTTP** al IP del VPS van a esa app, no a Survey.
+4. Abrí siempre por HTTPS: `https://percens.site` (el puerto 80 redirige a HTTPS).
 
-Opciones:
+Los puertos `8081` / `8001` en `127.0.0.1` son solo para depuración local en el servidor.
 
-- Quitar el mapeo `80:80` de esa otra app y dejar solo Traefik en el puerto 80 (recomendado, con redirección HTTP→HTTPS).
-- O acceder siempre por `https://survey.nosignal.site`.
+## Desarrollo local (sin Traefik)
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+- Frontend: `http://localhost:8081`
+- Backend: `http://localhost:8001`
 
 ## Comprobación
 
 ```bash
-docker network inspect nosignal-network --format '{{range .Containers}}{{.Name}} {{end}}'
+docker network inspect percens-network --format '{{range .Containers}}{{.Name}} {{end}}'
 ```
 
-Deben aparecer al menos: `nosignal-traefik`, `nosignal-survey-frontend`, `nosignal-survey-backend`.
+Deben aparecer: `percens-traefik`, `nosignal-survey-frontend`, `nosignal-survey-backend`.
 
 ```bash
-curl -sI https://survey.nosignal.site | head -5
+curl -sI https://percens.site | head -5
+curl -s https://api.percens.site/health
 ```

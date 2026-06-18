@@ -23,7 +23,7 @@ alwaysApply: false
 ## Seguridad
 
 - JWT con permisos mínimos; secretos solo en `.env`, nunca en código.
-- Sanitizar/validar inputs; CORS restringido a `https://survey.nosignal.site`.
+- Sanitizar/validar inputs; CORS restringido a `https://percens.site`.
 - HTTPS en producción (contexto seguro para clientes PWA).
 
 ## Estilo Python

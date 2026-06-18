@@ -1,28 +1,28 @@
 http:
   routers:
-    nosignal-survey-api:
-      rule: Host(`api.survey.nosignal.site`)
+    percens-api:
+      rule: Host(`api.percens.site`)
       entryPoints:
         - websecure
       tls:
         certResolver: le
-      service: nosignal-survey-api
+      service: percens-api
 
-    nosignal-survey-frontend:
-      rule: Host(`survey.nosignal.site`)
+    percens-frontend:
+      rule: Host(`percens.site`)
       entryPoints:
         - websecure
       tls:
         certResolver: le
-      service: nosignal-survey-frontend
+      service: percens-frontend
 
   services:
-    nosignal-survey-api:
+    percens-api:
       loadBalancer:
         servers:
           - url: http://nosignal-survey-backend:8000
 
-    nosignal-survey-frontend:
+    percens-frontend:
       loadBalancer:
         servers:
           - url: http://nosignal-survey-frontend:80

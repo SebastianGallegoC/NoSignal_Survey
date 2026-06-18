@@ -17,7 +17,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - nosignal-survey-internal
+      - percens-internal
 
   backend:
     build:
@@ -33,7 +33,7 @@ services:
       JWT_ALGORITHM: "HS256"
       JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-525600}
       NOSIGNAL_AUTH_USERS: ${NOSIGNAL_AUTH_USERS:?set_NOSIGNAL_AUTH_USERS}
-      CORS_ORIGINS: ${CORS_ORIGINS:-https://survey.nosignal.site}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://percens.site}
       DATABASE_URL: ${SURVEY_DATABASE_URL:-postgresql+asyncpg://nosignal_survey:${POSTGRES_PASSWORD}@nosignal-survey-db:5432/nosignal_survey}
       UPLOAD_ROOT: "uploads"
       ALLOW_INSECURE_DEFAULTS: ${ALLOW_INSECURE_DEFAULTS:-false}
@@ -56,15 +56,15 @@ services:
     volumes:
       - nosignal_survey_uploads:/app/uploads
     networks:
-      - nosignal-survey-internal
-      - nosignal-network
+      - percens-internal
+      - percens-network
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://api.survey.nosignal.site}
+        VITE_API_URL: ${VITE_API_URL:-https://api.percens.site}
     container_name: nosignal-survey-frontend
     restart: unless-stopped
     depends_on:
@@ -77,16 +77,39 @@ services:
     ports:
       - "127.0.0.1:8081:80"
     networks:
-      - nosignal-network
+      - percens-network
+
+  traefik:
+    image: traefik:v3.3
+    container_name: percens-traefik
+    restart: unless-stopped
+    profiles:
+      - production
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?set_ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
+      - percens_traefik_certs:/letsencrypt
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - percens-network
 
 volumes:
   nosignal_survey_db:
   nosignal_survey_uploads:
+  percens_traefik_certs:
 
 networks:
-  nosignal-survey-internal:
-    name: nosignal-survey-internal
+  percens-internal:
+    name: percens-internal
     driver: bridge
-  nosignal-network:
-    name: nosignal-network
-    external: true
+  percens-network:
+    name: percens-network
+    driver: bridge

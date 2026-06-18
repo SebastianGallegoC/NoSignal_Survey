@@ -117,19 +117,19 @@ docker compose up -d backend
 
 ### Comprobación rápida de API
 
-Sustituir `TOKEN` y la URL base (`https://api.survey.nosignal.site` o la que uses).
+Sustituir `TOKEN` y la URL base (`https://api.percens.site` o la que uses).
 
 **Health:**
 
 ```bash
-curl -s https://api.survey.nosignal.site/health
+curl -s https://api.percens.site/health
 ```
 
 **Búsqueda (requiere JWT):**
 
 ```bash
 curl -s -H "Authorization: Bearer TOKEN" \
-  "https://api.survey.nosignal.site/api/v1/forms/search?limit=5&offset=0"
+  "https://api.percens.site/api/v1/forms/search?limit=5&offset=0"
 ```
 
 Respuesta esperada (estructura):
@@ -147,14 +147,14 @@ Respuesta esperada (estructura):
 
 ```bash
 curl -s -H "Authorization: Bearer TOKEN" \
-  "https://api.survey.nosignal.site/api/v1/forms/ID_FORMULARIO"
+  "https://api.percens.site/api/v1/forms/ID_FORMULARIO"
 ```
 
 **Filtros de búsqueda:**
 
 ```bash
 curl -s -H "Authorization: Bearer TOKEN" \
-  "https://api.survey.nosignal.site/api/v1/forms/search?limit=20&offset=0&q=ana&municipio=Popayan&fecha_desde=2025-01-01&fecha_hasta=2025-12-31"
+  "https://api.percens.site/api/v1/forms/search?limit=20&offset=0&q=ana&municipio=Popayan&fecha_desde=2025-01-01&fecha_hasta=2025-12-31"
 ```
 
 ---
