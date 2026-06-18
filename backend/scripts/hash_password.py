@@ -3,9 +3,7 @@ from __future__ import annotations
 import argparse
 from getpass import getpass
 
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 def main() -> None:
@@ -16,7 +14,7 @@ def main() -> None:
     password = args.password or getpass("Password: ")
     if not password.strip():
         raise SystemExit("Password vacío.")
-    print(pwd_context.hash(password))
+    print(bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8"))
 
 
 if __name__ == "__main__":

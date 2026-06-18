@@ -3,15 +3,7 @@ import logging
 from time import time
 
 from fastapi import APIRouter, HTTPException, status
-from passlib.context import CryptContext
-
-from app.core.config import settings
-from app.core.security import create_access_token
-from app.schemas.auth import LoginRequest, TokenResponse
-
-router = APIRouter()
-logger = logging.getLogger(__name__)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 FAILED_ATTEMPTS: dict[str, list[float]] = {}
 MAX_FAILED_ATTEMPTS = 5
 WINDOW_SECONDS = 300
@@ -42,8 +34,11 @@ def _clear_failures(username: str) -> None:
 def _verify_password(stored: str, provided: str) -> bool:
     value = (stored or "").strip()
     if value.startswith(("bcrypt:", "$2a$", "$2b$", "$2y$")):
-        digest = value.removeprefix("bcrypt:")
-        return pwd_context.verify(provided, digest)
+        digest = value.removeprefix("bcrypt:").encode("utf-8")
+        try:
+            return bcrypt.checkpw(provided.encode("utf-8"), digest)
+        except ValueError:
+            return False
     if value.startswith("plain:"):
         return value.removeprefix("plain:") == provided
     # Compatibilidad temporal para despliegues heredados.
