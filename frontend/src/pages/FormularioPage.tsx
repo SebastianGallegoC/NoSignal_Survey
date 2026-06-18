@@ -17,6 +17,7 @@ import {
 import { FormularioOverviewPanel } from "@/components/form/FormularioOverviewPanel";
 import { FormFieldRow } from "@/components/form/FormFieldRow";
 import { Button } from "@/components/ui/button";
+import { APP_NAME } from "@/constants/appBrand";
 import { FORM_SECTIONS } from "@/config/formSections";
 import {
   hasFormularioEditChanges,
@@ -549,7 +550,7 @@ export const FormularioPage = () => {
         <header className="flex flex-col gap-3 border-b border-teal-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-teal-700">
-              NoSignal
+              {APP_NAME}
             </p>
             <h1 className="text-3xl font-semibold">Formulario de visita</h1>
             <p className="text-sm text-slate-600">

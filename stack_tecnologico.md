@@ -1,4 +1,4 @@
-# Stack Tecnológico: NoSignal (Offline-first)
+# Stack Tecnológico: PERCENS (Offline-first)
 
 ## 1. Frontend (PWA mobile-first)
 - **Framework:** React + Vite + TypeScript.

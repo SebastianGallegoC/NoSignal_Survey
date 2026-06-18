@@ -8,6 +8,7 @@ import {
 } from "@/components/encuestador/EncuestadorProfileFormFields";
 import { SimpleDialogModal } from "@/components/ui/SimpleDialogModal";
 import { Button } from "@/components/ui/button";
+import { APP_NAME } from "@/constants/appBrand";
 import {
   encuestadorProfileDeleteBlockedMessage,
   encuestadorProfileDeleteErrorMessage,
@@ -198,7 +199,7 @@ export const PerfilEncuestadorPage = () => {
             </Button>
           </div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-indigo-700 sm:text-xs sm:tracking-[0.35em]">
-            NoSignal Survey
+            {APP_NAME}
           </p>
           <h1 className="mt-1 text-xl font-semibold leading-tight text-slate-900 sm:mt-2 sm:text-3xl sm:leading-normal">
             Perfil encuestador

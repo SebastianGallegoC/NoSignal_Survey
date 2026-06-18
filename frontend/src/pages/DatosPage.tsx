@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { APP_NAME } from "@/constants/appBrand";
 
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { useFormStats } from "@/hooks/useFormStats";
@@ -272,7 +273,7 @@ export const DatosPage = () => {
             ) : null}
           </div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-teal-700 sm:text-xs sm:tracking-[0.35em]">
-            NoSignal Survey
+            {APP_NAME}
           </p>
           <h1 className="mt-1 text-xl font-semibold leading-tight text-slate-900 sm:mt-2 sm:text-3xl sm:leading-normal">
             Datos

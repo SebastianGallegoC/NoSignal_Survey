@@ -1,9 +1,9 @@
 ---
-description: Contexto, dominio y límites del proyecto NoSignal Survey
+description: Contexto, dominio y límites del proyecto PERCENS
 alwaysApply: true
 ---
 
-# NoSignal Survey — contexto del proyecto
+# PERCENS — contexto del proyecto
 
 PWA offline-first para encuestas de visita con GPS, fotos, sincronización y exportación Excel.
 

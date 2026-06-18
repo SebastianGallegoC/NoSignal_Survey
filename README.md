@@ -1,4 +1,4 @@
-# NoSignal Survey
+# PERCENS
 
 Aplicación PWA offline-first para diligenciar encuestas de visita con GPS, fotos, sincronización a API y descarga Excel basada en `PlantillaSurvey.xlsx`.
 

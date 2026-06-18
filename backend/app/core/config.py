@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "NoSignal Survey API"
+    app_name: str = "PERCENS API"
     api_v1_prefix: str = "/api/v1"
     environment: str = Field(default="development", alias="ENVIRONMENT")
     jwt_secret: str = Field(default="CHANGE_ME", alias="JWT_SECRET")

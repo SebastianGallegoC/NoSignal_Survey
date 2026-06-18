@@ -1,4 +1,4 @@
-# NoSignal Frontend
+# PERCENS — Frontend
 
 PWA offline-first para captura de formularios (GPS, fotos, validación y sincronización diferida).
 

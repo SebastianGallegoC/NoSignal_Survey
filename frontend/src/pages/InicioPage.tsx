@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BarChart3, ClipboardList, Download, FileSpreadsheet, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { APP_NAME } from "@/constants/appBrand";
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -49,7 +50,7 @@ export const InicioPage = () => {
       <div className="mx-auto w-full max-w-4xl">
         <header className="mb-4 sm:mb-8">
           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-teal-700 sm:text-xs sm:tracking-[0.35em]">
-            NoSignal Survey
+            {APP_NAME}
           </p>
           <h1 className="mt-1 text-xl font-semibold leading-tight text-foreground sm:mt-2 sm:text-3xl sm:leading-normal">
             Selecciona una opción

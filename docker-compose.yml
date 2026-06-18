@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-production}
-      APP_NAME: "NoSignal Survey API"
+      APP_NAME: "PERCENS API"
       API_V1_PREFIX: "/api/v1"
       JWT_SECRET: ${JWT_SECRET:?set_JWT_SECRET}
       JWT_ALGORITHM: "HS256"

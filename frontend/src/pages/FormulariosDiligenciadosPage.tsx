@@ -12,6 +12,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ConfirmDeleteFormModal } from "@/components/ConfirmDeleteFormModal";
 import type { FormularioSnapshot } from "@/components/form/FormularioRespuestaReadOnly";
 import { Button } from "@/components/ui/button";
+import { APP_NAME } from "@/constants/appBrand";
 import { ACCESS_TOKEN_KEY } from "@/lib/authStorage";
 import { isRegistroFotoSlot } from "@/config/registroFotografico";
 import {
@@ -1250,7 +1251,7 @@ export const FormulariosDiligenciadosPage = () => {
         <header className="mb-4 flex min-w-0 flex-col gap-3 overflow-x-clip sm:mb-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-teal-700">
-              NoSignal
+              {APP_NAME}
             </p>
             <h1 className="mt-1 text-2xl font-semibold sm:mt-2 sm:text-3xl">
               Formularios diligenciados

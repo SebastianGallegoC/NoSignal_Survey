@@ -18,9 +18,9 @@ export default defineConfig({
       },
       manifest: {
         id: '/',
-        name: 'NoSignal',
-        short_name: 'NoSignal',
-        description: 'Offline-first PWA for data collection.',
+        name: 'PERCENS',
+        short_name: 'PERCENS',
+        description: 'PWA offline-first para encuestas de visita con GPS y sincronización.',
         theme_color: '#0f766e',
         background_color: '#f6f7f5',
         scope: '/',
