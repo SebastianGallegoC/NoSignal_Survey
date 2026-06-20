@@ -21,7 +21,13 @@ branch_labels = None
 depends_on = None
 
 
-USER_ROLE_ENUM = sa.Enum("admin", "editor", "encuestador", name="user_role")
+USER_ROLE_ENUM = sa.Enum(
+    "admin",
+    "editor",
+    "encuestador",
+    name="user_role",
+    create_type=False,
+)
 
 
 def _seed_admin_users() -> None:
