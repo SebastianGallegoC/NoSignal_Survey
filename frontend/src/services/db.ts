@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 
 import type { RegistroFotoSlot } from '@/config/registroFotografico';
+import type { UserRole } from '@/lib/permissions';
 import { stripGmsKeysFromDatos } from '@/lib/stripGmsFromDatos';
 
 export type SyncStatus = 'PENDIENTE' | 'SINCRONIZANDO' | 'ERROR';
@@ -77,6 +78,7 @@ export interface SesionLocalRow {
   id: 'current';
   accessToken: string;
   username: string;
+  role?: UserRole | null;
 }
 
 export interface EncuestadorProfileCacheRow {

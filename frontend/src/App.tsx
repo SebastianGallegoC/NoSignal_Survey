@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { RoleProtectedRoute } from "@/components/routing/RoleProtectedRoute";
 import { ReloadPrompt } from "@/components/ReloadPrompt";
 
 const LoginPage = lazy(() =>
@@ -27,6 +28,9 @@ const PerfilEncuestadorPage = lazy(() =>
 );
 const DatosPage = lazy(() =>
   import("@/pages/DatosPage").then((mod) => ({ default: mod.DatosPage })),
+);
+const UsuariosPage = lazy(() =>
+  import("@/pages/UsuariosPage").then((mod) => ({ default: mod.UsuariosPage })),
 );
 function App() {
   return (
@@ -72,6 +76,14 @@ function App() {
               <ProtectedRoute>
                 <DatosPage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/usuarios"
+            element={
+              <RoleProtectedRoute allowedRoles={["admin"]}>
+                <UsuariosPage />
+              </RoleProtectedRoute>
             }
           />
           <Route

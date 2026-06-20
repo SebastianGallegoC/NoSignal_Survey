@@ -6,10 +6,11 @@ from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
-from app.api.deps import get_current_user
+from app.api.deps import CurrentUser, get_current_user
 from app.core.database import get_session
 from app.main import app
 from app.schemas.form_payload import MAX_GPS_ACCURACY_METERS
+from app.schemas.user import UserRole
 
 
 def _six_photos_payload():
@@ -45,24 +46,41 @@ async def _fake_session():
     yield object()
 
 
+def _make_user(role: UserRole = UserRole.ADMIN, username: str = "tester") -> CurrentUser:
+    return CurrentUser(id=1, username=username, role=role, is_active=True)
+
+
 async def _fake_user():
-    return "tester"
+    return _make_user()
 
 
 def test_login_ok_and_invalid_credentials(monkeypatch):
-    from app.core import config as cfg
+    from app.api.v1 import auth as auth_mod
 
-    monkeypatch.setattr(cfg.settings, "auth_users_json", '{"demo":"demo"}')
+    app.dependency_overrides[get_session] = _fake_session
+    monkeypatch.setattr(
+        auth_mod,
+        "authenticate_user",
+        AsyncMock(
+            side_effect=[
+                SimpleNamespace(id=1, username="demo", role="admin", is_active=True),
+                None,
+            ]
+        ),
+    )
     client = TestClient(app)
     ok = client.post("/api/v1/auth/login", json={"username": "demo", "password": "demo"})
     assert ok.status_code == 200
     body = ok.json()
     assert body["token_type"] == "bearer"
     assert body["access_token"]
+    assert body["username"] == "demo"
+    assert body["role"] == "admin"
 
     bad = client.post("/api/v1/auth/login", json={"username": "demo", "password": "wrong"})
     assert bad.status_code == 401
     assert bad.json()["detail"] == "invalid_credentials"
+    app.dependency_overrides.clear()
 
 
 def test_health_returns_ok(monkeypatch):
@@ -301,3 +319,83 @@ def test_delete_form_returns_204(monkeypatch):
     assert resp.status_code == 204
     assert resp.content == b""
     app.dependency_overrides.clear()
+
+
+def test_auth_me_returns_current_user():
+    app.dependency_overrides[get_current_user] = _fake_user
+    try:
+        client = TestClient(app)
+        resp = client.get("/api/v1/auth/me")
+        assert resp.status_code == 200
+        assert resp.json()["role"] == "admin"
+        assert resp.json()["username"] == "tester"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_delete_form_forbidden_for_encuestador(monkeypatch):
+    from app.api.v1 import forms as forms_mod
+
+    app.dependency_overrides[get_session] = _fake_session
+
+    async def _encuestador():
+        return _make_user(role=UserRole.ENCUESTADOR, username="encuestador")
+
+    app.dependency_overrides[get_current_user] = _encuestador
+    monkeypatch.setattr(forms_mod, "delete_form", AsyncMock(return_value=True))
+    try:
+        client = TestClient(app)
+        resp = client.delete("/api/v1/forms/f-del")
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "forbidden_role"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_list_users_admin_ok(monkeypatch):
+    from app.api.v1 import users as users_mod
+
+    app.dependency_overrides[get_session] = _fake_session
+    app.dependency_overrides[get_current_user] = _fake_user
+    monkeypatch.setattr(
+        users_mod,
+        "list_user_reads",
+        AsyncMock(
+            return_value=[
+                {
+                    "id": 1,
+                    "username": "admin",
+                    "role": "admin",
+                    "is_active": True,
+                    "created_at": "2026-06-20T00:00:00",
+                    "updated_at": "2026-06-20T00:00:00",
+                }
+            ]
+        ),
+    )
+    try:
+        client = TestClient(app)
+        resp = client.get("/api/v1/users/")
+        assert resp.status_code == 200
+        assert resp.json()["items"][0]["username"] == "admin"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_users_forbidden_for_editor(monkeypatch):
+    from app.api.v1 import users as users_mod
+
+    app.dependency_overrides[get_session] = _fake_session
+
+    async def _editor():
+        return _make_user(role=UserRole.EDITOR, username="editor")
+
+    app.dependency_overrides[get_current_user] = _editor
+    monkeypatch.setattr(users_mod, "list_user_reads", AsyncMock(return_value=[]))
+    try:
+        client = TestClient(app)
+        resp = client.get("/api/v1/users/")
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "forbidden_role"
+    finally:
+        app.dependency_overrides.clear()

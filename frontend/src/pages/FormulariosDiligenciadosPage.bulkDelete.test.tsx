@@ -25,6 +25,10 @@ const mocks = vi.hoisted(() => {
 
   return {
     state,
+    authState: {
+      username: "tester",
+      role: "admin" as "admin" | "editor" | "encuestador",
+    },
     resetState() {
       state.items = [makeForm()];
     },
@@ -58,8 +62,9 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("@/store/useAuthStore", () => ({
-  useAuthStore: (selector: (s: { username: string | null }) => unknown) =>
-    selector({ username: "tester" }),
+  useAuthStore: (
+    selector: (s: { username: string | null; role: "admin" | "editor" | "encuestador" }) => unknown,
+  ) => selector(mocks.authState),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -111,6 +116,7 @@ describe("FormulariosDiligenciadosPage — borrado masivo", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.resetState();
+    mocks.authState = { username: "tester", role: "admin" };
     localStorage.setItem(ACCESS_TOKEN_KEY, "token-de-prueba");
     Object.defineProperty(navigator, "onLine", {
       configurable: true,
@@ -188,6 +194,28 @@ describe("FormulariosDiligenciadosPage — borrado masivo", () => {
 
     expect(
       screen.queryByRole("heading", { name: /¿Eliminar todos los formularios\?/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("oculta acciones de eliminación para encuestador", async () => {
+    mocks.authState = { username: "enc-1", role: "encuestador" };
+    render(
+      <MemoryRouter>
+        <FormulariosDiligenciadosPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Excel \(todos\)/i }),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole("button", { name: /Eliminar todos los formularios/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Eliminar$/i }),
     ).not.toBeInTheDocument();
   });
 });

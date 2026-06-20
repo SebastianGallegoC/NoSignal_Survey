@@ -19,7 +19,7 @@ from app.services.encuestador_profiles import (
 async def test_delete_profile_for_user_blocked_when_profile_in_use(monkeypatch):
     profile = SimpleNamespace(id=12, habilitado=True)
     monkeypatch.setattr(
-        "app.services.encuestador_profiles.get_profile_for_user",
+        "app.services.encuestador_profiles.get_profile_by_id",
         AsyncMock(return_value=profile),
     )
     monkeypatch.setattr(
@@ -37,11 +37,11 @@ async def test_delete_profile_for_user_blocked_when_profile_in_use(monkeypatch):
 async def test_validate_profile_is_assignable_rejects_disabled(monkeypatch):
     profile = SimpleNamespace(id=7, habilitado=False)
     monkeypatch.setattr(
-        "app.services.encuestador_profiles.get_profile_for_user",
+        "app.services.encuestador_profiles.get_profile_by_id",
         AsyncMock(return_value=profile),
     )
 
-    ok, reason = await validate_profile_is_assignable(AsyncMock(), "encuestador", 7)
+    ok, reason = await validate_profile_is_assignable(AsyncMock(), 7)
 
     assert ok is False
     assert reason == "encuestador_profile_disabled"
@@ -51,13 +51,12 @@ async def test_validate_profile_is_assignable_rejects_disabled(monkeypatch):
 async def test_validate_profile_for_form_persist_allows_existing_disabled_link(monkeypatch):
     profile = SimpleNamespace(id=7, habilitado=False)
     monkeypatch.setattr(
-        "app.services.encuestador_profiles.get_profile_for_user",
+        "app.services.encuestador_profiles.get_profile_by_id",
         AsyncMock(return_value=profile),
     )
 
     ok, reason = await validate_profile_for_form_persist(
         AsyncMock(),
-        "encuestador",
         7,
         existing_profile_id=7,
     )
@@ -70,13 +69,12 @@ async def test_validate_profile_for_form_persist_allows_existing_disabled_link(m
 async def test_validate_profile_for_form_persist_rejects_new_disabled_assignment(monkeypatch):
     profile = SimpleNamespace(id=7, habilitado=False)
     monkeypatch.setattr(
-        "app.services.encuestador_profiles.get_profile_for_user",
+        "app.services.encuestador_profiles.get_profile_by_id",
         AsyncMock(return_value=profile),
     )
 
     ok, reason = await validate_profile_for_form_persist(
         AsyncMock(),
-        "encuestador",
         7,
         existing_profile_id=None,
     )
@@ -118,7 +116,7 @@ async def test_list_profile_reads_includes_form_counts(monkeypatch):
         ),
     ]
     monkeypatch.setattr(
-        "app.services.encuestador_profiles.list_profiles_for_user",
+        "app.services.encuestador_profiles.list_profiles",
         AsyncMock(return_value=profiles),
     )
     monkeypatch.setattr(

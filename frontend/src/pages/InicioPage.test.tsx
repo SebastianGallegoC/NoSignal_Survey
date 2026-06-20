@@ -8,9 +8,17 @@ vi.mock("@/services/sync", () => ({
 }));
 
 const mockUseConnectivity = vi.fn(() => true);
+const mockUsePermissions = vi.fn(() => ({
+  canManageEncuestadorProfiles: true,
+  canManageUsers: false,
+}));
 
 vi.mock("@/hooks/useConnectivityStatus", () => ({
   useConnectivityStatus: () => mockUseConnectivity(),
+}));
+
+vi.mock("@/hooks/usePermissions", () => ({
+  usePermissions: () => mockUsePermissions(),
 }));
 
 import { InicioPage } from "@/pages/InicioPage";
@@ -51,6 +59,22 @@ describe("InicioPage", () => {
       "href",
       "/perfil-encuestador",
     );
+  });
+
+  it("muestra el acceso a usuarios solo para admin", async () => {
+    mockUsePermissions.mockReturnValue({
+      canManageEncuestadorProfiles: true,
+      canManageUsers: true,
+    });
+    await renderInicio();
+    expect(screen.getByRole("link", { name: /Usuarios/i })).toHaveAttribute(
+      "href",
+      "/usuarios",
+    );
+    mockUsePermissions.mockReturnValue({
+      canManageEncuestadorProfiles: true,
+      canManageUsers: false,
+    });
   });
 
   it("renderiza enlaces a formulario, diligenciados y plantilla", async () => {

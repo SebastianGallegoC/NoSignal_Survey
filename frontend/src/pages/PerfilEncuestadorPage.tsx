@@ -31,6 +31,7 @@ import {
   syncEnabledEncuestadorProfiles,
 } from "@/services/encuestadorProfiles";
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const emptyProfileForm = (): EncuestadorProfileFormState => ({
@@ -47,6 +48,7 @@ const emptyProfileForm = (): EncuestadorProfileFormState => ({
 export const PerfilEncuestadorPage = () => {
   const online = useConnectivityStatus();
   const authUsername = useAuthStore((s) => s.username);
+  const { canManageEncuestadorProfiles } = usePermissions();
   const [profiles, setProfiles] = useState<EncuestadorProfileRead[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [profilesError, setProfilesError] = useState<string | null>(null);
@@ -205,35 +207,43 @@ export const PerfilEncuestadorPage = () => {
             Perfil encuestador
           </h1>
           <p className="mt-1 text-xs leading-snug text-muted-foreground sm:mt-2 sm:text-sm sm:leading-normal">
-            Creá, editá, deshabilitá o eliminá perfiles para diligenciar encuestas más rápido.
+            {canManageEncuestadorProfiles
+              ? "Creá, editá, deshabilitá o eliminá perfiles para diligenciar encuestas más rápido."
+              : "Consultá los perfiles creados para diligenciar encuestas."}
           </p>
         </header>
 
-        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-6 md:grid-cols-2">
-          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
-            <p className="text-sm font-semibold text-slate-800">
-              {editingProfileId == null ? "Crear perfil" : `Editando perfil #${editingProfileId}`}
-            </p>
-            <EncuestadorProfileFormFields values={formValues} onChange={setFormValues} />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                disabled={updateDisabled}
-                className="disabled:pointer-events-none disabled:opacity-50"
-                onClick={() => void submitProfile()}
-              >
-                {editingProfileId == null ? "Guardar perfil" : "Actualizar perfil"}
-              </Button>
-              {editingProfileId != null ? (
-                <Button type="button" variant="outline" onClick={resetProfileForm}>
-                  Cancelar edición
+        <div
+          className={`grid gap-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-6 ${
+            canManageEncuestadorProfiles ? "md:grid-cols-2" : ""
+          }`}
+        >
+          {canManageEncuestadorProfiles ? (
+            <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+              <p className="text-sm font-semibold text-slate-800">
+                {editingProfileId == null ? "Crear perfil" : `Editando perfil #${editingProfileId}`}
+              </p>
+              <EncuestadorProfileFormFields values={formValues} onChange={setFormValues} />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  disabled={updateDisabled}
+                  className="disabled:pointer-events-none disabled:opacity-50"
+                  onClick={() => void submitProfile()}
+                >
+                  {editingProfileId == null ? "Guardar perfil" : "Actualizar perfil"}
                 </Button>
+                {editingProfileId != null ? (
+                  <Button type="button" variant="outline" onClick={resetProfileForm}>
+                    Cancelar edición
+                  </Button>
+                ) : null}
+              </div>
+              {profilesError ? (
+                <p className="text-xs font-medium text-rose-700">{profilesError}</p>
               ) : null}
             </div>
-            {profilesError ? (
-              <p className="text-xs font-medium text-rose-700">{profilesError}</p>
-            ) : null}
-          </div>
+          ) : null}
 
           <div className="space-y-2 rounded-xl border border-slate-200 p-3">
             <p className="text-sm font-semibold text-slate-800">Perfiles registrados</p>
@@ -267,28 +277,32 @@ export const PerfilEncuestadorPage = () => {
                     >
                       Ver perfil
                     </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => startEditingProfile(profile)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => void toggleProfile(profile)}
-                    >
-                      {profile.habilitado ? "Deshabilitar" : "Habilitar"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="border-rose-300 text-rose-700 hover:bg-rose-50"
-                      onClick={() => void requestDeleteProfile(profile)}
-                    >
-                      Eliminar
-                    </Button>
+                    {canManageEncuestadorProfiles ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => startEditingProfile(profile)}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => void toggleProfile(profile)}
+                        >
+                          {profile.habilitado ? "Deshabilitar" : "Habilitar"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-rose-300 text-rose-700 hover:bg-rose-50"
+                          onClick={() => void requestDeleteProfile(profile)}
+                        >
+                          Eliminar
+                        </Button>
+                      </>
+                    ) : null}
                   </div>
                 </div>
               ))

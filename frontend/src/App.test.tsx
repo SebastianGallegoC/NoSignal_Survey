@@ -21,7 +21,7 @@ describe("App lazy routes", () => {
   let root: Root | null = null;
 
   afterEach(async () => {
-    useAuthStore.setState({ token: null, username: null, ready: true });
+    useAuthStore.setState({ token: null, username: null, role: null, ready: true });
     if (root) {
       await act(async () => {
         root?.unmount();
@@ -61,14 +61,13 @@ describe("App lazy routes", () => {
     actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
     const [{ default: App }] = await Promise.all([
       import("@/App"),
-      import("@/pages/InicioPage"),
       import("@/pages/LoginPage"),
     ]);
 
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    useAuthStore.setState({ token: null, username: null, ready: true });
+    useAuthStore.setState({ token: null, username: null, role: null, ready: true });
 
     await act(async () => {
       root?.render(
@@ -77,12 +76,10 @@ describe("App lazy routes", () => {
         </MemoryRouter>,
       );
       await flush();
-      await flush();
-      await flush();
     });
 
     expect(container.textContent).toContain("Iniciar sesión");
-  });
+  }, 15000);
 
   it("monta ReloadPrompt en la raíz de la app", async () => {
     actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;

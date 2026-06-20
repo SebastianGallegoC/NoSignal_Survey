@@ -60,8 +60,6 @@ class Settings(BaseSettings):
                 "JWT_SECRET inseguro. Usa al menos 32 caracteres aleatorios o define "
                 "ALLOW_INSECURE_DEFAULTS=true solo en desarrollo local."
             )
-        if not (self.auth_users_json or "").strip():
-            raise ValueError("NOSIGNAL_AUTH_USERS no puede estar vacío en producción.")
         return self
 
 

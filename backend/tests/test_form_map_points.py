@@ -5,11 +5,12 @@ from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
-from app.api.deps import get_current_user
+from app.api.deps import CurrentUser, get_current_user
 from app.api.v1 import forms as forms_api
 from app.constants.form_stats_municipio import MUNICIPIO_SIN_ASOCIAR
 from app.core.database import get_session
 from app.main import app
+from app.schemas.user import UserRole
 from app.schemas.form_map import (
     FormMapPointItem,
     FormMapPointsFiltersApplied,
@@ -22,7 +23,7 @@ async def _fake_session():
 
 
 async def _fake_user():
-    return "tester"
+    return CurrentUser(id=1, username="tester", role=UserRole.ADMIN, is_active=True)
 
 
 def test_form_map_points_requires_auth():

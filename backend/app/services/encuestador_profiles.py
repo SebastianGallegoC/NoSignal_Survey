@@ -8,9 +8,9 @@ from app.repository.encuestador_profiles import (
     count_forms_using_profile,
     create_profile,
     delete_profile,
-    get_profile_for_user,
-    list_enabled_profiles_for_user,
-    list_profiles_for_user,
+    get_profile_by_id,
+    list_enabled_profiles,
+    list_profiles,
     save_profile,
 )
 from app.schemas.encuestador_profile import (
@@ -50,7 +50,7 @@ def to_lite_model(profile: EncuestadorProfile) -> EncuestadorProfileLite:
 
 
 async def list_profile_reads(session: AsyncSession, username: str) -> list[EncuestadorProfileRead]:
-    profiles = await list_profiles_for_user(session, username)
+    profiles = await list_profiles(session)
     profile_ids = [int(item.id) for item in profiles]
     form_counts = await count_forms_grouped_by_profile_ids(session, profile_ids)
     return [
@@ -60,7 +60,7 @@ async def list_profile_reads(session: AsyncSession, username: str) -> list[Encue
 
 
 async def list_enabled_profile_lites(session: AsyncSession, username: str) -> list[EncuestadorProfileLite]:
-    profiles = await list_enabled_profiles_for_user(session, username)
+    profiles = await list_enabled_profiles(session)
     return [to_lite_model(item) for item in profiles]
 
 
@@ -92,7 +92,7 @@ async def update_profile_for_user(
     profile_id: int,
     payload: EncuestadorProfileUpdate,
 ) -> EncuestadorProfileRead | None:
-    profile = await get_profile_for_user(session, profile_id, username)
+    profile = await get_profile_by_id(session, profile_id)
     if profile is None:
         return None
     profile.nombres_apellidos_encuestador = payload.nombres_apellidos_encuestador
@@ -113,7 +113,7 @@ async def set_profile_enabled_for_user(
     profile_id: int,
     enabled: bool,
 ) -> EncuestadorProfileRead | None:
-    profile = await get_profile_for_user(session, profile_id, username)
+    profile = await get_profile_by_id(session, profile_id)
     if profile is None:
         return None
     profile.habilitado = enabled
@@ -126,7 +126,7 @@ async def delete_profile_for_user(
     username: str,
     profile_id: int,
 ) -> tuple[bool, str | None]:
-    profile = await get_profile_for_user(session, profile_id, username)
+    profile = await get_profile_by_id(session, profile_id)
     if profile is None:
         return False, "not_found"
     uses = await count_forms_using_profile(session, profile_id)
@@ -138,10 +138,9 @@ async def delete_profile_for_user(
 
 async def validate_profile_is_assignable(
     session: AsyncSession,
-    username: str,
     profile_id: int,
 ) -> tuple[bool, str | None]:
-    profile = await get_profile_for_user(session, profile_id, username)
+    profile = await get_profile_by_id(session, profile_id)
     if profile is None:
         return False, "encuestador_profile_not_found"
     if not bool(profile.habilitado):
@@ -151,7 +150,6 @@ async def validate_profile_is_assignable(
 
 async def validate_profile_for_form_persist(
     session: AsyncSession,
-    username: str,
     profile_id: int | None,
     *,
     existing_profile_id: int | None,
@@ -160,8 +158,8 @@ async def validate_profile_for_form_persist(
     if profile_id is None:
         return True, None
     if existing_profile_id is not None and existing_profile_id == profile_id:
-        profile = await get_profile_for_user(session, profile_id, username)
+        profile = await get_profile_by_id(session, profile_id)
         if profile is None:
             return False, "encuestador_profile_not_found"
         return True, None
-    return await validate_profile_is_assignable(session, username, profile_id)
+    return await validate_profile_is_assignable(session, profile_id)

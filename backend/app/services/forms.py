@@ -81,7 +81,7 @@ def _require_fecha_visita_in_datos(datos_formulario: dict[str, object]) -> None:
 async def persist_form(
     session: AsyncSession,
     payload: FormPayload,
-    username: str,
+    _username: str,
 ) -> FormRecord:
     fecha_hora = parse_fecha_hora_iso(payload.fecha_hora)
     fecha_act = resolve_fecha_actualizacion_dt(payload)
@@ -95,7 +95,6 @@ async def persist_form(
     if payload.id_perfil_encuestador is not None:
         profile_ok, profile_error = await validate_profile_for_form_persist(
             session,
-            username,
             payload.id_perfil_encuestador,
             existing_profile_id=existing_profile_id,
         )

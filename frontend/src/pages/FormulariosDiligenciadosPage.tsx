@@ -37,6 +37,7 @@ import {
   loadHiddenFormIds,
 } from "@/services/formLocalDelete";
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   buildFormValuesFromSnapshot,
   coalesceIdPerfilEncuestador,
@@ -101,6 +102,7 @@ function summaryToServerListItem(summary: FormSummaryItem): FormReadItem {
 
 export const FormulariosDiligenciadosPage = () => {
   const authUsername = useAuthStore((s) => s.username);
+  const { canDeleteForms } = usePermissions();
   const online = useConnectivityStatus();
   const navigate = useNavigate();
   const [rows, setRows] = useState<DisplayRow[]>([]);
@@ -809,7 +811,7 @@ export const FormulariosDiligenciadosPage = () => {
         setPrecargaLoadingId(null);
       }
     },
-    [loadList, precargaLoadingId, selectedId],
+    [authUsername, loadList, precargaLoadingId, precargaMap, selectedId],
   );
 
   const eliminarPrecargaRow = useCallback(
@@ -1325,31 +1327,33 @@ export const FormulariosDiligenciadosPage = () => {
               </Button>
             </div>
             <div className="page-toolbar-actions">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  if (!navigator.onLine) {
-                    return;
+              {canDeleteForms ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (!navigator.onLine) {
+                      return;
+                    }
+                    setPrecargaError(null);
+                    setModalEliminarTodasPrecargas(true);
+                  }}
+                  disabled={
+                    !online ||
+                    precargas.length === 0 ||
+                    eliminandoTodasPrecargas ||
+                    eliminandoPrecargaId !== null
                   }
-                  setPrecargaError(null);
-                  setModalEliminarTodasPrecargas(true);
-                }}
-                disabled={
-                  !online ||
-                  precargas.length === 0 ||
-                  eliminandoTodasPrecargas ||
-                  eliminandoPrecargaId !== null
-                }
-                title={!online ? "Requiere conexión a internet" : undefined}
-                className="toolbar-btn toolbar-full-row border-amber-200 text-amber-950 hover:bg-amber-50"
-              >
-                {eliminandoTodasPrecargas
-                  ? "Quitando precargas…"
-                  : precargas.length === 0
-                    ? "Quitar todas las precargas"
-                    : `Quitar todas las precargas (${precargas.length})`}
-              </Button>
+                  title={!online ? "Requiere conexión a internet" : undefined}
+                  className="toolbar-btn toolbar-full-row border-amber-200 text-amber-950 hover:bg-amber-50"
+                >
+                  {eliminandoTodasPrecargas
+                    ? "Quitando precargas…"
+                    : precargas.length === 0
+                      ? "Quitar todas las precargas"
+                      : `Quitar todas las precargas (${precargas.length})`}
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
@@ -1382,34 +1386,36 @@ export const FormulariosDiligenciadosPage = () => {
                   ? "Descargando fotos…"
                   : "Fotos (todos)"}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => solicitarEliminarTodosFormularios()}
-                disabled={
-                  !online ||
-                  rowsMostrados.length === 0 ||
-                  !!pendingDeleteRow ||
-                  eliminandoTodosFormularios ||
-                  (hayFormulariosEnServidor &&
-                    (typeof localStorage === "undefined" ||
-                      !localStorage.getItem(ACCESS_TOKEN_KEY)))
-                }
-                title={
-                  !online
-                    ? "Requiere conexión a internet"
-                    : hayFormulariosEnServidor &&
-                        (typeof localStorage === "undefined" ||
-                          !localStorage.getItem(ACCESS_TOKEN_KEY))
-                      ? "Iniciá sesión para borrar formularios del servidor"
-                      : undefined
-                }
-                className="toolbar-btn toolbar-full-row border-rose-300 text-rose-900 hover:bg-rose-50"
-              >
-                {eliminandoTodosFormularios
-                  ? "Eliminando…"
-                  : "Eliminar todos los formularios"}
-              </Button>
+              {canDeleteForms ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => solicitarEliminarTodosFormularios()}
+                  disabled={
+                    !online ||
+                    rowsMostrados.length === 0 ||
+                    !!pendingDeleteRow ||
+                    eliminandoTodosFormularios ||
+                    (hayFormulariosEnServidor &&
+                      (typeof localStorage === "undefined" ||
+                        !localStorage.getItem(ACCESS_TOKEN_KEY)))
+                  }
+                  title={
+                    !online
+                      ? "Requiere conexión a internet"
+                      : hayFormulariosEnServidor &&
+                          (typeof localStorage === "undefined" ||
+                            !localStorage.getItem(ACCESS_TOKEN_KEY))
+                        ? "Iniciá sesión para borrar formularios del servidor"
+                        : undefined
+                  }
+                  className="toolbar-btn toolbar-full-row border-rose-300 text-rose-900 hover:bg-rose-50"
+                >
+                  {eliminandoTodosFormularios
+                    ? "Eliminando…"
+                    : "Eliminar todos los formularios"}
+                </Button>
+              ) : null}
             </div>
           </div>
         </header>
@@ -1599,22 +1605,24 @@ export const FormulariosDiligenciadosPage = () => {
                         {isOpen ? "Cerrar" : "Ver formulario"}
                       </span>
                     </button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={!online || eliminandoId === row.id_formulario}
-                      title={
-                        !online ? "Requiere conexión a internet" : undefined
-                      }
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        solicitarEliminar(row);
-                      }}
-                      className="h-8 shrink-0 self-center border-rose-200 px-2 text-xs text-rose-800 hover:bg-rose-50 sm:h-9 sm:px-3 sm:text-sm"
-                    >
-                      {eliminandoId === row.id_formulario ? "…" : "Eliminar"}
-                    </Button>
+                    {canDeleteForms ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!online || eliminandoId === row.id_formulario}
+                        title={
+                          !online ? "Requiere conexión a internet" : undefined
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          solicitarEliminar(row);
+                        }}
+                        className="h-8 shrink-0 self-center border-rose-200 px-2 text-xs text-rose-800 hover:bg-rose-50 sm:h-9 sm:px-3 sm:text-sm"
+                      >
+                        {eliminandoId === row.id_formulario ? "…" : "Eliminar"}
+                      </Button>
+                    ) : null}
                   </div>
 
                   {isOpen ? (
@@ -1667,7 +1675,8 @@ export const FormulariosDiligenciadosPage = () => {
                                         : "Precargar offline"}
                                     </Button>
                                   ) : null}
-                                  {online &&
+                                  {canDeleteForms &&
+                                  online &&
                                   (precargaMap.has(row.id_formulario) ||
                                     row.historial) ? (
                                     <Button

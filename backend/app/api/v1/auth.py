@@ -1,13 +1,15 @@
-import json
 import logging
 from time import time
 
-import bcrypt
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.api.deps import CurrentUser, get_current_user
+from app.core.database import get_session
 from app.core.security import create_access_token
 from app.schemas.auth import LoginRequest, TokenResponse
+from app.schemas.user import UserMe, UserRole
+from app.services.auth import authenticate_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -38,51 +40,42 @@ def _clear_failures(username: str) -> None:
     FAILED_ATTEMPTS.pop(username, None)
 
 
-def _verify_password(stored: str, provided: str) -> bool:
-    value = (stored or "").strip()
-    if value.startswith(("bcrypt:", "$2a$", "$2b$", "$2y$")):
-        digest = value.removeprefix("bcrypt:").encode("utf-8")
-        try:
-            return bcrypt.checkpw(provided.encode("utf-8"), digest)
-        except ValueError:
-            return False
-    if value.startswith("plain:"):
-        return value.removeprefix("plain:") == provided
-    # Compatibilidad temporal para despliegues heredados.
-    logger.warning(
-        "Auth user con password en texto plano detectado. Migra a bcrypt para endurecer seguridad."
-    )
-    return value == provided
-
-
-def _user_password_map() -> dict[str, str]:
-    raw = (settings.auth_users_json or "").strip()
-    if not raw:
-        return {}
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
-    if not isinstance(data, dict):
-        return {}
-    return {str(k): str(v) for k, v in data.items()}
-
-
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest) -> TokenResponse:
+async def login(
+    payload: LoginRequest,
+    session: AsyncSession = Depends(get_session),
+) -> TokenResponse:
     if _is_rate_limited(payload.username):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="too_many_attempts",
         )
-    users = _user_password_map()
-    expected = users.get(payload.username)
-    if expected is None or not _verify_password(expected, payload.password):
+    user = await authenticate_user(session, payload.username, payload.password)
+    if user is None:
         _register_failure(payload.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid_credentials",
         )
     _clear_failures(payload.username)
-    token, expires_in = create_access_token(payload.username)
-    return TokenResponse(access_token=token, expires_in=expires_in)
+    token, expires_in = create_access_token(
+        user.username,
+        role=UserRole(user.role),
+        user_id=int(user.id),
+    )
+    return TokenResponse(
+        access_token=token,
+        expires_in=expires_in,
+        username=user.username,
+        role=UserRole(user.role),
+    )
+
+
+@router.get("/me", response_model=UserMe)
+async def me(current_user: CurrentUser = Depends(get_current_user)) -> UserMe:
+    return UserMe(
+        id=current_user.id,
+        username=current_user.username,
+        role=current_user.role,
+        is_active=current_user.is_active,
+    )

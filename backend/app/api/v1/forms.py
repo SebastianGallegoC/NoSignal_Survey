@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import CurrentUser, get_current_user, require_roles
 from app.core.database import get_session
 from app.core.schema_flags import forms_has_fecha_actualizacion
 from app.repository.forms import (
@@ -37,6 +37,7 @@ from app.services.form_stats import (
 from app.services.form_map import get_form_map_points
 from app.services.forms import persist_form
 from app.services.storage import media_type_for_image, validated_photo_path
+from app.schemas.user import UserRole
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -47,7 +48,7 @@ async def list_forms(
     request: Request,
     limit: int = Query(200, ge=1, le=500),
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Lista formularios guardados en el servidor (todos los dispositivos que sincronizaron)."""
     rid = getattr(request.state, "request_id", None)
@@ -58,7 +59,7 @@ async def list_forms(
             "list_forms DB error request_id=%s limit=%s user=%r schema_has_fecha_actualizacion=%s",
             rid,
             limit,
-            _current_user,
+            current_user.username,
             forms_has_fecha_actualizacion,
         )
         raise
@@ -67,7 +68,7 @@ async def list_forms(
             "list_forms unexpected error request_id=%s limit=%s user=%r schema_has_fecha_actualizacion=%s",
             rid,
             limit,
-            _current_user,
+            current_user.username,
             forms_has_fecha_actualizacion,
         )
         raise
@@ -76,7 +77,7 @@ async def list_forms(
         rid,
         len(items),
         limit,
-        _current_user,
+        current_user.username,
     )
     return FormListResponse(items=items)
 
@@ -91,7 +92,7 @@ async def search_forms(
     fecha_desde: date | None = Query(default=None),
     fecha_hasta: date | None = Query(default=None),
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Listado paginado y filtrable para la tabla de formularios diligenciados."""
     rid = getattr(request.state, "request_id", None)
@@ -111,7 +112,7 @@ async def search_forms(
             rid,
             limit,
             offset,
-            _current_user,
+            current_user.username,
         )
         raise
     logger.info(
@@ -121,7 +122,7 @@ async def search_forms(
         total,
         limit,
         offset,
-        _current_user,
+        current_user.username,
     )
     return FormSearchResponse(items=items, total=total, limit=limit, offset=offset)
 
@@ -129,13 +130,13 @@ async def search_forms(
 @router.get("/stats/anios", response_model=FormStatsAniosResponse)
 async def form_stats_anios(
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Años distintos con fecha de visita en formularios sincronizados."""
     try:
         return await get_distinct_anios(session)
     except SQLAlchemyError:
-        logger.exception("form_stats_anios DB error user=%r", _current_user)
+        logger.exception("form_stats_anios DB error user=%r", current_user.username)
         raise
 
 
@@ -144,7 +145,7 @@ async def form_stats_monthly_diligencias(
     anio: int = Query(..., ge=2000, le=2100),
     municipios: list[str] = Query(default=[]),
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Conteo mensual de formularios por municipio (fecha de referencia: fecha_visita)."""
     try:
@@ -162,20 +163,20 @@ async def form_stats_monthly_diligencias(
             municipios=params.municipios,
         )
     except SQLAlchemyError:
-        logger.exception("form_stats_monthly DB error user=%r", _current_user)
+        logger.exception("form_stats_monthly DB error user=%r", current_user.username)
         raise
 
 
 @router.get("/stats/municipios", response_model=FormStatsMunicipiosResponse)
 async def form_stats_municipios(
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Municipios distintos usados en formularios del servidor (para filtros de Datos)."""
     try:
         return await get_distinct_municipios(session)
     except SQLAlchemyError:
-        logger.exception("form_stats_municipios DB error user=%r", _current_user)
+        logger.exception("form_stats_municipios DB error user=%r", current_user.username)
         raise
 
 
@@ -185,7 +186,7 @@ async def form_validation_stats(
     fecha_desde: date | None = Query(default=None),
     fecha_hasta: date | None = Query(default=None),
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Agregados de resultado_validacion con filtros opcionales por municipio y fecha_visita."""
     try:
@@ -212,7 +213,7 @@ async def form_validation_stats(
             fecha_hasta=params.fecha_hasta,
         )
     except SQLAlchemyError:
-        logger.exception("form_validation_stats DB error user=%r", _current_user)
+        logger.exception("form_validation_stats DB error user=%r", current_user.username)
         raise
 
 
@@ -222,7 +223,7 @@ async def form_map_points(
     fecha_desde: date | None = Query(default=None),
     fecha_hasta: date | None = Query(default=None),
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Puntos geográficos para visor de mapa en Datos."""
     try:
@@ -249,7 +250,7 @@ async def form_map_points(
             fecha_hasta=params.fecha_hasta,
         )
     except SQLAlchemyError:
-        logger.exception("form_map_points DB error user=%r", _current_user)
+        logger.exception("form_map_points DB error user=%r", current_user.username)
         raise
 
 
@@ -257,7 +258,7 @@ async def form_map_points(
 async def get_form_by_id_endpoint(
     form_id: str,
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    _current_user: CurrentUser = Depends(get_current_user),
 ):
     """Obtiene un formulario puntual por id para detalle/precarga en frontend."""
     item = await get_form_for_read_by_id(session, form_id)
@@ -271,7 +272,7 @@ async def get_form_photo(
     form_id: str,
     photo_index: int,
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    _current_user: CurrentUser = Depends(get_current_user),
 ):
     """Sirve un archivo de foto guardado en disco (requiere el mismo token que el resto del API)."""
     if photo_index < 0:
@@ -296,13 +297,13 @@ async def create_form(
     payload: FormPayload,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     if idempotency_key and idempotency_key != payload.id_formulario:
         raise HTTPException(status_code=409, detail="idempotency_key_mismatch")
 
     try:
-        record = await persist_form(session, payload, _current_user)
+        record = await persist_form(session, payload, current_user.username)
     except ValueError as exc:
         # Errores tras validar el JSON (fotos, fecha_hora, etc.); no pasan por RequestValidationError.
         logger.warning("422 persist_form: %s", exc)
@@ -314,7 +315,7 @@ async def create_form(
 async def delete_form_endpoint(
     form_id: str,
     session: AsyncSession = Depends(get_session),
-    _current_user: str = Depends(get_current_user),
+    _current_user: CurrentUser = Depends(require_roles(UserRole.ADMIN, UserRole.EDITOR)),
 ):
     """Elimina un formulario del servidor (fila en BD y archivos de foto asociados)."""
     deleted = await delete_form(session, form_id)

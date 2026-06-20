@@ -1,6 +1,10 @@
+import type { UserRole } from "@/lib/permissions";
+
 export interface JwtPayloadShape {
   sub?: string;
   exp?: number;
+  role?: UserRole;
+  uid?: number;
 }
 
 export const decodeJwtPayload = (token: string): JwtPayloadShape | null => {

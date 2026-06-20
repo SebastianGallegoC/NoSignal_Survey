@@ -1,4 +1,5 @@
 import { ACCESS_TOKEN_KEY } from '@/lib/authStorage';
+import type { UserRole } from '@/lib/permissions';
 import {
   LEGACY_API_MAX_GPS_ACCURACY_METERS,
   MIN_GPS_PRECISION_METERS,
@@ -96,6 +97,29 @@ export interface LoginResponse {
   access_token: string;
   token_type: string;
   expires_in: number;
+  username: string;
+  role: UserRole;
+}
+
+export interface UserRead {
+  id: number;
+  username: string;
+  role: UserRole;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserCreatePayload {
+  username: string;
+  password: string;
+  role: UserRole;
+}
+
+export interface UserUpdatePayload {
+  role?: UserRole;
+  is_active?: boolean;
+  password?: string;
 }
 
 export class LoginApiError extends Error {
@@ -149,6 +173,18 @@ export const loginApi = async (username: string, password: string): Promise<Logi
     throw new LoginApiError(response.status, detail || `login_${response.status}`);
   }
   return response.json() as Promise<LoginResponse>;
+};
+
+export const fetchMeApi = async (): Promise<UserRead> => {
+  const response = await fetch(`${API_BASE}/api/v1/auth/me`, {
+    headers: { ...authHeaders() },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || `auth_me_${response.status}`);
+  }
+  return (await response.json()) as UserRead;
 };
 
 /** Respuesta de `GET /api/v1/forms/` (datos en servidor; fotos = rutas de archivo). */
@@ -636,4 +672,46 @@ export const deleteEncuestadorProfileApi = async (profileId: number): Promise<vo
     const detail = parseApiErrorDetail(t) || `encuestador_profiles_delete_${response.status}`;
     throw new EncuestadorProfileApiError(response.status, detail);
   }
+};
+
+export const listUsersApi = async (): Promise<UserRead[]> => {
+  const response = await fetch(`${API_BASE}/api/v1/users/`, {
+    headers: { ...authHeaders() },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(parseApiErrorDetail(detail) || `users_list_${response.status}`);
+  }
+  const body = (await response.json()) as { items?: UserRead[] };
+  return Array.isArray(body.items) ? body.items : [];
+};
+
+export const createUserApi = async (payload: UserCreatePayload): Promise<UserRead> => {
+  const response = await fetch(`${API_BASE}/api/v1/users/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(parseApiErrorDetail(detail) || `users_create_${response.status}`);
+  }
+  return (await response.json()) as UserRead;
+};
+
+export const updateUserApi = async (
+  userId: number,
+  payload: UserUpdatePayload,
+): Promise<UserRead> => {
+  const response = await fetch(`${API_BASE}/api/v1/users/${userId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(parseApiErrorDetail(detail) || `users_update_${response.status}`);
+  }
+  return (await response.json()) as UserRead;
 };

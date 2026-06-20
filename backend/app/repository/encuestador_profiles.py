@@ -5,34 +5,29 @@ from app.models.encuestador_profile import EncuestadorProfile
 from app.models.form_record import FormRecord
 
 
-def _base_stmt(username: str) -> Select[tuple[EncuestadorProfile]]:
+def _base_stmt() -> Select[tuple[EncuestadorProfile]]:
     return (
         select(EncuestadorProfile)
-        .where(EncuestadorProfile.username_owner == username)
         .order_by(EncuestadorProfile.nombres_apellidos_encuestador.asc(), EncuestadorProfile.id.asc())
     )
 
 
-async def list_profiles_for_user(session: AsyncSession, username: str) -> list[EncuestadorProfile]:
-    result = await session.execute(_base_stmt(username))
+async def list_profiles(session: AsyncSession) -> list[EncuestadorProfile]:
+    result = await session.execute(_base_stmt())
     return list(result.scalars().all())
 
 
-async def list_enabled_profiles_for_user(session: AsyncSession, username: str) -> list[EncuestadorProfile]:
-    result = await session.execute(_base_stmt(username).where(EncuestadorProfile.habilitado.is_(True)))
+async def list_enabled_profiles(session: AsyncSession) -> list[EncuestadorProfile]:
+    result = await session.execute(_base_stmt().where(EncuestadorProfile.habilitado.is_(True)))
     return list(result.scalars().all())
 
 
-async def get_profile_for_user(
+async def get_profile_by_id(
     session: AsyncSession,
     profile_id: int,
-    username: str,
 ) -> EncuestadorProfile | None:
     result = await session.execute(
-        select(EncuestadorProfile).where(
-            EncuestadorProfile.id == profile_id,
-            EncuestadorProfile.username_owner == username,
-        )
+        select(EncuestadorProfile).where(EncuestadorProfile.id == profile_id)
     )
     return result.scalars().first()
 

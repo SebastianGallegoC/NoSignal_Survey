@@ -63,7 +63,30 @@ Variables clave:
 - `ACME_EMAIL` (Let's Encrypt)
 - `POSTGRES_PASSWORD`
 - `JWT_SECRET`
-- `NOSIGNAL_AUTH_USERS`
+
+## Usuarios y roles
+
+La autenticación usa una tabla `users` en PostgreSQL con roles:
+
+- `admin`: acceso total, incluida la gestión de usuarios
+- `editor`: mismas capacidades operativas que admin excepto crear/ver/editar usuarios
+- `encuestador`: puede diligenciar, ver/editar formularios, ver perfiles y consultar Datos; no puede eliminar formularios ni modificar usuarios/perfiles
+
+Bootstrap del primer administrador:
+
+1. Ejecutar migraciones:
+
+```bash
+docker compose exec backend python -m alembic upgrade head
+```
+
+2. Crear el primer admin en BD:
+
+```bash
+docker compose exec backend python -m scripts.create_admin_user --username admin --role admin
+```
+
+`NOSIGNAL_AUTH_USERS` queda como variable opcional de bootstrap para migraciones heredadas; el login normal ya usa la base de datos.
 
 ## Desarrollo local
 
