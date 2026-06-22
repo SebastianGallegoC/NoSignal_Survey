@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, require_roles
 from app.core.database import get_session
 from app.schemas.user import UserCreate, UserListResponse, UserRead, UserRole, UserUpdate
-from app.services.users import create_user_account, list_user_reads, update_user_account
+from app.services.users import (
+    create_user_account,
+    delete_user_account,
+    list_user_reads,
+    update_user_account,
+)
 
 router = APIRouter()
 
@@ -44,3 +49,17 @@ async def update_user_endpoint(
     if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user_not_found")
     return updated
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user_endpoint(
+    user_id: int,
+    session: AsyncSession = Depends(get_session),
+    _current_user: CurrentUser = Depends(require_roles(UserRole.ADMIN)),
+) -> None:
+    try:
+        deleted = await delete_user_account(session, user_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user_not_found")

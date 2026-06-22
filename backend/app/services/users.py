@@ -8,6 +8,7 @@ from app.core.security import hash_password
 from app.models.user import User
 from app.repository.users import (
     create_user,
+    delete_user,
     get_user_by_id,
     get_user_by_username,
     list_users,
@@ -80,3 +81,13 @@ async def update_user_account(
         user.password_hash = hash_password(payload.password)
     saved = await save_user(session, user)
     return to_user_read(saved)
+
+
+async def delete_user_account(session: AsyncSession, user_id: int) -> bool:
+    user = await get_user_by_id(session, user_id)
+    if user is None:
+        return False
+    if UserRole(user.role) == UserRole.ADMIN:
+        raise ValueError("admin_user_immutable")
+    await delete_user(session, user)
+    return True

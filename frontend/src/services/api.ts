@@ -715,3 +715,14 @@ export const updateUserApi = async (
   }
   return (await response.json()) as UserRead;
 };
+
+export const deleteUserApi = async (userId: number): Promise<void> => {
+  const response = await fetch(`${API_BASE}/api/v1/users/${userId}`, {
+    method: "DELETE",
+    headers: { ...authHeaders() },
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(parseApiErrorDetail(detail) || `users_delete_${response.status}`);
+  }
+};

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { ConfirmDeleteUserModal } from "@/components/users/ConfirmDeleteUserModal";
 import { PasswordField } from "@/components/users/PasswordField";
 import { Button } from "@/components/ui/button";
 import { type UserRole } from "@/lib/permissions";
@@ -28,6 +29,7 @@ type Props = {
   error?: string | null;
   onClose: () => void;
   onSave: (updates: { role: UserRole; is_active: boolean; password?: string }) => void;
+  onDelete: () => void;
 };
 
 function draftFromUser(user: UserRead): EditDraft {
@@ -38,16 +40,35 @@ function draftFromUser(user: UserRead): EditDraft {
   };
 }
 
-export function EditUserModal({ user, saving = false, error = null, onClose, onSave }: Props) {
+function hasDraftChanges(user: UserRead, draft: EditDraft): boolean {
+  const originalRole = user.role === "admin" ? "encuestador" : user.role;
+  return (
+    draft.role !== originalRole ||
+    draft.is_active !== user.is_active ||
+    draft.password.length > 0
+  );
+}
+
+export function EditUserModal({
+  user,
+  saving = false,
+  error = null,
+  onClose,
+  onSave,
+  onDelete,
+}: Props) {
   const open = user != null;
   const [draft, setDraft] = useState<EditDraft | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
       setDraft(null);
+      setConfirmDeleteOpen(false);
       return;
     }
     setDraft(draftFromUser(user));
+    setConfirmDeleteOpen(false);
   }, [user]);
 
   useEffect(() => {
@@ -62,7 +83,7 @@ export function EditUserModal({ user, saving = false, error = null, onClose, onS
   }, [open]);
 
   useEffect(() => {
-    if (!open || saving) {
+    if (!open || saving || confirmDeleteOpen) {
       return;
     }
     const onKey = (e: KeyboardEvent) => {
@@ -72,14 +93,19 @@ export function EditUserModal({ user, saving = false, error = null, onClose, onS
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, saving, onClose]);
+  }, [open, saving, confirmDeleteOpen, onClose]);
+
+  const hasChanges = useMemo(
+    () => (user && draft ? hasDraftChanges(user, draft) : false),
+    [user, draft],
+  );
 
   if (!user || !draft) {
     return null;
   }
 
   const handleSave = () => {
-    if (draft.password.length > 0 && draft.password.length < 8) {
+    if (!hasChanges || (draft.password.length > 0 && draft.password.length < 8)) {
       return;
     }
     onSave({
@@ -92,105 +118,137 @@ export function EditUserModal({ user, saving = false, error = null, onClose, onS
   const passwordInvalid = draft.password.length > 0 && draft.password.length < 8;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
-      <button
-        type="button"
-        className="absolute inset-0 bg-slate-900/45 backdrop-blur-[1px]"
-        aria-label="Cerrar ventana"
-        disabled={saving}
-        onClick={() => {
-          if (!saving) {
-            onClose();
-          }
-        }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-user-title"
-        className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="edit-user-title" className="text-lg font-semibold text-slate-900">
-          Editar usuario
-        </h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Modificá el rol, el estado o la contraseña de <strong>{user.username}</strong>.
-        </p>
-
-        <div className="mt-4 space-y-3">
-          <label className="flex flex-col gap-1 text-sm">
-            Usuario
-            <input
-              value={user.username}
-              readOnly
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            Rol
-            <select
-              value={draft.role}
-              disabled={saving}
-              onChange={(e) =>
-                setDraft((current) =>
-                  current
-                    ? { ...current, role: e.target.value as Exclude<UserRole, "admin"> }
-                    : current,
-                )
-              }
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:cursor-not-allowed disabled:bg-slate-100"
-            >
-              {EDIT_ROLE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={draft.is_active}
-              disabled={saving}
-              onChange={(e) =>
-                setDraft((current) =>
-                  current ? { ...current, is_active: e.target.checked } : current,
-                )
-              }
-              className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
-            />
-            Usuario activo
-          </label>
-
-          <PasswordField
-            id={`edit-user-password-${user.id}`}
-            label="Nueva contraseña (opcional)"
-            placeholder="Dejar vacío para no cambiar"
-            value={draft.password}
-            disabled={saving}
-            onChange={(password) =>
-              setDraft((current) => (current ? { ...current, password } : current))
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
+        <button
+          type="button"
+          className="absolute inset-0 bg-slate-900/45 backdrop-blur-[1px]"
+          aria-label="Cerrar ventana"
+          disabled={saving}
+          onClick={() => {
+            if (!saving) {
+              onClose();
             }
-          />
-          {passwordInvalid ? (
-            <p className="text-xs text-rose-700">La contraseña debe tener al menos 8 caracteres.</p>
-          ) : null}
-        </div>
+          }}
+        />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-user-title"
+          className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 id="edit-user-title" className="text-lg font-semibold text-slate-900">
+            Editar usuario
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Modificá el rol, el estado o la contraseña de <strong>{user.username}</strong>.
+          </p>
 
-        {error ? <p className="mt-3 text-sm text-rose-700">{error}</p> : null}
+          <div className="mt-4 space-y-3">
+            <label className="flex flex-col gap-1 text-sm">
+              Usuario
+              <input
+                value={user.username}
+                readOnly
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+              />
+            </label>
 
-        <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="button" disabled={saving || passwordInvalid} onClick={handleSave}>
-            {saving ? "Guardando…" : "Guardar cambios"}
-          </Button>
+            <label className="flex flex-col gap-1 text-sm">
+              Rol
+              <select
+                value={draft.role}
+                disabled={saving}
+                onChange={(e) =>
+                  setDraft((current) =>
+                    current
+                      ? { ...current, role: e.target.value as Exclude<UserRole, "admin"> }
+                      : current,
+                  )
+                }
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:cursor-not-allowed disabled:bg-slate-100"
+              >
+                {EDIT_ROLE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={draft.is_active}
+                disabled={saving}
+                onChange={(e) =>
+                  setDraft((current) =>
+                    current ? { ...current, is_active: e.target.checked } : current,
+                  )
+                }
+                className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
+              />
+              Usuario activo
+            </label>
+
+            <PasswordField
+              id={`edit-user-password-${user.id}`}
+              label="Nueva contraseña (opcional)"
+              placeholder="Dejar vacío para no cambiar"
+              value={draft.password}
+              disabled={saving}
+              onChange={(password) =>
+                setDraft((current) => (current ? { ...current, password } : current))
+              }
+            />
+            {passwordInvalid ? (
+              <p className="text-xs text-rose-700">La contraseña debe tener al menos 8 caracteres.</p>
+            ) : null}
+          </div>
+
+          {error ? <p className="mt-3 text-sm text-rose-700">{error}</p> : null}
+
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={() => setConfirmDeleteOpen(true)}
+              className="border-rose-200 text-rose-800 hover:bg-rose-50"
+            >
+              Eliminar
+            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                disabled={saving || !hasChanges || passwordInvalid}
+                onClick={handleSave}
+              >
+                {saving ? "Actualizando…" : "Actualizar"}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+
+      <ConfirmDeleteUserModal
+        open={confirmDeleteOpen}
+        username={user.username}
+        confirming={saving}
+        onCancel={() => {
+          if (!saving) {
+            setConfirmDeleteOpen(false);
+          }
+        }}
+        onConfirm={() => {
+          setConfirmDeleteOpen(false);
+          onDelete();
+        }}
+      />
+    </>
   );
 }

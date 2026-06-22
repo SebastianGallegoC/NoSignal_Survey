@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   ]),
   createUserApi: vi.fn(),
   updateUserApi: vi.fn(),
+  deleteUserApi: vi.fn(),
 }));
 
 vi.mock("@/services/usersApi", () => mocks);
@@ -68,7 +69,7 @@ describe("UsuariosPage", () => {
     expect(createPassword).toHaveAttribute("type", "text");
   });
 
-  it("abre el modal de edición al pulsar Editar", async () => {
+  it("abre el modal de edición y habilita Actualizar solo con cambios", async () => {
     render(
       <MemoryRouter>
         <UsuariosPage />
@@ -81,9 +82,34 @@ describe("UsuariosPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Editar$/i }));
 
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Editar usuario/i })).toBeInTheDocument();
-    expect(screen.getByLabelText("Nueva contraseña (opcional)")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Guardar cambios/i })).toBeInTheDocument();
+    const updateButton = screen.getByRole("button", { name: /^Actualizar$/i });
+    expect(updateButton).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText("Usuario activo"));
+    expect(updateButton).toBeEnabled();
+    expect(screen.getByRole("button", { name: /^Eliminar$/i })).toBeInTheDocument();
+  });
+
+  it("muestra confirmación antes de eliminar un usuario", async () => {
+    render(
+      <MemoryRouter>
+        <UsuariosPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("encuestador1")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Editar$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Eliminar$/i }));
+
+    expect(screen.getByRole("heading", { name: /¿Eliminar usuario\?/i })).toBeInTheDocument();
+    const confirmDialog = screen.getByRole("heading", { name: /¿Eliminar usuario\?/i }).closest('[role="dialog"]');
+    fireEvent.click(within(confirmDialog as HTMLElement).getByRole("button", { name: /^Eliminar$/i }));
+
+    await waitFor(() => {
+      expect(mocks.deleteUserApi).toHaveBeenCalledWith(2);
+    });
   });
 });

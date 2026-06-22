@@ -5,6 +5,7 @@ export type {
 } from "@/services/api";
 export {
   createUserApi,
+  deleteUserApi,
   listUsersApi,
   updateUserApi,
 } from "@/services/api";

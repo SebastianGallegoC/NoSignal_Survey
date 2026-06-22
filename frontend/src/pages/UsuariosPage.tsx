@@ -8,6 +8,7 @@ import { APP_NAME } from "@/constants/appBrand";
 import { type UserRole } from "@/lib/permissions";
 import {
   createUserApi,
+  deleteUserApi,
   listUsersApi,
   type UserRead,
   updateUserApi,
@@ -126,6 +127,25 @@ export const UsuariosPage = () => {
     },
     [editingUser, loadUsers],
   );
+
+  const deleteEditedUser = useCallback(async () => {
+    if (!editingUser) {
+      return;
+    }
+    setEditError(null);
+    setSaving(true);
+    try {
+      await deleteUserApi(editingUser.id);
+      setEditingUser(null);
+      await loadUsers();
+    } catch (e) {
+      setEditError(
+        mapUserError(e instanceof Error ? e.message : "No se pudo eliminar el usuario."),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }, [editingUser, loadUsers]);
 
   const closeEditModal = useCallback(() => {
     if (saving) {
@@ -264,6 +284,7 @@ export const UsuariosPage = () => {
         error={editError}
         onClose={closeEditModal}
         onSave={(updates) => void saveEditedUser(updates)}
+        onDelete={() => void deleteEditedUser()}
       />
     </div>
   );
