@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import hash_password
 from app.models.user import User
 from app.repository.users import (
-    count_active_admins,
     create_user,
     get_user_by_id,
     get_user_by_username,
@@ -40,6 +39,8 @@ async def list_user_reads(session: AsyncSession) -> list[UserRead]:
 
 
 async def create_user_account(session: AsyncSession, payload: UserCreate) -> UserRead:
+    if payload.role == UserRole.ADMIN:
+        raise ValueError("admin_role_creation_forbidden")
     existing = await get_user_by_username(session, payload.username)
     if existing is not None:
         raise ValueError("username_already_exists")
@@ -64,18 +65,14 @@ async def update_user_account(
     if user is None:
         return None
     current_role = UserRole(user.role)
+    if current_role == UserRole.ADMIN:
+        raise ValueError("admin_user_immutable")
     current_active = bool(user.is_active)
     next_role = payload.role or current_role
     next_active = current_active if payload.is_active is None else payload.is_active
 
-    if (
-        current_role == UserRole.ADMIN
-        and current_active
-        and (next_role != UserRole.ADMIN or not next_active)
-    ):
-        active_admins = await count_active_admins(session)
-        if active_admins <= 1:
-            raise ValueError("last_admin_must_remain_active")
+    if payload.role == UserRole.ADMIN:
+        raise ValueError("admin_role_creation_forbidden")
 
     user.role = next_role.value
     user.is_active = next_active

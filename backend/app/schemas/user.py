@@ -39,6 +39,13 @@ class UserCreate(BaseModel):
             raise ValueError("username_no_spaces")
         return normalized
 
+    @field_validator("role")
+    @classmethod
+    def forbid_admin_role(cls, value: UserRole) -> UserRole:
+        if value == UserRole.ADMIN:
+            raise ValueError("admin_role_creation_forbidden")
+        return value
+
 
 class UserUpdate(BaseModel):
     role: UserRole | None = None

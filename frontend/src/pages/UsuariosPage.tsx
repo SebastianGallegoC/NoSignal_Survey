@@ -11,24 +11,76 @@ import {
   updateUserApi,
 } from "@/services/usersApi";
 
-const ROLE_OPTIONS: Array<{ value: UserRole; label: string }> = [
-  { value: "admin", label: "Administrador" },
-  { value: "editor", label: "Edición" },
-  { value: "encuestador", label: "Encuestador" },
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: "Administrador",
+  editor: "Edición",
+  encuestador: "Encuestador",
+};
+
+const CREATE_ROLE_OPTIONS: Array<{ value: Exclude<UserRole, "admin">; label: string }> = [
+  { value: "editor", label: ROLE_LABELS.editor },
+  { value: "encuestador", label: ROLE_LABELS.encuestador },
 ];
 
 type DraftState = {
   username: string;
   password: string;
-  confirmPassword: string;
-  role: UserRole;
+  role: Exclude<UserRole, "admin">;
 };
 
 const EMPTY_DRAFT: DraftState = {
   username: "",
   password: "",
-  confirmPassword: "",
   role: "encuestador",
+};
+
+function mapUserError(message: string): string {
+  switch (message) {
+    case "admin_role_creation_forbidden":
+      return "No se pueden crear usuarios con rol administrador.";
+    case "admin_user_immutable":
+      return "Los usuarios administrador no se pueden modificar.";
+    case "username_already_exists":
+      return "Ese nombre de usuario ya existe.";
+    default:
+      return message;
+  }
+}
+
+type PasswordFieldProps = {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+};
+
+const PasswordField = ({ id, label, value, onChange, placeholder }: PasswordFieldProps) => {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <label className="flex flex-col gap-1 text-sm" htmlFor={id}>
+      {label}
+      <div className="relative">
+        <input
+          id={id}
+          type={visible ? "text" : "password"}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 pr-16 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+        />
+        <button
+          type="button"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+          aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+          onClick={() => setVisible((current) => !current)}
+        >
+          {visible ? "Ocultar" : "Ver"}
+        </button>
+      </div>
+    </label>
+  );
 };
 
 export const UsuariosPage = () => {
@@ -45,7 +97,9 @@ export const UsuariosPage = () => {
     try {
       setUsers(await listUsersApi());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudieron cargar los usuarios.");
+      setError(
+        mapUserError(e instanceof Error ? e.message : "No se pudieron cargar los usuarios."),
+      );
     } finally {
       setLoading(false);
     }
@@ -66,10 +120,6 @@ export const UsuariosPage = () => {
       setError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
-    if (draft.password !== draft.confirmPassword) {
-      setError("La confirmación de contraseña no coincide.");
-      return;
-    }
     setSaving(true);
     try {
       await createUserApi({
@@ -80,7 +130,9 @@ export const UsuariosPage = () => {
       setDraft(EMPTY_DRAFT);
       await loadUsers();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo crear el usuario.");
+      setError(
+        mapUserError(e instanceof Error ? e.message : "No se pudo crear el usuario."),
+      );
     } finally {
       setSaving(false);
     }
@@ -95,7 +147,9 @@ export const UsuariosPage = () => {
         setRowPasswords((current) => ({ ...current, [user.id]: "" }));
         await loadUsers();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo actualizar el usuario.");
+        setError(
+          mapUserError(e instanceof Error ? e.message : "No se pudo actualizar el usuario."),
+        );
       } finally {
         setSaving(false);
       }
@@ -141,38 +195,24 @@ export const UsuariosPage = () => {
                 onChange={(e) =>
                   setDraft((current) => ({
                     ...current,
-                    role: e.target.value as UserRole,
+                    role: e.target.value as Exclude<UserRole, "admin">,
                   }))
                 }
                 className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
               >
-                {ROLE_OPTIONS.map((option) => (
+                {CREATE_ROLE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Contraseña
-              <input
-                type="password"
-                value={draft.password}
-                onChange={(e) => setDraft((current) => ({ ...current, password: e.target.value }))}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Confirmar contraseña
-              <input
-                type="password"
-                value={draft.confirmPassword}
-                onChange={(e) =>
-                  setDraft((current) => ({ ...current, confirmPassword: e.target.value }))
-                }
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-              />
-            </label>
+            <PasswordField
+              id="create-user-password"
+              label="Contraseña"
+              value={draft.password}
+              onChange={(password) => setDraft((current) => ({ ...current, password }))}
+            />
             <Button type="button" disabled={saving} onClick={() => void createUser()}>
               {saving ? "Guardando…" : "Crear usuario"}
             </Button>
@@ -192,73 +232,94 @@ export const UsuariosPage = () => {
               <p className="text-sm text-slate-600">No hay usuarios creados.</p>
             ) : (
               <div className="space-y-3">
-                {users.map((user) => (
-                  <div
-                    key={user.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-slate-900">{user.username}</p>
-                        <p className="text-xs text-slate-600">
-                          Estado: {user.is_active ? "Activo" : "Inactivo"}
-                        </p>
+                {users.map((user) => {
+                  const isAdmin = user.role === "admin";
+
+                  return (
+                    <div
+                      key={user.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-slate-900">{user.username}</p>
+                          <p className="text-xs text-slate-600">
+                            Estado: {user.is_active ? "Activo" : "Inactivo"}
+                          </p>
+                          {isAdmin ? (
+                            <p className="mt-1 text-xs text-slate-500">
+                              Cuenta administrador protegida: no editable.
+                            </p>
+                          ) : null}
+                        </div>
+                        {isAdmin ? (
+                          <span className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700">
+                            {ROLE_LABELS.admin}
+                          </span>
+                        ) : (
+                          <select
+                            value={user.role}
+                            onChange={(e) =>
+                              void updateUser(user, { role: e.target.value as UserRole })
+                            }
+                            className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
+                            disabled={saving}
+                          >
+                            {CREATE_ROLE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
-                      <select
-                        value={user.role}
-                        onChange={(e) =>
-                          void updateUser(user, { role: e.target.value as UserRole })
-                        }
-                        className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
-                        disabled={saving}
-                      >
-                        {ROLE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
 
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={saving}
-                        onClick={() =>
-                          void updateUser(user, { is_active: !user.is_active })
-                        }
-                      >
-                        {user.is_active ? "Desactivar" : "Activar"}
-                      </Button>
-                    </div>
+                      {!isAdmin ? (
+                        <>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={saving}
+                              onClick={() =>
+                                void updateUser(user, { is_active: !user.is_active })
+                              }
+                            >
+                              {user.is_active ? "Desactivar" : "Activar"}
+                            </Button>
+                          </div>
 
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                      <input
-                        type="password"
-                        placeholder="Nueva contraseña"
-                        value={rowPasswords[user.id] ?? ""}
-                        onChange={(e) =>
-                          setRowPasswords((current) => ({
-                            ...current,
-                            [user.id]: e.target.value,
-                          }))
-                        }
-                        className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={saving || (rowPasswords[user.id] ?? "").length < 8}
-                        onClick={() =>
-                          void updateUser(user, { password: rowPasswords[user.id] ?? "" })
-                        }
-                      >
-                        Restablecer contraseña
-                      </Button>
+                          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                            <div className="min-w-0 flex-1">
+                              <PasswordField
+                                id={`reset-password-${user.id}`}
+                                label="Nueva contraseña"
+                                placeholder="Nueva contraseña"
+                                value={rowPasswords[user.id] ?? ""}
+                                onChange={(password) =>
+                                  setRowPasswords((current) => ({
+                                    ...current,
+                                    [user.id]: password,
+                                  }))
+                                }
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={saving || (rowPasswords[user.id] ?? "").length < 8}
+                              onClick={() =>
+                                void updateUser(user, { password: rowPasswords[user.id] ?? "" })
+                              }
+                            >
+                              Restablecer contraseña
+                            </Button>
+                          </div>
+                        </>
+                      ) : null}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
