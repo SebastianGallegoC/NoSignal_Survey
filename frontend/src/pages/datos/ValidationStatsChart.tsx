@@ -6,10 +6,14 @@ import {
   Tooltip,
 } from "recharts";
 
+import type { CSSProperties } from "react";
+
 import {
-  CUMPLE_DETALLE_CARD_CLASSES,
   CUMPLE_DETALLE_COLORS,
   CUMPLE_DETALLE_LABELS,
+  CUMPLE_DETALLE_THEME,
+  CUMPLE_DETALLE_TOTAL_CARD_CLASS,
+  type CumpleDetalleKey,
 } from "@/constants/validationStatsFilter";
 import { ResponsiveChartBox } from "@/pages/datos/ResponsiveChartBox";
 import type { FormStatsCumpleDetalle, FormStatsResponse } from "@/services/api";
@@ -104,14 +108,16 @@ function StatsPieChart({
 function StatCard({
   label,
   value,
-  className,
+  className = "",
+  style,
 }: {
   label: string;
   value: number;
-  className: string;
+  className?: string;
+  style?: CSSProperties;
 }) {
   return (
-    <div className={`rounded-lg border px-3 py-2 ${className}`}>
+    <div className={`rounded-lg border px-3 py-2 ${className}`} style={style}>
       <dt className="text-xs font-medium uppercase tracking-wide">{label}</dt>
       <dd className="text-2xl font-semibold">{value}</dd>
     </div>
@@ -167,22 +173,26 @@ export const ValidationStatsChart = ({ stats }: ValidationStatsChartProps) => {
           ariaLabel={`Gráfico de formularios que cumplen por tipo de servicio de energía, total ${stats.total}`}
         />
         <dl className="grid grid-cols-1 gap-3 text-sm">
-          {chartData.map((entry) => (
-            <StatCard
-              key={entry.key}
-              label={entry.name}
-              value={entry.value}
-              className={
-                CUMPLE_DETALLE_CARD_CLASSES[
-                  entry.key as keyof typeof CUMPLE_DETALLE_LABELS
-                ]
-              }
-            />
-          ))}
+          {chartData.map((entry) => {
+            const theme =
+              CUMPLE_DETALLE_THEME[entry.key as CumpleDetalleKey];
+            return (
+              <StatCard
+                key={entry.key}
+                label={entry.name}
+                value={entry.value}
+                style={{
+                  borderColor: theme.border,
+                  backgroundColor: theme.bg,
+                  color: theme.text,
+                }}
+              />
+            );
+          })}
           <StatCard
             label="Total"
             value={stats.total}
-            className="border-slate-200 bg-slate-100 text-slate-900"
+            className={CUMPLE_DETALLE_TOTAL_CARD_CLASS}
           />
         </dl>
       </div>
