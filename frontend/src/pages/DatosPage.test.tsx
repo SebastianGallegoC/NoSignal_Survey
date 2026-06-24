@@ -310,6 +310,28 @@ describe("DatosPage", () => {
     });
   });
 
+  it("aplica filtro de municipio al mapa al cambiar el select de validación", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    mockFetchFormStatsMunicipios.mockResolvedValue(["Cúcuta", "Medellín"]);
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(mockFetchFormMapPoints).toHaveBeenCalled());
+    const callsBefore = mockFetchFormMapPoints.mock.calls.length;
+    const select = screen.getAllByRole("combobox")[0];
+    fireEvent.change(select, { target: { value: "Cúcuta" } });
+    await waitFor(() => {
+      expect(mockFetchFormMapPoints.mock.calls.length).toBeGreaterThan(callsBefore);
+      const lastCall = mockFetchFormMapPoints.mock.calls.at(-1)?.[0];
+      expect(lastCall).toMatchObject({
+        municipios: ["Cúcuta"],
+      });
+    });
+  });
+
   it("restaura secciones y filtros guardados al volver a Datos", async () => {
     localStorage.setItem("nosignal_access_token", "token");
     mockFetchFormStats.mockResolvedValue(sampleStats);
@@ -323,10 +345,6 @@ describe("DatosPage", () => {
         fechaHasta: "2026-01-31",
         anioMensual: 2025,
         municipioMensual: "Medellín",
-        mapMunicipios: ["Cúcuta"],
-        mapMunicipiosInitialized: true,
-        mapFechaDesde: "2026-02-01",
-        mapFechaHasta: "2026-02-28",
       },
       Date.now(),
     );

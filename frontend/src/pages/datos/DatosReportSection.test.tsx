@@ -28,6 +28,23 @@ describe("DatosReportSection", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it("omite bloque de filtros cuando no se proporcionan", () => {
+    render(
+      <DatosReportSection
+        ariaLabel="Mapa"
+        title="Ubicación"
+        description="Sin filtros propios"
+        open
+        onOpenChange={vi.fn()}
+      >
+        <p>Mapa</p>
+      </DatosReportSection>,
+    );
+
+    expect(screen.queryByText(/Filtros de este gráfico/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Mapa")).toBeInTheDocument();
+  });
+
   it("muestra el título aunque la sección esté retraída", () => {
     render(
       <DatosReportSection

@@ -10,7 +10,6 @@ import { useFormStats } from "@/hooks/useFormStats";
 import { useFormMapPoints } from "@/hooks/useFormMapPoints";
 import { useFormStatsMunicipios } from "@/hooks/useFormStatsMunicipios";
 import { useFormStatsMonthly } from "@/hooks/useFormStatsMonthly";
-import { DatosMapFilters } from "@/pages/datos/DatosMapFilters";
 import { DatosFilters } from "@/pages/datos/DatosFilters";
 import { DatosOfflineBanner } from "@/pages/datos/DatosOfflineBanner";
 import { DatosReportSection } from "@/pages/datos/DatosReportSection";
@@ -27,9 +26,11 @@ import {
   getCurrentMonthIsoDateRange,
   getDefaultMonthlyAnio,
 } from "@/pages/datos/datosDateDefaults";
+import { buildMapPointsQueryFromValidationFilters } from "@/pages/datos/datosMapQuery";
 import {
   getInitialDatosPageUiState,
   saveDatosPagePreferences,
+  type DatosPageSectionId,
 } from "@/pages/datos/datosPagePreferences";
 
 const FormulariosMapView = lazy(async () => {
@@ -47,12 +48,6 @@ export const DatosPage = () => {
 
   const [anioMensual, setAnioMensual] = useState(initialUi.anioMensual);
   const [municipioMensual, setMunicipioMensual] = useState(initialUi.municipioMensual);
-  const [mapMunicipios, setMapMunicipios] = useState(initialUi.mapMunicipios);
-  const [mapMunicipiosInitialized, setMapMunicipiosInitialized] = useState(
-    initialUi.mapMunicipiosInitialized,
-  );
-  const [mapFechaDesde, setMapFechaDesde] = useState(initialUi.mapFechaDesde);
-  const [mapFechaHasta, setMapFechaHasta] = useState(initialUi.mapFechaHasta);
 
   const filters = useMemo((): FormStatsQuery => {
     const q: FormStatsQuery = {};
@@ -107,12 +102,14 @@ export const DatosPage = () => {
   }, [monthlyData, municipioMensual]);
 
   const mapFilters = useMemo(
-    () => ({
-      municipios: [...mapMunicipios],
-      fecha_desde: mapFechaDesde.trim(),
-      fecha_hasta: mapFechaHasta.trim(),
-    }),
-    [mapMunicipios, mapFechaDesde, mapFechaHasta],
+    () =>
+      buildMapPointsQueryFromValidationFilters(
+        municipio,
+        fechaDesde,
+        fechaHasta,
+        municipioOptions,
+      ),
+    [municipio, fechaDesde, fechaHasta, municipioOptions],
   );
   const {
     points: mapPoints,
@@ -152,25 +149,7 @@ export const DatosPage = () => {
     }
   }, [municipioMensual, municipioOptions, municipiosLoadState]);
 
-  useEffect(() => {
-    if (municipiosLoadState !== "ready") {
-      return;
-    }
-    if (!mapMunicipiosInitialized) {
-      setMapMunicipios([...municipioOptions]);
-      setMapMunicipiosInitialized(true);
-      return;
-    }
-
-    setMapMunicipios((prev) => prev.filter((municipio) => municipioOptions.includes(municipio)));
-  }, [
-    mapMunicipiosInitialized,
-    municipioOptions,
-    municipiosLoadState,
-  ]);
-
   const openSectionsKey = [...openSections].sort().join("|");
-  const mapMunicipiosKey = mapMunicipios.join("|");
 
   useEffect(() => {
     saveDatosPagePreferences({
@@ -180,10 +159,6 @@ export const DatosPage = () => {
       fechaHasta,
       anioMensual,
       municipioMensual,
-      mapMunicipios,
-      mapMunicipiosInitialized,
-      mapFechaDesde,
-      mapFechaHasta,
     });
   }, [
     openSectionsKey,
@@ -192,10 +167,6 @@ export const DatosPage = () => {
     fechaHasta,
     anioMensual,
     municipioMensual,
-    mapMunicipiosKey,
-    mapMunicipiosInitialized,
-    mapFechaDesde,
-    mapFechaHasta,
   ]);
 
   const clearValidationFilters = () => {
@@ -210,22 +181,7 @@ export const DatosPage = () => {
     setMunicipioMensual(MUNICIPIO_MENSUAL_TODOS);
   };
 
-  const clearMapFilters = () => {
-    const { desde, hasta } = getCurrentMonthIsoDateRange();
-    setMapFechaDesde(desde);
-    setMapFechaHasta(hasta);
-    setMapMunicipios([...municipioOptions]);
-  };
-
-  const toggleMapMunicipio = (municipioName: string) => {
-    setMapMunicipios((prev) =>
-      prev.includes(municipioName)
-        ? prev.filter((item) => item !== municipioName)
-        : [...prev, municipioName],
-    );
-  };
-
-  const setSectionOpen = (sectionId: string, isOpen: boolean) => {
+  const setSectionOpen = (sectionId: DatosPageSectionId, isOpen: boolean) => {
     setOpenSections((prev) => {
       const next = new Set(prev);
       if (isOpen) {
@@ -292,52 +248,9 @@ export const DatosPage = () => {
         ) : null}
 
         <DatosReportSection
-          ariaLabel="Mapa de formularios"
-          title="Ubicación de formularios"
-          description="Mapa con la coordenada GPS de cada formulario sincronizado. Los filtros de abajo aplican solo a este mapa."
-          open={openSections.has("mapa")}
-          onOpenChange={(isOpen) => setSectionOpen("mapa", isOpen)}
-          filtersLabel="Filtros del mapa"
-          filters={
-            <DatosMapFilters
-              municipioOptions={municipioOptions}
-              selectedMunicipios={mapMunicipios}
-              municipiosLoading={municipiosLoadState === "loading"}
-              fechaDesde={mapFechaDesde}
-              fechaHasta={mapFechaHasta}
-              disabled={!online}
-              onToggleMunicipio={toggleMapMunicipio}
-              onSelectAllMunicipios={() => setMapMunicipios([...municipioOptions])}
-              onClearMunicipios={() => setMapMunicipios([])}
-              onChangeFechaDesde={setMapFechaDesde}
-              onChangeFechaHasta={setMapFechaHasta}
-              onClear={clearMapFilters}
-            />
-          }
-        >
-          <Suspense
-            fallback={
-              <p className="py-8 text-center text-sm text-slate-600">
-                Cargando mapa…
-              </p>
-            }
-          >
-            <FormulariosMapView
-              points={mapPoints}
-              total={mapTotal}
-              loadState={mapLoadState}
-              isRefreshing={mapIsRefreshing}
-              error={mapError}
-              onRetry={() => void reloadMapPoints()}
-              sectionOpen={openSections.has("mapa")}
-            />
-          </Suspense>
-        </DatosReportSection>
-
-        <DatosReportSection
           ariaLabel="Validación"
           title="Resultado de validación"
-          description="Distribución de formularios según el campo «Resultado de validación». Los filtros de abajo aplican solo a este gráfico."
+          description="Distribución de formularios según el campo «Resultado de validación». Los filtros de abajo también aplican al mapa de ubicación."
           open={openSections.has("validacion")}
           onOpenChange={(isOpen) => setSectionOpen("validacion", isOpen)}
           filters={
@@ -383,6 +296,32 @@ export const DatosPage = () => {
               Conectate a internet para ver este gráfico.
             </p>
           ) : null}
+        </DatosReportSection>
+
+        <DatosReportSection
+          ariaLabel="Mapa de formularios"
+          title="Ubicación de formularios"
+          description="Mapa con la coordenada GPS de cada formulario sincronizado. Usa los mismos filtros de la sección «Resultado de validación»."
+          open={openSections.has("mapa")}
+          onOpenChange={(isOpen) => setSectionOpen("mapa", isOpen)}
+        >
+          <Suspense
+            fallback={
+              <p className="py-8 text-center text-sm text-slate-600">
+                Cargando mapa…
+              </p>
+            }
+          >
+            <FormulariosMapView
+              points={mapPoints}
+              total={mapTotal}
+              loadState={mapLoadState}
+              isRefreshing={mapIsRefreshing}
+              error={mapError}
+              onRetry={() => void reloadMapPoints()}
+              sectionOpen={openSections.has("mapa")}
+            />
+          </Suspense>
         </DatosReportSection>
 
         <DatosReportSection

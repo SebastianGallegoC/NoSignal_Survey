@@ -9,7 +9,7 @@ interface DatosReportSectionProps {
   ariaLabel: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  filters: ReactNode;
+  filters?: ReactNode;
   filtersLabel?: string;
   children: ReactNode;
 }
@@ -49,12 +49,14 @@ export const DatosReportSection = ({
         </div>
       </summary>
 
-      <div className="mt-4 border-t border-slate-100 pt-4">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          {filtersLabel}
-        </p>
-        {filters}
-      </div>
+      {filters ? (
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {filtersLabel}
+          </p>
+          {filters}
+        </div>
+      ) : null}
 
       <div className="mt-4 px-0 py-1 sm:py-2">{children}</div>
     </details>

@@ -25,10 +25,6 @@ describe("datosPagePreferences", () => {
         fechaHasta: "2026-01-31",
         anioMensual: 2025,
         municipioMensual: "Medellín",
-        mapMunicipios: ["Cúcuta", "Medellín"],
-        mapMunicipiosInitialized: true,
-        mapFechaDesde: "2026-02-01",
-        mapFechaHasta: "2026-02-28",
       },
       1_000,
     );
@@ -38,8 +34,7 @@ describe("datosPagePreferences", () => {
     expect(restored?.openSections).toEqual(new Set(["mapa"]));
     expect(restored?.municipio).toBe("Cúcuta");
     expect(restored?.anioMensual).toBe(2025);
-    expect(restored?.mapMunicipios).toEqual(["Cúcuta", "Medellín"]);
-    expect(restored?.mapMunicipiosInitialized).toBe(true);
+    expect(restored?.fechaDesde).toBe("2026-01-01");
   });
 
   it("expira preferencias después de 30 minutos", () => {
@@ -51,10 +46,6 @@ describe("datosPagePreferences", () => {
         fechaHasta: "2026-06-30",
         anioMensual: 2026,
         municipioMensual: MUNICIPIO_MENSUAL_TODOS,
-        mapMunicipios: [],
-        mapMunicipiosInitialized: false,
-        mapFechaDesde: "2026-06-01",
-        mapFechaHasta: "2026-06-30",
       },
       0,
     );
