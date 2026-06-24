@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -7,6 +8,14 @@ class FormStatsFiltersApplied(BaseModel):
     municipio: str | None = None
     fecha_desde: date | None = None
     fecha_hasta: date | None = None
+    resultado_validacion: Literal["CUMPLE", "NO CUMPLE"] | None = None
+
+
+class FormStatsCumpleDetalle(BaseModel):
+    sin_servicio_energia: int = Field(ge=0)
+    servicio_irregular_directo: int = Field(ge=0)
+    servicio_irregular_indirecto: int = Field(ge=0)
+    sin_clasificar: int = Field(ge=0)
 
 
 class FormStatsResponse(BaseModel):
@@ -14,6 +23,8 @@ class FormStatsResponse(BaseModel):
     cumple: int = Field(ge=0)
     no_cumple: int = Field(ge=0)
     sin_resultado: int = Field(ge=0)
+    vista: Literal["resumen", "cumple_detalle", "no_cumple"] = "resumen"
+    cumple_detalle: FormStatsCumpleDetalle | None = None
     filtros_aplicados: FormStatsFiltersApplied
 
 
@@ -67,6 +78,7 @@ class FormStatsQueryParams(BaseModel):
     municipio: str | None = None
     fecha_desde: date | None = None
     fecha_hasta: date | None = None
+    resultado_validacion: Literal["CUMPLE", "NO CUMPLE"] | None = None
 
     @model_validator(mode="after")
     def validate_date_range(self) -> "FormStatsQueryParams":

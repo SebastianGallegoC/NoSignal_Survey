@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -7,6 +8,7 @@ class FormMapPointsQueryParams(BaseModel):
     municipios: list[str] = Field(default_factory=list)
     fecha_desde: date | None = None
     fecha_hasta: date | None = None
+    resultado_validacion: Literal["CUMPLE", "NO CUMPLE"] | None = None
 
     @model_validator(mode="after")
     def validate_query(self) -> "FormMapPointsQueryParams":
@@ -33,6 +35,7 @@ class FormMapPointsFiltersApplied(BaseModel):
     municipios: list[str] = Field(default_factory=list)
     fecha_desde: date | None = None
     fecha_hasta: date | None = None
+    resultado_validacion: Literal["CUMPLE", "NO CUMPLE"] | None = None
 
 
 class FormMapPointItem(BaseModel):

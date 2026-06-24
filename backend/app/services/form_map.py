@@ -15,12 +15,14 @@ async def get_form_map_points(
     municipios: list[str],
     fecha_desde: date | None = None,
     fecha_hasta: date | None = None,
+    resultado_validacion: str | None = None,
 ) -> FormMapPointsResponse:
     items = await list_form_map_points(
         session,
         municipios=municipios,
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta,
+        resultado_validacion=resultado_validacion,
     )
     return FormMapPointsResponse(
         items=items,
@@ -29,5 +31,6 @@ async def get_form_map_points(
             municipios=municipios,
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
+            resultado_validacion=resultado_validacion,
         ),
     )

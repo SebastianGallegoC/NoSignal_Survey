@@ -1,4 +1,5 @@
 import { MUNICIPIO_MENSUAL_TODOS } from "@/pages/datos/MonthlyDiligenciasFilters";
+import type { ResultadoValidacionFilter } from "@/constants/validationStatsFilter";
 import { getCurrentMonthIsoDateRange } from "@/pages/datos/datosDateDefaults";
 
 export const DATOS_PAGE_PREFS_STORAGE_KEY = "nosignal_datos_page_prefs";
@@ -20,6 +21,7 @@ type DatosPagePreferencesPayloadV2 = {
     municipio: string;
     fechaDesde: string;
     fechaHasta: string;
+    resultadoValidacion: ResultadoValidacionFilter;
   };
   monthly: {
     anio: number;
@@ -44,6 +46,7 @@ type DatosPagePreferencesPayloadV1 = Omit<
 export type DatosPageUiState = {
   openSections: Set<DatosPageSectionId>;
   municipio: string;
+  resultadoValidacion: ResultadoValidacionFilter;
   fechaDesde: string;
   fechaHasta: string;
   anioMensual: number;
@@ -55,6 +58,7 @@ function defaultUiState(): DatosPageUiState {
   return {
     openSections: new Set(DEFAULT_OPEN_SECTIONS),
     municipio: "",
+    resultadoValidacion: "",
     fechaDesde: desde,
     fechaHasta: hasta,
     anioMensual: new Date().getFullYear(),
@@ -93,6 +97,11 @@ function parseStoredPreferences(
       typeof parsed.validation.fechaHasta === "string"
         ? parsed.validation.fechaHasta
         : "";
+    const resultadoValidacionRaw = parsed.validation.resultadoValidacion;
+    const resultadoValidacion: ResultadoValidacionFilter =
+      resultadoValidacionRaw === "CUMPLE" || resultadoValidacionRaw === "NO CUMPLE"
+        ? resultadoValidacionRaw
+        : "";
     const anio =
       typeof parsed.monthly.anio === "number" && Number.isFinite(parsed.monthly.anio)
         ? parsed.monthly.anio
@@ -108,7 +117,7 @@ function parseStoredPreferences(
       v: 2,
       savedAt: typeof parsed.savedAt === "number" ? parsed.savedAt : Date.now(),
       openSections,
-      validation: { municipio, fechaDesde, fechaHasta },
+      validation: { municipio, fechaDesde, fechaHasta, resultadoValidacion },
       monthly: { anio, municipio: municipioMensual },
     };
   } catch {
@@ -136,6 +145,7 @@ export function loadDatosPagePreferences(
   return {
     openSections: new Set(stored.openSections),
     municipio: stored.validation.municipio,
+    resultadoValidacion: stored.validation.resultadoValidacion,
     fechaDesde: stored.validation.fechaDesde,
     fechaHasta: stored.validation.fechaHasta,
     anioMensual: stored.monthly.anio,
@@ -155,6 +165,7 @@ export function saveDatosPagePreferences(
       municipio: state.municipio,
       fechaDesde: state.fechaDesde,
       fechaHasta: state.fechaHasta,
+      resultadoValidacion: state.resultadoValidacion,
     },
     monthly: {
       anio: state.anioMensual,

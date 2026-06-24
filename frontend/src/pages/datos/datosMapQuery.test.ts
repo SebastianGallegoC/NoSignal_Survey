@@ -32,4 +32,21 @@ describe("buildMapPointsQueryFromValidationFilters", () => {
       fecha_hasta: "2026-06-30",
     });
   });
+
+  it("incluye resultado_validacion cuando está seleccionado", () => {
+    expect(
+      buildMapPointsQueryFromValidationFilters(
+        "",
+        "2026-06-01",
+        "2026-06-30",
+        ["Cúcuta"],
+        "NO CUMPLE",
+      ),
+    ).toEqual({
+      municipios: ["Cúcuta"],
+      fecha_desde: "2026-06-01",
+      fecha_hasta: "2026-06-30",
+      resultado_validacion: "NO CUMPLE",
+    });
+  });
 });

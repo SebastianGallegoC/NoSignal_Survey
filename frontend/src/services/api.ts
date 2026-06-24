@@ -260,13 +260,25 @@ export interface FormStatsFiltersApplied {
   municipio: string | null;
   fecha_desde: string | null;
   fecha_hasta: string | null;
+  resultado_validacion: "CUMPLE" | "NO CUMPLE" | null;
 }
+
+export interface FormStatsCumpleDetalle {
+  sin_servicio_energia: number;
+  servicio_irregular_directo: number;
+  servicio_irregular_indirecto: number;
+  sin_clasificar: number;
+}
+
+export type FormStatsVista = "resumen" | "cumple_detalle" | "no_cumple";
 
 export interface FormStatsResponse {
   total: number;
   cumple: number;
   no_cumple: number;
   sin_resultado: number;
+  vista: FormStatsVista;
+  cumple_detalle: FormStatsCumpleDetalle | null;
   filtros_aplicados: FormStatsFiltersApplied;
 }
 
@@ -274,6 +286,7 @@ export interface FormStatsQuery {
   municipio?: string;
   fecha_desde?: string;
   fecha_hasta?: string;
+  resultado_validacion?: "CUMPLE" | "NO CUMPLE";
 }
 
 export interface FormStatsMunicipiosResponse {
@@ -312,6 +325,7 @@ export interface FormMapPointsFiltersApplied {
   municipios: string[];
   fecha_desde: string | null;
   fecha_hasta: string | null;
+  resultado_validacion: "CUMPLE" | "NO CUMPLE" | null;
 }
 
 export interface FormMapPointsResponse {
@@ -324,6 +338,7 @@ export interface FormMapPointsQuery {
   municipios?: string[];
   fecha_desde?: string;
   fecha_hasta?: string;
+  resultado_validacion?: "CUMPLE" | "NO CUMPLE";
 }
 
 /** Elimina el formulario en el servidor (requiere JWT). */
@@ -408,6 +423,9 @@ export const fetchFormStatsFromApi = async (
   if (params.fecha_hasta?.trim()) {
     search.set("fecha_hasta", params.fecha_hasta.trim());
   }
+  if (params.resultado_validacion) {
+    search.set("resultado_validacion", params.resultado_validacion);
+  }
   const qs = search.toString();
   const url = `${API_BASE}/api/v1/forms/stats${qs ? `?${qs}` : ""}`;
   const response = await fetch(url, {
@@ -491,6 +509,9 @@ export const fetchFormMapPointsFromApi = async (
   }
   if (params.fecha_hasta?.trim()) {
     search.set("fecha_hasta", params.fecha_hasta.trim());
+  }
+  if (params.resultado_validacion) {
+    search.set("resultado_validacion", params.resultado_validacion);
   }
   const qs = search.toString();
   const url = `${API_BASE}/api/v1/forms/map-points${qs ? `?${qs}` : ""}`;

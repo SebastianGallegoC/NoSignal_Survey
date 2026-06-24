@@ -43,6 +43,9 @@ export const DatosPage = () => {
   const [initialUi] = useState(getInitialDatosPageUiState);
   const [openSections, setOpenSections] = useState(initialUi.openSections);
   const [municipio, setMunicipio] = useState(initialUi.municipio);
+  const [resultadoValidacion, setResultadoValidacion] = useState(
+    initialUi.resultadoValidacion,
+  );
   const [fechaDesde, setFechaDesde] = useState(initialUi.fechaDesde);
   const [fechaHasta, setFechaHasta] = useState(initialUi.fechaHasta);
 
@@ -60,8 +63,11 @@ export const DatosPage = () => {
     if (fechaHasta.trim()) {
       q.fecha_hasta = fechaHasta.trim();
     }
+    if (resultadoValidacion === "CUMPLE" || resultadoValidacion === "NO CUMPLE") {
+      q.resultado_validacion = resultadoValidacion;
+    }
     return q;
-  }, [municipio, fechaDesde, fechaHasta]);
+  }, [municipio, fechaDesde, fechaHasta, resultadoValidacion]);
 
   const { stats, loadState, error, reload } = useFormStats(filters, online);
   const {
@@ -108,8 +114,9 @@ export const DatosPage = () => {
         fechaDesde,
         fechaHasta,
         municipioOptions,
+        resultadoValidacion,
       ),
-    [municipio, fechaDesde, fechaHasta, municipioOptions],
+    [municipio, fechaDesde, fechaHasta, municipioOptions, resultadoValidacion],
   );
   const {
     points: mapPoints,
@@ -155,6 +162,7 @@ export const DatosPage = () => {
     saveDatosPagePreferences({
       openSections,
       municipio,
+      resultadoValidacion,
       fechaDesde,
       fechaHasta,
       anioMensual,
@@ -163,6 +171,7 @@ export const DatosPage = () => {
   }, [
     openSectionsKey,
     municipio,
+    resultadoValidacion,
     fechaDesde,
     fechaHasta,
     anioMensual,
@@ -172,6 +181,7 @@ export const DatosPage = () => {
   const clearValidationFilters = () => {
     const { desde, hasta } = getCurrentMonthIsoDateRange();
     setMunicipio("");
+    setResultadoValidacion("");
     setFechaDesde(desde);
     setFechaHasta(hasta);
   };
@@ -258,9 +268,11 @@ export const DatosPage = () => {
               municipio={municipio}
               municipioOptions={municipioOptions}
               municipiosLoading={municipiosLoadState === "loading"}
+              resultadoValidacion={resultadoValidacion}
               fechaDesde={fechaDesde}
               fechaHasta={fechaHasta}
               onChangeMunicipio={setMunicipio}
+              onChangeResultadoValidacion={setResultadoValidacion}
               onChangeFechaDesde={setFechaDesde}
               onChangeFechaHasta={setFechaHasta}
               onClear={clearValidationFilters}

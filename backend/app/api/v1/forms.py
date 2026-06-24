@@ -185,6 +185,7 @@ async def form_validation_stats(
     municipio: str | None = Query(default=None),
     fecha_desde: date | None = Query(default=None),
     fecha_hasta: date | None = Query(default=None),
+    resultado_validacion: str | None = Query(default=None),
     session: AsyncSession = Depends(get_session),
     current_user: CurrentUser = Depends(get_current_user),
 ):
@@ -194,6 +195,7 @@ async def form_validation_stats(
             municipio=municipio,
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
+            resultado_validacion=resultado_validacion,
         )
     except ValidationError as exc:
         detail = "invalid_stats_query"
@@ -211,6 +213,7 @@ async def form_validation_stats(
             municipio=params.municipio,
             fecha_desde=params.fecha_desde,
             fecha_hasta=params.fecha_hasta,
+            resultado_validacion=params.resultado_validacion,
         )
     except SQLAlchemyError:
         logger.exception("form_validation_stats DB error user=%r", current_user.username)
@@ -222,6 +225,7 @@ async def form_map_points(
     municipios: list[str] = Query(default=[]),
     fecha_desde: date | None = Query(default=None),
     fecha_hasta: date | None = Query(default=None),
+    resultado_validacion: str | None = Query(default=None),
     session: AsyncSession = Depends(get_session),
     current_user: CurrentUser = Depends(get_current_user),
 ):
@@ -231,6 +235,7 @@ async def form_map_points(
             municipios=municipios,
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
+            resultado_validacion=resultado_validacion,
         )
     except ValidationError as exc:
         detail = "invalid_map_points_query"
@@ -248,6 +253,7 @@ async def form_map_points(
             municipios=params.municipios,
             fecha_desde=params.fecha_desde,
             fecha_hasta=params.fecha_hasta,
+            resultado_validacion=params.resultado_validacion,
         )
     except SQLAlchemyError:
         logger.exception("form_map_points DB error user=%r", current_user.username)

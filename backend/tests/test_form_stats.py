@@ -185,10 +185,13 @@ def test_form_stats_ok(monkeypatch):
             cumple=6,
             no_cumple=3,
             sin_resultado=1,
+            vista="resumen",
+            cumple_detalle=None,
             filtros_aplicados=FormStatsFiltersApplied(
                 municipio="Cucuta",
                 fecha_desde=date(2026, 1, 1),
                 fecha_hasta=date(2026, 6, 30),
+                resultado_validacion=None,
             ),
         )
 
@@ -218,5 +221,50 @@ def test_form_stats_ok(monkeypatch):
         assert body["no_cumple"] == 3
         assert body["sin_resultado"] == 1
         assert body["filtros_aplicados"]["municipio"] == "Cucuta"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_form_stats_cumple_filter(monkeypatch):
+    from app.schemas.form_stats import FormStatsCumpleDetalle
+
+    async def _fake_get_validation_stats(_session, **kwargs):
+        assert kwargs["resultado_validacion"] == "CUMPLE"
+        return FormStatsResponse(
+            total=4,
+            cumple=4,
+            no_cumple=0,
+            sin_resultado=0,
+            vista="cumple_detalle",
+            cumple_detalle=FormStatsCumpleDetalle(
+                sin_servicio_energia=1,
+                servicio_irregular_directo=2,
+                servicio_irregular_indirecto=1,
+                sin_clasificar=0,
+            ),
+            filtros_aplicados=FormStatsFiltersApplied(
+                resultado_validacion="CUMPLE",
+            ),
+        )
+
+    monkeypatch.setattr(
+        forms_api,
+        "get_validation_stats",
+        AsyncMock(side_effect=_fake_get_validation_stats),
+    )
+
+    app.dependency_overrides[get_session] = _fake_session
+    app.dependency_overrides[get_current_user] = _fake_user
+    try:
+        client = TestClient(app)
+        resp = client.get(
+            "/api/v1/forms/stats",
+            params={"resultado_validacion": "CUMPLE"},
+            headers={"Authorization": "Bearer dummy"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["vista"] == "cumple_detalle"
+        assert body["cumple_detalle"]["servicio_irregular_directo"] == 2
     finally:
         app.dependency_overrides.clear()

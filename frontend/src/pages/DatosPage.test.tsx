@@ -55,10 +55,13 @@ const sampleStats = {
   cumple: 6,
   no_cumple: 3,
   sin_resultado: 1,
+  vista: "resumen" as const,
+  cumple_detalle: null,
   filtros_aplicados: {
     municipio: null,
     fecha_desde: null,
     fecha_hasta: null,
+    resultado_validacion: null,
   },
 };
 
@@ -291,6 +294,32 @@ describe("DatosPage", () => {
     });
   });
 
+  it("aplica filtro de resultado de validación al cambiar el select", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue({
+      ...sampleStats,
+      vista: "cumple_detalle",
+      cumple_detalle: {
+        sin_servicio_energia: 2,
+        servicio_irregular_directo: 3,
+        servicio_irregular_indirecto: 1,
+        sin_clasificar: 0,
+      },
+    });
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(mockFetchFormStats).toHaveBeenCalled());
+    const resultadoSelect = screen.getByLabelText(/^Resultado de validación$/i);
+    fireEvent.change(resultadoSelect, { target: { value: "CUMPLE" } });
+    await waitFor(() => {
+      const lastCall = mockFetchFormStats.mock.calls.at(-1)?.[0];
+      expect(lastCall).toMatchObject({ resultado_validacion: "CUMPLE" });
+    });
+  });
+
   it("aplica filtro de municipio al cambiar el select", async () => {
     localStorage.setItem("nosignal_access_token", "token");
     mockFetchFormStats.mockResolvedValue(sampleStats);
@@ -341,6 +370,7 @@ describe("DatosPage", () => {
       {
         openSections: new Set(["mapa"]),
         municipio: "Cúcuta",
+        resultadoValidacion: "NO CUMPLE",
         fechaDesde: "2026-01-01",
         fechaHasta: "2026-01-31",
         anioMensual: 2025,

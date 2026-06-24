@@ -4,6 +4,14 @@ from sqlalchemy import Integer, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.form_stats_municipio import MUNICIPIO_SIN_ASOCIAR
+from app.constants.form_validation import (
+    INFORMACION_VIVIENDA_CUMPLE_CLASIFICACION,
+    INFORMACION_VIVIENDA_IRREGULAR_DIRECTO,
+    INFORMACION_VIVIENDA_IRREGULAR_INDIRECTO,
+    INFORMACION_VIVIENDA_SIN_SERVICIO_ENERGIA,
+    RESULTADO_CUMPLE,
+    RESULTADO_NO_CUMPLE,
+)
 from app.models.form_record import FormRecord
 
 MES_ETIQUETAS = (
@@ -31,29 +39,16 @@ def _municipio_vacio():
     return or_(municipio_col.is_(None), municipio_col == "")
 
 
-async def aggregate_validation_stats(
-    session: AsyncSession,
+def _apply_common_stats_filters(
+    stmt,
     *,
     municipio: str | None = None,
     fecha_desde: date | None = None,
     fecha_hasta: date | None = None,
-) -> tuple[int, int, int]:
-    """
-    Devuelve (cumple, no_cumple, sin_resultado) según filtros opcionales.
-    """
-    resultado = _json_text("resultado_validacion")
+    resultado_validacion: str | None = None,
+):
     municipio_col = _json_text("municipio")
     fecha_visita = _json_text("fecha_visita")
-
-    stmt = select(
-        func.count().filter(resultado == "CUMPLE").label("cumple"),
-        func.count().filter(resultado == "NO CUMPLE").label("no_cumple"),
-        func.count().filter(
-            (resultado.is_(None))
-            | (resultado == "")
-            | (~resultado.in_(["CUMPLE", "NO CUMPLE"]))
-        ).label("sin_resultado"),
-    ).select_from(FormRecord)
 
     if municipio:
         if municipio == MUNICIPIO_SIN_ASOCIAR:
@@ -77,12 +72,115 @@ async def aggregate_validation_stats(
             fecha_visita <= hasta,
         )
 
+    if resultado_validacion:
+        stmt = stmt.where(_json_text("resultado_validacion") == resultado_validacion)
+
+    return stmt
+
+
+async def aggregate_validation_stats(
+    session: AsyncSession,
+    *,
+    municipio: str | None = None,
+    fecha_desde: date | None = None,
+    fecha_hasta: date | None = None,
+) -> tuple[int, int, int]:
+    """
+    Devuelve (cumple, no_cumple, sin_resultado) según filtros opcionales.
+    """
+    resultado = _json_text("resultado_validacion")
+
+    stmt = select(
+        func.count().filter(resultado == RESULTADO_CUMPLE).label("cumple"),
+        func.count().filter(resultado == RESULTADO_NO_CUMPLE).label("no_cumple"),
+        func.count().filter(
+            (resultado.is_(None))
+            | (resultado == "")
+            | (~resultado.in_([RESULTADO_CUMPLE, RESULTADO_NO_CUMPLE]))
+        ).label("sin_resultado"),
+    ).select_from(FormRecord)
+
+    stmt = _apply_common_stats_filters(
+        stmt,
+        municipio=municipio,
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+    )
+
     result = await session.execute(stmt)
     row = result.one()
     cumple = int(row.cumple or 0)
     no_cumple = int(row.no_cumple or 0)
     sin_resultado = int(row.sin_resultado or 0)
     return cumple, no_cumple, sin_resultado
+
+
+async def aggregate_cumple_informacion_vivienda(
+    session: AsyncSession,
+    *,
+    municipio: str | None = None,
+    fecha_desde: date | None = None,
+    fecha_hasta: date | None = None,
+) -> tuple[int, int, int, int]:
+    """
+    Devuelve conteos de formularios CUMPLE clasificados por informacion_vivienda.
+    """
+    informacion = _json_text("informacion_vivienda")
+    stmt = select(
+        func.count()
+        .filter(informacion == INFORMACION_VIVIENDA_SIN_SERVICIO_ENERGIA)
+        .label("sin_servicio_energia"),
+        func.count()
+        .filter(informacion == INFORMACION_VIVIENDA_IRREGULAR_DIRECTO)
+        .label("servicio_irregular_directo"),
+        func.count()
+        .filter(informacion == INFORMACION_VIVIENDA_IRREGULAR_INDIRECTO)
+        .label("servicio_irregular_indirecto"),
+        func.count()
+        .filter(
+            informacion.is_(None)
+            | (informacion == "")
+            | (~informacion.in_(INFORMACION_VIVIENDA_CUMPLE_CLASIFICACION))
+        )
+        .label("sin_clasificar"),
+    ).select_from(FormRecord)
+
+    stmt = _apply_common_stats_filters(
+        stmt,
+        municipio=municipio,
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        resultado_validacion=RESULTADO_CUMPLE,
+    )
+
+    result = await session.execute(stmt)
+    row = result.one()
+    return (
+        int(row.sin_servicio_energia or 0),
+        int(row.servicio_irregular_directo or 0),
+        int(row.servicio_irregular_indirecto or 0),
+        int(row.sin_clasificar or 0),
+    )
+
+
+async def aggregate_resultado_validacion_count(
+    session: AsyncSession,
+    *,
+    resultado_validacion: str,
+    municipio: str | None = None,
+    fecha_desde: date | None = None,
+    fecha_hasta: date | None = None,
+) -> int:
+    stmt = select(func.count()).select_from(FormRecord)
+    stmt = _apply_common_stats_filters(
+        stmt,
+        municipio=municipio,
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        resultado_validacion=resultado_validacion,
+    )
+    result = await session.execute(stmt)
+    return int(result.scalar_one() or 0)
 
 
 async def list_distinct_municipios(session: AsyncSession) -> list[str]:

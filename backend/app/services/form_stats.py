@@ -4,19 +4,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repository.form_stats import (
     MES_ETIQUETAS,
+    aggregate_cumple_informacion_vivienda,
     aggregate_monthly_diligencias,
+    aggregate_resultado_validacion_count,
     aggregate_validation_stats,
     list_distinct_anios_fecha_visita,
     list_distinct_municipios,
 )
 from app.schemas.form_stats import (
     FormStatsAniosResponse,
+    FormStatsCumpleDetalle,
     FormStatsFiltersApplied,
     FormStatsMonthlyMunicipioSerie,
     FormStatsMonthlyResponse,
     FormStatsMunicipiosResponse,
     FormStatsResponse,
 )
+from app.constants.form_validation import RESULTADO_CUMPLE, RESULTADO_NO_CUMPLE
 
 
 async def get_validation_stats(
@@ -25,7 +29,67 @@ async def get_validation_stats(
     municipio: str | None = None,
     fecha_desde: date | None = None,
     fecha_hasta: date | None = None,
+    resultado_validacion: str | None = None,
 ) -> FormStatsResponse:
+    filtros = FormStatsFiltersApplied(
+        municipio=municipio,
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        resultado_validacion=resultado_validacion,
+    )
+
+    if resultado_validacion == RESULTADO_CUMPLE:
+        (
+            sin_servicio_energia,
+            servicio_irregular_directo,
+            servicio_irregular_indirecto,
+            sin_clasificar,
+        ) = await aggregate_cumple_informacion_vivienda(
+            session,
+            municipio=municipio,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+        )
+        detalle = FormStatsCumpleDetalle(
+            sin_servicio_energia=sin_servicio_energia,
+            servicio_irregular_directo=servicio_irregular_directo,
+            servicio_irregular_indirecto=servicio_irregular_indirecto,
+            sin_clasificar=sin_clasificar,
+        )
+        total = (
+            sin_servicio_energia
+            + servicio_irregular_directo
+            + servicio_irregular_indirecto
+            + sin_clasificar
+        )
+        return FormStatsResponse(
+            total=total,
+            cumple=total,
+            no_cumple=0,
+            sin_resultado=0,
+            vista="cumple_detalle",
+            cumple_detalle=detalle,
+            filtros_aplicados=filtros,
+        )
+
+    if resultado_validacion == RESULTADO_NO_CUMPLE:
+        no_cumple = await aggregate_resultado_validacion_count(
+            session,
+            resultado_validacion=RESULTADO_NO_CUMPLE,
+            municipio=municipio,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+        )
+        return FormStatsResponse(
+            total=no_cumple,
+            cumple=0,
+            no_cumple=no_cumple,
+            sin_resultado=0,
+            vista="no_cumple",
+            cumple_detalle=None,
+            filtros_aplicados=filtros,
+        )
+
     cumple, no_cumple, sin_resultado = await aggregate_validation_stats(
         session,
         municipio=municipio,
@@ -38,11 +102,9 @@ async def get_validation_stats(
         cumple=cumple,
         no_cumple=no_cumple,
         sin_resultado=sin_resultado,
-        filtros_aplicados=FormStatsFiltersApplied(
-            municipio=municipio,
-            fecha_desde=fecha_desde,
-            fecha_hasta=fecha_hasta,
-        ),
+        vista="resumen",
+        cumple_detalle=None,
+        filtros_aplicados=filtros,
     )
 
 

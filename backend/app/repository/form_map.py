@@ -25,6 +25,7 @@ async def list_form_map_points(
     municipios: list[str],
     fecha_desde: date | None = None,
     fecha_hasta: date | None = None,
+    resultado_validacion: str | None = None,
 ) -> list[FormMapPointItem]:
     municipio_col = _json_text("municipio")
     fecha_visita_col = _json_text("fecha_visita")
@@ -57,6 +58,11 @@ async def list_form_map_points(
                 fecha_visita_col != "",
                 fecha_visita_col <= fecha_hasta.isoformat(),
             ]
+        )
+
+    if resultado_validacion:
+        filters.append(
+            _json_text("resultado_validacion") == resultado_validacion,
         )
 
     stmt = (

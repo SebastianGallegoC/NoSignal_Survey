@@ -21,6 +21,7 @@ describe("datosPagePreferences", () => {
       {
         openSections: new Set(["mapa"]),
         municipio: "Cúcuta",
+        resultadoValidacion: "NO CUMPLE",
         fechaDesde: "2026-01-01",
         fechaHasta: "2026-01-31",
         anioMensual: 2025,
@@ -35,6 +36,7 @@ describe("datosPagePreferences", () => {
     expect(restored?.municipio).toBe("Cúcuta");
     expect(restored?.anioMensual).toBe(2025);
     expect(restored?.fechaDesde).toBe("2026-01-01");
+    expect(restored?.resultadoValidacion).toBe("NO CUMPLE");
   });
 
   it("expira preferencias después de 30 minutos", () => {
@@ -42,6 +44,7 @@ describe("datosPagePreferences", () => {
       {
         openSections: new Set(["validacion"]),
         municipio: "",
+        resultadoValidacion: "",
         fechaDesde: "2026-06-01",
         fechaHasta: "2026-06-30",
         anioMensual: 2026,
