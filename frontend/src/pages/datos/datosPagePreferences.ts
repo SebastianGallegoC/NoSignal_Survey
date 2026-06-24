@@ -1,6 +1,6 @@
 import { MUNICIPIO_MENSUAL_TODOS } from "@/pages/datos/MonthlyDiligenciasFilters";
 import type { ResultadoValidacionFilter } from "@/constants/validationStatsFilter";
-import { getCurrentMonthIsoDateRange } from "@/pages/datos/datosDateDefaults";
+import { inferAnioMesFromDateRange } from "@/pages/datos/validationDateFilter";
 
 export const DATOS_PAGE_PREFS_STORAGE_KEY = "nosignal_datos_page_prefs";
 export const DATOS_PAGE_PREFS_TTL_MS = 30 * 60 * 1000;
@@ -12,6 +12,22 @@ const DEFAULT_OPEN_SECTIONS: DatosPageSectionId[] = [
   "mapa",
   "mensual",
 ];
+
+type DatosPagePreferencesPayloadV3 = {
+  v: 3;
+  savedAt: number;
+  openSections: DatosPageSectionId[];
+  validation: {
+    municipio: string;
+    anioFiltro: number | null;
+    mesFiltro: number | null;
+    resultadoValidacion: ResultadoValidacionFilter;
+  };
+  monthly: {
+    anio: number;
+    municipio: string;
+  };
+};
 
 type DatosPagePreferencesPayloadV2 = {
   v: 2;
@@ -47,20 +63,19 @@ export type DatosPageUiState = {
   openSections: Set<DatosPageSectionId>;
   municipio: string;
   resultadoValidacion: ResultadoValidacionFilter;
-  fechaDesde: string;
-  fechaHasta: string;
+  anioFiltro: number | null;
+  mesFiltro: number | null;
   anioMensual: number;
   municipioMensual: string;
 };
 
 function defaultUiState(): DatosPageUiState {
-  const { desde, hasta } = getCurrentMonthIsoDateRange();
   return {
     openSections: new Set(DEFAULT_OPEN_SECTIONS),
     municipio: "",
     resultadoValidacion: "",
-    fechaDesde: desde,
-    fechaHasta: hasta,
+    anioFiltro: null,
+    mesFiltro: null,
     anioMensual: new Date().getFullYear(),
     municipioMensual: MUNICIPIO_MENSUAL_TODOS,
   };
@@ -70,14 +85,21 @@ function isSectionId(value: string): value is DatosPageSectionId {
   return value === "mapa" || value === "validacion" || value === "mensual";
 }
 
+function parseResultadoValidacion(
+  raw: unknown,
+): ResultadoValidacionFilter {
+  return raw === "CUMPLE" || raw === "NO CUMPLE" ? raw : "";
+}
+
 function parseStoredPreferences(
   raw: string,
-): DatosPagePreferencesPayloadV2 | null {
+): DatosPagePreferencesPayloadV3 | null {
   try {
     const parsed = JSON.parse(raw) as
+      | DatosPagePreferencesPayloadV3
       | DatosPagePreferencesPayloadV2
       | DatosPagePreferencesPayloadV1;
-    if (parsed.v !== 1 && parsed.v !== 2) return null;
+    if (parsed.v !== 1 && parsed.v !== 2 && parsed.v !== 3) return null;
     if (!Array.isArray(parsed.openSections)) return null;
     if (!parsed.validation || typeof parsed.validation !== "object") return null;
     if (!parsed.monthly || typeof parsed.monthly !== "object") return null;
@@ -89,19 +111,39 @@ function parseStoredPreferences(
       typeof parsed.validation.municipio === "string"
         ? parsed.validation.municipio
         : "";
-    const fechaDesde =
-      typeof parsed.validation.fechaDesde === "string"
-        ? parsed.validation.fechaDesde
-        : "";
-    const fechaHasta =
-      typeof parsed.validation.fechaHasta === "string"
-        ? parsed.validation.fechaHasta
-        : "";
-    const resultadoValidacionRaw = parsed.validation.resultadoValidacion;
-    const resultadoValidacion: ResultadoValidacionFilter =
-      resultadoValidacionRaw === "CUMPLE" || resultadoValidacionRaw === "NO CUMPLE"
-        ? resultadoValidacionRaw
-        : "";
+    const resultadoValidacion = parseResultadoValidacion(
+      parsed.validation.resultadoValidacion,
+    );
+
+    let anioFiltro: number | null = null;
+    let mesFiltro: number | null = null;
+
+    if (parsed.v === 3) {
+      const v3 = parsed as DatosPagePreferencesPayloadV3;
+      anioFiltro =
+        typeof v3.validation.anioFiltro === "number" &&
+        Number.isFinite(v3.validation.anioFiltro)
+          ? v3.validation.anioFiltro
+          : null;
+      mesFiltro =
+        typeof v3.validation.mesFiltro === "number" &&
+        Number.isFinite(v3.validation.mesFiltro)
+          ? v3.validation.mesFiltro
+          : null;
+    } else {
+      const fechaDesde =
+        typeof parsed.validation.fechaDesde === "string"
+          ? parsed.validation.fechaDesde
+          : "";
+      const fechaHasta =
+        typeof parsed.validation.fechaHasta === "string"
+          ? parsed.validation.fechaHasta
+          : "";
+      const inferred = inferAnioMesFromDateRange(fechaDesde, fechaHasta);
+      anioFiltro = inferred.anioFiltro;
+      mesFiltro = inferred.mesFiltro;
+    }
+
     const anio =
       typeof parsed.monthly.anio === "number" && Number.isFinite(parsed.monthly.anio)
         ? parsed.monthly.anio
@@ -111,13 +153,11 @@ function parseStoredPreferences(
         ? parsed.monthly.municipio
         : MUNICIPIO_MENSUAL_TODOS;
 
-    if (!fechaDesde || !fechaHasta) return null;
-
     return {
-      v: 2,
+      v: 3,
       savedAt: typeof parsed.savedAt === "number" ? parsed.savedAt : Date.now(),
       openSections,
-      validation: { municipio, fechaDesde, fechaHasta, resultadoValidacion },
+      validation: { municipio, anioFiltro, mesFiltro, resultadoValidacion },
       monthly: { anio, municipio: municipioMensual },
     };
   } catch {
@@ -146,8 +186,8 @@ export function loadDatosPagePreferences(
     openSections: new Set(stored.openSections),
     municipio: stored.validation.municipio,
     resultadoValidacion: stored.validation.resultadoValidacion,
-    fechaDesde: stored.validation.fechaDesde,
-    fechaHasta: stored.validation.fechaHasta,
+    anioFiltro: stored.validation.anioFiltro,
+    mesFiltro: stored.validation.mesFiltro,
     anioMensual: stored.monthly.anio,
     municipioMensual: stored.monthly.municipio,
   };
@@ -157,14 +197,14 @@ export function saveDatosPagePreferences(
   state: DatosPageUiState,
   now = Date.now(),
 ): void {
-  const payload: DatosPagePreferencesPayloadV2 = {
-    v: 2,
+  const payload: DatosPagePreferencesPayloadV3 = {
+    v: 3,
     savedAt: now,
     openSections: [...state.openSections],
     validation: {
       municipio: state.municipio,
-      fechaDesde: state.fechaDesde,
-      fechaHasta: state.fechaHasta,
+      anioFiltro: state.anioFiltro,
+      mesFiltro: state.mesFiltro,
       resultadoValidacion: state.resultadoValidacion,
     },
     monthly: {

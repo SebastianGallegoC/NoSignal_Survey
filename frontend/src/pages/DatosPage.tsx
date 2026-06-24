@@ -8,6 +8,8 @@ import { APP_NAME } from "@/constants/appBrand";
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { useFormStats } from "@/hooks/useFormStats";
 import { useFormMapPoints } from "@/hooks/useFormMapPoints";
+import { useFormStatsAnios } from "@/hooks/useFormStatsAnios";
+import { useFormStatsMeses } from "@/hooks/useFormStatsMeses";
 import { useFormStatsMunicipios } from "@/hooks/useFormStatsMunicipios";
 import { useFormStatsMonthly } from "@/hooks/useFormStatsMonthly";
 import { DatosFilters } from "@/pages/datos/DatosFilters";
@@ -22,11 +24,9 @@ import {
 import { ValidationStatsChart } from "@/pages/datos/ValidationStatsChart";
 import type { FormStatsMonthlyQuery, FormStatsQuery } from "@/services/api";
 
-import {
-  getCurrentMonthIsoDateRange,
-  getDefaultMonthlyAnio,
-} from "@/pages/datos/datosDateDefaults";
+import { getDefaultMonthlyAnio } from "@/pages/datos/datosDateDefaults";
 import { buildMapPointsQueryFromValidationFilters } from "@/pages/datos/datosMapQuery";
+import { buildValidationDateRange } from "@/pages/datos/validationDateFilter";
 import {
   getInitialDatosPageUiState,
   saveDatosPagePreferences,
@@ -46,11 +46,27 @@ export const DatosPage = () => {
   const [resultadoValidacion, setResultadoValidacion] = useState(
     initialUi.resultadoValidacion,
   );
-  const [fechaDesde, setFechaDesde] = useState(initialUi.fechaDesde);
-  const [fechaHasta, setFechaHasta] = useState(initialUi.fechaHasta);
+  const [anioFiltro, setAnioFiltro] = useState<number | null>(initialUi.anioFiltro);
+  const [mesFiltro, setMesFiltro] = useState<number | null>(initialUi.mesFiltro);
 
   const [anioMensual, setAnioMensual] = useState(initialUi.anioMensual);
   const [municipioMensual, setMunicipioMensual] = useState(initialUi.municipioMensual);
+
+  const { fechaDesde, fechaHasta } = useMemo(
+    () => buildValidationDateRange(anioFiltro, mesFiltro),
+    [anioFiltro, mesFiltro],
+  );
+
+  const {
+    anios: anioFiltroOptions,
+    loadState: aniosFiltroLoadState,
+    reload: reloadAniosFiltro,
+  } = useFormStatsAnios(online);
+  const {
+    meses: mesFiltroOptions,
+    loadState: mesesFiltroLoadState,
+    reload: reloadMesesFiltro,
+  } = useFormStatsMeses(anioFiltro, online);
 
   const filters = useMemo((): FormStatsQuery => {
     const q: FormStatsQuery = {};
@@ -156,6 +172,39 @@ export const DatosPage = () => {
     }
   }, [municipioMensual, municipioOptions, municipiosLoadState]);
 
+  useEffect(() => {
+    if (anioFiltro == null) {
+      if (mesFiltro != null) {
+        setMesFiltro(null);
+      }
+      return;
+    }
+    if (
+      aniosFiltroLoadState === "ready" &&
+      !anioFiltroOptions.includes(anioFiltro)
+    ) {
+      setAnioFiltro(null);
+      setMesFiltro(null);
+    }
+  }, [anioFiltro, mesFiltro, anioFiltroOptions, aniosFiltroLoadState]);
+
+  useEffect(() => {
+    if (anioFiltro == null || mesFiltro == null) {
+      return;
+    }
+    if (
+      mesesFiltroLoadState === "ready" &&
+      !mesFiltroOptions.includes(mesFiltro)
+    ) {
+      setMesFiltro(null);
+    }
+  }, [anioFiltro, mesFiltro, mesFiltroOptions, mesesFiltroLoadState]);
+
+  const handleChangeAnioFiltro = (value: number | null) => {
+    setAnioFiltro(value);
+    setMesFiltro(null);
+  };
+
   const openSectionsKey = [...openSections].sort().join("|");
 
   useEffect(() => {
@@ -163,8 +212,8 @@ export const DatosPage = () => {
       openSections,
       municipio,
       resultadoValidacion,
-      fechaDesde,
-      fechaHasta,
+      anioFiltro,
+      mesFiltro,
       anioMensual,
       municipioMensual,
     });
@@ -172,18 +221,17 @@ export const DatosPage = () => {
     openSectionsKey,
     municipio,
     resultadoValidacion,
-    fechaDesde,
-    fechaHasta,
+    anioFiltro,
+    mesFiltro,
     anioMensual,
     municipioMensual,
   ]);
 
   const clearValidationFilters = () => {
-    const { desde, hasta } = getCurrentMonthIsoDateRange();
     setMunicipio("");
     setResultadoValidacion("");
-    setFechaDesde(desde);
-    setFechaHasta(hasta);
+    setAnioFiltro(null);
+    setMesFiltro(null);
   };
 
   const clearMonthlyFilters = () => {
@@ -206,6 +254,8 @@ export const DatosPage = () => {
   const refreshAll = () => {
     void reloadMunicipios();
     void reloadAnios();
+    void reloadAniosFiltro();
+    void reloadMesesFiltro();
     void reload();
     void reloadMonthly();
     void reloadMapPoints();
@@ -269,12 +319,16 @@ export const DatosPage = () => {
               municipioOptions={municipioOptions}
               municipiosLoading={municipiosLoadState === "loading"}
               resultadoValidacion={resultadoValidacion}
-              fechaDesde={fechaDesde}
-              fechaHasta={fechaHasta}
+              anioFiltro={anioFiltro}
+              mesFiltro={mesFiltro}
+              anioOptions={anioFiltroOptions}
+              aniosLoading={aniosFiltroLoadState === "loading"}
+              mesOptions={mesFiltroOptions}
+              mesesLoading={mesesFiltroLoadState === "loading"}
               onChangeMunicipio={setMunicipio}
               onChangeResultadoValidacion={setResultadoValidacion}
-              onChangeFechaDesde={setFechaDesde}
-              onChangeFechaHasta={setFechaHasta}
+              onChangeAnioFiltro={handleChangeAnioFiltro}
+              onChangeMesFiltro={setMesFiltro}
               onClear={clearValidationFilters}
               disabled={!online}
             />

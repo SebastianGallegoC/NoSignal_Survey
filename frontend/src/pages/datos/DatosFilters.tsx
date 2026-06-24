@@ -3,19 +3,26 @@ import {
   RESULTADO_VALIDACION_FILTER_OPTIONS,
   type ResultadoValidacionFilter,
 } from "@/constants/validationStatsFilter";
-import { getCurrentMonthIsoDateRange } from "@/pages/datos/datosDateDefaults";
+import {
+  hasActiveValidationDateFilter,
+  mesFiltroLabel,
+} from "@/pages/datos/validationDateFilter";
 
 interface DatosFiltersProps {
   municipio: string;
   municipioOptions: string[];
   municipiosLoading?: boolean;
   resultadoValidacion: ResultadoValidacionFilter;
-  fechaDesde: string;
-  fechaHasta: string;
+  anioFiltro: number | null;
+  mesFiltro: number | null;
+  anioOptions: number[];
+  aniosLoading?: boolean;
+  mesOptions: number[];
+  mesesLoading?: boolean;
   onChangeMunicipio: (value: string) => void;
   onChangeResultadoValidacion: (value: ResultadoValidacionFilter) => void;
-  onChangeFechaDesde: (value: string) => void;
-  onChangeFechaHasta: (value: string) => void;
+  onChangeAnioFiltro: (value: number | null) => void;
+  onChangeMesFiltro: (value: number | null) => void;
   onClear: () => void;
   disabled?: boolean;
 }
@@ -25,25 +32,31 @@ export const DatosFilters = ({
   municipioOptions,
   municipiosLoading = false,
   resultadoValidacion,
-  fechaDesde,
-  fechaHasta,
+  anioFiltro,
+  mesFiltro,
+  anioOptions,
+  aniosLoading = false,
+  mesOptions,
+  mesesLoading = false,
   onChangeMunicipio,
   onChangeResultadoValidacion,
-  onChangeFechaDesde,
-  onChangeFechaHasta,
+  onChangeAnioFiltro,
+  onChangeMesFiltro,
   onClear,
   disabled = false,
 }: DatosFiltersProps) => {
-  const defaultDates = getCurrentMonthIsoDateRange();
   const hasActive =
     municipio !== "" ||
     resultadoValidacion !== "" ||
-    fechaDesde !== defaultDates.desde ||
-    fechaHasta !== defaultDates.hasta;
+    hasActiveValidationDateFilter(anioFiltro, mesFiltro);
 
   const selectDisabled = disabled || municipiosLoading;
   const noMunicipios =
     !municipiosLoading && municipioOptions.length === 0 && !disabled;
+
+  const anioSelectDisabled = disabled || aniosLoading;
+  const mesSelectDisabled =
+    disabled || anioFiltro == null || mesesLoading || mesOptions.length === 0;
 
   return (
     <div className="min-w-0 overflow-x-clip">
@@ -110,32 +123,64 @@ export const DatosFilters = ({
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
           Fecha de la visita
         </h3>
-        <div className="mt-3 grid min-w-0 grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end">
-          <label className="flex min-w-0 max-w-full flex-col text-xs font-medium text-slate-700 sm:min-w-[10rem] sm:flex-1">
-            Desde
-            <input
-              type="date"
-              value={fechaDesde}
-              disabled={disabled}
-              onChange={(e) => onChangeFechaDesde(e.target.value)}
-              className="form-date-input mt-1 block w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100"
-            />
+        <div className="mt-3 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end">
+          <label className="flex min-w-0 max-w-xs flex-col text-xs font-medium text-slate-700">
+            Año
+            <select
+              aria-label="Año para filtro de validación"
+              value={anioFiltro ?? ""}
+              disabled={anioSelectDisabled}
+              onChange={(e) => {
+                const raw = e.target.value;
+                onChangeAnioFiltro(raw === "" ? null : Number(raw));
+              }}
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100"
+            >
+              <option value="">
+                {aniosLoading ? "Cargando años…" : "Todos los años"}
+              </option>
+              {anioOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
           </label>
-          <label className="flex min-w-0 max-w-full flex-col text-xs font-medium text-slate-700 sm:min-w-[10rem] sm:flex-1">
-            Hasta
-            <input
-              type="date"
-              value={fechaHasta}
-              disabled={disabled}
-              onChange={(e) => onChangeFechaHasta(e.target.value)}
-              className="form-date-input mt-1 block w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100"
-            />
-          </label>
+
+          {anioFiltro != null ? (
+            <label className="flex min-w-0 max-w-xs flex-col text-xs font-medium text-slate-700">
+              Mes
+              <select
+                aria-label="Mes para filtro de validación"
+                value={mesFiltro ?? ""}
+                disabled={mesSelectDisabled}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  onChangeMesFiltro(raw === "" ? null : Number(raw));
+                }}
+                className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100"
+              >
+                <option value="">
+                  {mesesLoading
+                    ? "Cargando meses…"
+                    : mesOptions.length === 0
+                      ? "Sin meses con datos"
+                      : "Todos los meses"}
+                </option>
+                {mesOptions.map((m) => (
+                  <option key={m} value={m}>
+                    {mesFiltroLabel(m)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
           <button
             type="button"
             disabled={disabled || !hasActive}
             onClick={onClear}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 sm:w-fit"
           >
             Limpiar filtros
           </button>

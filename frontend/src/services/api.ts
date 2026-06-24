@@ -455,6 +455,21 @@ export const fetchFormStatsAniosFromApi = async (): Promise<number[]> => {
   return Array.isArray(body.anios) ? body.anios : [];
 };
 
+/** Meses con formularios para un año (`GET /api/v1/forms/stats/meses`). */
+export const fetchFormStatsMesesFromApi = async (anio: number): Promise<number[]> => {
+  const url = `${API_BASE}/api/v1/forms/stats/meses?anio=${encodeURIComponent(String(anio))}`;
+  const response = await fetch(url, {
+    headers: { ...authHeaders() },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `forms_stats_meses_${response.status}`);
+  }
+  const body = (await response.json()) as { meses?: number[] };
+  return Array.isArray(body.meses) ? body.meses : [];
+};
+
 /** Diligencias por mes y municipio (`GET /api/v1/forms/stats/diligencias-mensuales`). */
 export const fetchFormStatsMonthlyFromApi = async (
   params: FormStatsMonthlyQuery,

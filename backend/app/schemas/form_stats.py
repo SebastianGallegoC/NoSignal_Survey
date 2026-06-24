@@ -36,6 +36,11 @@ class FormStatsAniosResponse(BaseModel):
     anios: list[int] = Field(default_factory=list)
 
 
+class FormStatsMesesResponse(BaseModel):
+    anio: int
+    meses: list[int] = Field(default_factory=list)
+
+
 class FormStatsMonthlyMunicipioSerie(BaseModel):
     municipio: str
     totales: list[int] = Field(

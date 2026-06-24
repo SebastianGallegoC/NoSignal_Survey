@@ -22,6 +22,7 @@ from app.schemas.form_map import FormMapPointsQueryParams, FormMapPointsResponse
 from app.schemas.form_read import FormListResponse, FormReadItem, FormSearchResponse
 from app.schemas.form_stats import (
     FormStatsAniosResponse,
+    FormStatsMesesResponse,
     FormStatsMonthlyQueryParams,
     FormStatsMonthlyResponse,
     FormStatsMunicipiosResponse,
@@ -30,6 +31,7 @@ from app.schemas.form_stats import (
 )
 from app.services.form_stats import (
     get_distinct_anios,
+    get_distinct_meses,
     get_distinct_municipios,
     get_monthly_diligencias,
     get_validation_stats,
@@ -137,6 +139,20 @@ async def form_stats_anios(
         return await get_distinct_anios(session)
     except SQLAlchemyError:
         logger.exception("form_stats_anios DB error user=%r", current_user.username)
+        raise
+
+
+@router.get("/stats/meses", response_model=FormStatsMesesResponse)
+async def form_stats_meses(
+    anio: int = Query(..., ge=2000, le=2100),
+    session: AsyncSession = Depends(get_session),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Meses (1-12) con formularios para el año indicado según fecha_visita."""
+    try:
+        return await get_distinct_meses(session, anio=anio)
+    except SQLAlchemyError:
+        logger.exception("form_stats_meses DB error user=%r", current_user.username)
         raise
 
 

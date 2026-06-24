@@ -9,12 +9,14 @@ from app.repository.form_stats import (
     aggregate_resultado_validacion_count,
     aggregate_validation_stats,
     list_distinct_anios_fecha_visita,
+    list_distinct_meses_fecha_visita,
     list_distinct_municipios,
 )
 from app.schemas.form_stats import (
     FormStatsAniosResponse,
     FormStatsCumpleDetalle,
     FormStatsFiltersApplied,
+    FormStatsMesesResponse,
     FormStatsMonthlyMunicipioSerie,
     FormStatsMonthlyResponse,
     FormStatsMunicipiosResponse,
@@ -116,6 +118,11 @@ async def get_distinct_municipios(session: AsyncSession) -> FormStatsMunicipiosR
 async def get_distinct_anios(session: AsyncSession) -> FormStatsAniosResponse:
     anios = await list_distinct_anios_fecha_visita(session)
     return FormStatsAniosResponse(anios=anios)
+
+
+async def get_distinct_meses(session: AsyncSession, *, anio: int) -> FormStatsMesesResponse:
+    meses = await list_distinct_meses_fecha_visita(session, anio=anio)
+    return FormStatsMesesResponse(anio=anio, meses=meses)
 
 
 async def get_monthly_diligencias(

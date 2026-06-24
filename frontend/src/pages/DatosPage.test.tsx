@@ -7,6 +7,7 @@ const mockFetchFormStats = vi.fn();
 const mockFetchFormStatsMunicipios = vi.fn();
 const mockFetchFormStatsMonthly = vi.fn();
 const mockFetchFormStatsAnios = vi.fn();
+const mockFetchFormStatsMeses = vi.fn();
 const mockFetchFormMapPoints = vi.fn();
 const mockUseConnectivity = vi.fn(() => true);
 
@@ -23,6 +24,8 @@ vi.mock("@/services/api", async (importOriginal) => {
     fetchFormStatsMonthlyFromApi: (...args: unknown[]) =>
       mockFetchFormStatsMonthly(...args),
     fetchFormStatsAniosFromApi: () => mockFetchFormStatsAnios(),
+    fetchFormStatsMesesFromApi: (...args: unknown[]) =>
+      mockFetchFormStatsMeses(...args),
     fetchFormMapPointsFromApi: (...args: unknown[]) =>
       mockFetchFormMapPoints(...args),
   };
@@ -46,7 +49,6 @@ vi.mock("@/lib/authStorage", () => ({
   ACCESS_TOKEN_KEY: "nosignal_access_token",
 }));
 
-import { getCurrentMonthIsoDateRange } from "@/pages/datos/datosDateDefaults";
 import { saveDatosPagePreferences } from "@/pages/datos/datosPagePreferences";
 import { DatosPage } from "@/pages/DatosPage";
 
@@ -77,6 +79,7 @@ describe("DatosPage", () => {
       MUNICIPIO_SIN_ASOCIAR,
     ]);
     mockFetchFormStatsAnios.mockResolvedValue([2026, 2025]);
+    mockFetchFormStatsMeses.mockResolvedValue([1, 3, 6]);
     mockFetchFormMapPoints.mockResolvedValue({
       items: [
         {
@@ -200,10 +203,9 @@ describe("DatosPage", () => {
     });
   });
 
-  it("aplica rango del mes actual por defecto en validación", async () => {
+  it("no aplica filtro de fechas por defecto (todos los años)", async () => {
     localStorage.setItem("nosignal_access_token", "token");
     mockFetchFormStats.mockResolvedValue(sampleStats);
-    const { desde, hasta } = getCurrentMonthIsoDateRange();
     render(
       <MemoryRouter>
         <DatosPage />
@@ -212,17 +214,45 @@ describe("DatosPage", () => {
     await waitFor(() => {
       expect(mockFetchFormStats).toHaveBeenCalled();
       const lastCall = mockFetchFormStats.mock.calls.at(-1)?.[0];
-      expect(lastCall).toMatchObject({ fecha_desde: desde, fecha_hasta: hasta });
+      expect(lastCall?.fecha_desde).toBeUndefined();
+      expect(lastCall?.fecha_hasta).toBeUndefined();
     });
     const validationSection = screen.getByLabelText("Validación");
-    const desdeInput = within(validationSection).getByLabelText(
-      /^Desde$/i,
-    ) as HTMLInputElement;
-    const hastaInput = within(validationSection).getByLabelText(
-      /^Hasta$/i,
-    ) as HTMLInputElement;
-    expect(desdeInput.value).toBe(desde);
-    expect(hastaInput.value).toBe(hasta);
+    const anioSelect = within(validationSection).getByRole("combobox", {
+      name: /Año para filtro de validación/i,
+    }) as HTMLSelectElement;
+    expect(anioSelect.value).toBe("");
+    expect(
+      within(anioSelect).getByRole("option", { name: "Todos los años" }),
+    ).toBeInTheDocument();
+  });
+
+  it("aplica filtro de año y mes al elegirlos en validación", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(mockFetchFormStats).toHaveBeenCalled());
+    const validationSection = screen.getByLabelText("Validación");
+    const anioSelect = within(validationSection).getByRole("combobox", {
+      name: /Año para filtro de validación/i,
+    });
+    fireEvent.change(anioSelect, { target: { value: "2026" } });
+    await waitFor(() => expect(mockFetchFormStatsMeses).toHaveBeenCalledWith(2026));
+    const mesSelect = await within(validationSection).findByRole("combobox", {
+      name: /Mes para filtro de validación/i,
+    });
+    fireEvent.change(mesSelect, { target: { value: "6" } });
+    await waitFor(() => {
+      const lastCall = mockFetchFormStats.mock.calls.at(-1)?.[0];
+      expect(lastCall).toMatchObject({
+        fecha_desde: "2026-06-01",
+        fecha_hasta: "2026-06-30",
+      });
+    });
   });
 
   it("muestra gráfico cuando hay datos del servidor", async () => {
@@ -365,15 +395,14 @@ describe("DatosPage", () => {
   it("restaura secciones y filtros guardados al volver a Datos", async () => {
     localStorage.setItem("nosignal_access_token", "token");
     mockFetchFormStats.mockResolvedValue(sampleStats);
-    const { desde } = getCurrentMonthIsoDateRange();
 
     saveDatosPagePreferences(
       {
         openSections: new Set(["mapa"]),
         municipio: "Cúcuta",
         resultadoValidacion: "NO CUMPLE",
-        fechaDesde: "2026-01-01",
-        fechaHasta: "2026-01-31",
+        anioFiltro: 2026,
+        mesFiltro: 1,
         anioMensual: 2025,
         municipioMensual: "Medellín",
       },
@@ -409,11 +438,13 @@ describe("DatosPage", () => {
     expect(validationSection.open).toBe(false);
 
     const validationFilters = within(validationSection);
-    expect(
-      (validationFilters.getByLabelText(/^Desde$/i) as HTMLInputElement).value,
-    ).toBe("2026-01-01");
-    expect(
-      (validationFilters.getByLabelText(/^Hasta$/i) as HTMLInputElement).value,
-    ).not.toBe(desde);
+    const anioSelect = validationFilters.getByRole("combobox", {
+      name: /Año para filtro de validación/i,
+    }) as HTMLSelectElement;
+    expect(anioSelect.value).toBe("2026");
+    const mesSelect = validationFilters.getByRole("combobox", {
+      name: /Mes para filtro de validación/i,
+    }) as HTMLSelectElement;
+    expect(mesSelect.value).toBe("1");
   });
 });

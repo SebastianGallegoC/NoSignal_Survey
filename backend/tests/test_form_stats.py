@@ -13,6 +13,7 @@ from app.api.v1 import forms as forms_api
 from app.constants.form_stats_municipio import MUNICIPIO_SIN_ASOCIAR
 from app.schemas.form_stats import (
     FormStatsFiltersApplied,
+    FormStatsMesesResponse,
     FormStatsMonthlyMunicipioSerie,
     FormStatsMonthlyResponse,
     FormStatsMunicipiosResponse,
@@ -38,6 +39,36 @@ def test_form_stats_municipios_requires_auth():
     client = TestClient(app)
     resp = client.get("/api/v1/forms/stats/municipios")
     assert resp.status_code == 401
+
+
+def test_form_stats_meses_requires_auth():
+    client = TestClient(app)
+    resp = client.get("/api/v1/forms/stats/meses", params={"anio": 2026})
+    assert resp.status_code == 401
+
+
+def test_form_stats_meses_ok(monkeypatch):
+    monkeypatch.setattr(
+        forms_api,
+        "get_distinct_meses",
+        AsyncMock(
+            return_value=FormStatsMesesResponse(anio=2026, meses=[1, 3, 6]),
+        ),
+    )
+
+    app.dependency_overrides[get_session] = _fake_session
+    app.dependency_overrides[get_current_user] = _fake_user
+    try:
+        client = TestClient(app)
+        resp = client.get(
+            "/api/v1/forms/stats/meses",
+            params={"anio": 2026},
+            headers={"Authorization": "Bearer dummy"},
+        )
+        assert resp.status_code == 200
+        assert resp.json() == {"anio": 2026, "meses": [1, 3, 6]}
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_form_stats_municipios_ok(monkeypatch):

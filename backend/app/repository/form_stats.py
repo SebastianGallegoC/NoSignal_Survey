@@ -240,6 +240,35 @@ async def list_distinct_anios_fecha_visita(session: AsyncSession) -> list[int]:
     return anios
 
 
+async def list_distinct_meses_fecha_visita(
+    session: AsyncSession,
+    *,
+    anio: int,
+) -> list[int]:
+    fecha_visita = _json_text("fecha_visita")
+    anio_txt = str(anio)
+    mes_col = cast(func.substring(fecha_visita, 6, 2), Integer)
+    stmt = (
+        select(mes_col)
+        .select_from(FormRecord)
+        .where(
+            *_fecha_visita_valida(),
+            func.substring(fecha_visita, 1, 4) == anio_txt,
+            mes_col >= 1,
+            mes_col <= 12,
+        )
+        .distinct()
+        .order_by(mes_col)
+    )
+    result = await session.execute(stmt)
+    meses: list[int] = []
+    for row in result.all():
+        mes = int(row[0] or 0)
+        if 1 <= mes <= 12:
+            meses.append(mes)
+    return meses
+
+
 async def aggregate_monthly_diligencias(
     session: AsyncSession,
     *,

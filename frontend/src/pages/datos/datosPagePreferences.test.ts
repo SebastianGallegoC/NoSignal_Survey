@@ -22,8 +22,8 @@ describe("datosPagePreferences", () => {
         openSections: new Set(["mapa"]),
         municipio: "Cúcuta",
         resultadoValidacion: "NO CUMPLE",
-        fechaDesde: "2026-01-01",
-        fechaHasta: "2026-01-31",
+        anioFiltro: 2026,
+        mesFiltro: 1,
         anioMensual: 2025,
         municipioMensual: "Medellín",
       },
@@ -35,8 +35,31 @@ describe("datosPagePreferences", () => {
     expect(restored?.openSections).toEqual(new Set(["mapa"]));
     expect(restored?.municipio).toBe("Cúcuta");
     expect(restored?.anioMensual).toBe(2025);
-    expect(restored?.fechaDesde).toBe("2026-01-01");
+    expect(restored?.anioFiltro).toBe(2026);
+    expect(restored?.mesFiltro).toBe(1);
     expect(restored?.resultadoValidacion).toBe("NO CUMPLE");
+  });
+
+  it("migra preferencias v2 con fechas a año y mes", () => {
+    sessionStorage.setItem(
+      DATOS_PAGE_PREFS_STORAGE_KEY,
+      JSON.stringify({
+        v: 2,
+        savedAt: 1_000,
+        openSections: ["validacion"],
+        validation: {
+          municipio: "",
+          fechaDesde: "2026-03-01",
+          fechaHasta: "2026-03-31",
+          resultadoValidacion: "",
+        },
+        monthly: { anio: 2026, municipio: MUNICIPIO_MENSUAL_TODOS },
+      }),
+    );
+
+    const restored = loadDatosPagePreferences(1_000);
+    expect(restored?.anioFiltro).toBe(2026);
+    expect(restored?.mesFiltro).toBe(3);
   });
 
   it("expira preferencias después de 30 minutos", () => {
@@ -45,8 +68,8 @@ describe("datosPagePreferences", () => {
         openSections: new Set(["validacion"]),
         municipio: "",
         resultadoValidacion: "",
-        fechaDesde: "2026-06-01",
-        fechaHasta: "2026-06-30",
+        anioFiltro: null,
+        mesFiltro: null,
         anioMensual: 2026,
         municipioMensual: MUNICIPIO_MENSUAL_TODOS,
       },
@@ -65,5 +88,7 @@ describe("datosPagePreferences", () => {
     expect(initial.openSections.has("validacion")).toBe(true);
     expect(initial.openSections.has("mensual")).toBe(true);
     expect(initial.municipio).toBe("");
+    expect(initial.anioFiltro).toBeNull();
+    expect(initial.mesFiltro).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   ImagePreviewModal,
@@ -62,117 +63,120 @@ export const MapPointDetailModal = ({ point, onClose }: MapPointDetailModalProps
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-        role="presentation"
-      >
-        <button
-          type="button"
-          className="absolute inset-0 bg-slate-900/45 backdrop-blur-[1px]"
-          aria-label="Cerrar ventana"
-          onClick={onClose}
-        />
+      {createPortal(
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="map-point-detail-title"
-          className="relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white shadow-xl"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-4"
+          role="presentation"
         >
-          <div className="border-b border-slate-100 px-5 py-4">
-            <h2
-              id="map-point-detail-title"
-              className="text-lg font-semibold text-slate-900"
-            >
-              {point.nombres_apellidos_encuestado || "Sin nombre registrado"}
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Municipio: {municipioFilterLabel(point.municipio)}
-            </p>
-            <p className="text-sm text-slate-600">
-              Fecha visita: {point.fecha_visita || "Sin fecha"}
-            </p>
-            <p className="text-sm text-slate-600">
-              Resultado: {point.resultado_validacion || "Sin resultado"}
-            </p>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-            <div className="rounded-xl border border-teal-100 bg-teal-50/60 px-3 py-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">
-                Información de la vivienda
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/45 backdrop-blur-[1px]"
+            aria-label="Cerrar ventana"
+            onClick={onClose}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="map-point-detail-title"
+            className="relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-slate-100 px-5 py-4">
+              <h2
+                id="map-point-detail-title"
+                className="text-lg font-semibold text-slate-900"
+              >
+                {point.nombres_apellidos_encuestado || "Sin nombre registrado"}
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Municipio: {municipioFilterLabel(point.municipio)}
               </p>
-              <p className="mt-1 text-sm font-medium text-teal-900">
-                {formatInformacionVivienda(informacionVivienda)}
+              <p className="text-sm text-slate-600">
+                Fecha visita: {point.fecha_visita || "Sin fecha"}
+              </p>
+              <p className="text-sm text-slate-600">
+                Resultado: {point.resultado_validacion || "Sin resultado"}
               </p>
             </div>
 
-            <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Registro fotográfico
-            </h3>
-
-            {loadState === "loading" ? (
-              <p className="mt-3 text-sm text-slate-500">Cargando fotos…</p>
-            ) : null}
-
-            {loadState === "error" ? (
-              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50/90 px-3 py-2 text-sm text-rose-900">
-                No se pudieron cargar las fotos: {error ?? "error desconocido"}.
-                <button
-                  type="button"
-                  onClick={() => void reload()}
-                  className="ml-2 font-medium underline"
-                >
-                  Reintentar
-                </button>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+              <div className="rounded-xl border border-teal-100 bg-teal-50/60 px-3 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">
+                  Información de la vivienda
+                </p>
+                <p className="mt-1 text-sm font-medium text-teal-900">
+                  {formatInformacionVivienda(informacionVivienda)}
+                </p>
               </div>
-            ) : null}
 
-            {loadState === "ready" && (detail?.fotos.length ?? 0) === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">
-                Este formulario no tiene fotos registradas.
-              </p>
-            ) : null}
+              <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                Registro fotográfico
+              </h3>
 
-            {loadState === "ready" && detail && detail.fotos.length > 0 ? (
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {detail.fotos.map((foto) => (
+              {loadState === "loading" ? (
+                <p className="mt-3 text-sm text-slate-500">Cargando fotos…</p>
+              ) : null}
+
+              {loadState === "error" ? (
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50/90 px-3 py-2 text-sm text-rose-900">
+                  No se pudieron cargar las fotos: {error ?? "error desconocido"}.
                   <button
-                    key={`${foto.slot}-${foto.nombre_archivo}`}
                     type="button"
-                    onClick={() => {
-                      if (!foto.data) {
-                        return;
-                      }
-                      setPreview({
-                        nombre_archivo: foto.nombre_archivo,
-                        src: foto.data,
-                      });
-                    }}
-                    className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-left"
+                    onClick={() => void reload()}
+                    className="ml-2 font-medium underline"
                   >
-                    <img
-                      src={foto.data}
-                      alt={registroFotoLabel(foto.slot)}
-                      className="aspect-square w-full object-cover"
-                      loading="lazy"
-                    />
-                    <p className="truncate px-1.5 py-1 text-center text-[10px] text-slate-600">
-                      {registroFotoLabel(foto.slot)}
-                    </p>
+                    Reintentar
                   </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
+                </div>
+              ) : null}
 
-          <div className="border-t border-slate-100 px-5 py-4">
-            <Button type="button" variant="outline" onClick={onClose} className="w-full">
-              Cerrar
-            </Button>
+              {loadState === "ready" && (detail?.fotos.length ?? 0) === 0 ? (
+                <p className="mt-3 text-sm text-slate-500">
+                  Este formulario no tiene fotos registradas.
+                </p>
+              ) : null}
+
+              {loadState === "ready" && detail && detail.fotos.length > 0 ? (
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {detail.fotos.map((foto) => (
+                    <button
+                      key={`${foto.slot}-${foto.nombre_archivo}`}
+                      type="button"
+                      onClick={() => {
+                        if (!foto.data) {
+                          return;
+                        }
+                        setPreview({
+                          nombre_archivo: foto.nombre_archivo,
+                          src: foto.data,
+                        });
+                      }}
+                      className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-left"
+                    >
+                      <img
+                        src={foto.data}
+                        alt={registroFotoLabel(foto.slot)}
+                        className="aspect-square w-full object-cover"
+                        loading="lazy"
+                      />
+                      <p className="truncate px-1.5 py-1 text-center text-[10px] text-slate-600">
+                        {registroFotoLabel(foto.slot)}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="border-t border-slate-100 px-5 py-4">
+              <Button type="button" variant="outline" onClick={onClose} className="w-full">
+                Cerrar
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
+        </div>,
+        document.body,
+      )}
 
       <ImagePreviewModal image={preview} onClose={() => setPreview(null)} />
     </>
