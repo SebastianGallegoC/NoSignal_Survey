@@ -7,6 +7,7 @@ import {
 } from "recharts";
 
 import {
+  CUMPLE_DETALLE_CARD_CLASSES,
   CUMPLE_DETALLE_COLORS,
   CUMPLE_DETALLE_LABELS,
 } from "@/constants/validationStatsFilter";
@@ -171,13 +172,17 @@ export const ValidationStatsChart = ({ stats }: ValidationStatsChartProps) => {
               key={entry.key}
               label={entry.name}
               value={entry.value}
-              className="border-slate-200 bg-white text-slate-900"
+              className={
+                CUMPLE_DETALLE_CARD_CLASSES[
+                  entry.key as keyof typeof CUMPLE_DETALLE_LABELS
+                ]
+              }
             />
           ))}
           <StatCard
             label="Total"
             value={stats.total}
-            className="border-teal-100 bg-teal-50/60 text-teal-900"
+            className="border-slate-200 bg-slate-100 text-slate-900"
           />
         </dl>
       </div>

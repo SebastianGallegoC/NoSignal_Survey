@@ -320,11 +320,6 @@ export const FormulariosMapView = ({
           </div>
         )}
       </div>
-
-      <p className="mt-2 text-xs text-slate-500">
-        Colores: verde (cumple), rojo (no cumple), gris (sin resultado). Puntos en la misma
-        ubicación se muestran ligeramente separados para facilitar la selección.
-      </p>
     </div>
   );
 };
