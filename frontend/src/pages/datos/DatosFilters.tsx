@@ -47,7 +47,7 @@ export const DatosFilters = ({
 
   return (
     <div className="min-w-0 overflow-x-clip">
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-4">
         <label className="flex min-w-0 max-w-md flex-col text-xs font-medium text-slate-700">
           Municipio
           <select
@@ -71,23 +71,33 @@ export const DatosFilters = ({
           </select>
         </label>
 
-        <label className="flex min-w-0 max-w-md flex-col text-xs font-medium text-slate-700">
-          Resultado de validación
-          <select
-            value={resultadoValidacion}
-            disabled={disabled}
-            onChange={(e) =>
-              onChangeResultadoValidacion(e.target.value as ResultadoValidacionFilter)
-            }
-            className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100"
-          >
-            {RESULTADO_VALIDACION_FILTER_OPTIONS.map((option) => (
-              <option key={option.value || "todos"} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <fieldset
+          disabled={disabled}
+          className="flex min-w-0 max-w-full flex-col text-xs font-medium text-slate-700 disabled:opacity-60"
+        >
+          <legend className="mb-2">Resultado de validación</legend>
+          <div className="flex flex-wrap gap-2">
+            {RESULTADO_VALIDACION_FILTER_OPTIONS.map((option) => {
+              const selected = resultadoValidacion === option.value;
+              return (
+                <button
+                  key={option.value || "todos"}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onChangeResultadoValidacion(option.value)}
+                  className={`rounded-xl border px-3 py-2 text-sm transition disabled:cursor-not-allowed ${
+                    selected
+                      ? "border-teal-600 bg-teal-50 text-teal-800"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                  }`}
+                  aria-pressed={selected}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
       </div>
 
       {noMunicipios ? (

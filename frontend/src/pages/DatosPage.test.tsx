@@ -312,8 +312,8 @@ describe("DatosPage", () => {
       </MemoryRouter>,
     );
     await waitFor(() => expect(mockFetchFormStats).toHaveBeenCalled());
-    const resultadoSelect = screen.getByLabelText(/^Resultado de validación$/i);
-    fireEvent.change(resultadoSelect, { target: { value: "CUMPLE" } });
+    const cumplenButton = screen.getByRole("button", { name: "Cumplen" });
+    fireEvent.click(cumplenButton);
     await waitFor(() => {
       const lastCall = mockFetchFormStats.mock.calls.at(-1)?.[0];
       expect(lastCall).toMatchObject({ resultado_validacion: "CUMPLE" });
