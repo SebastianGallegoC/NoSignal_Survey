@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 import { useEncuestadorProfilesSync } from '@/hooks/useEncuestadorProfilesSync';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { useSessionRoleSync } from '@/hooks/useSessionRoleSync';
 import { isAccessTokenValid } from '@/lib/jwt';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -19,6 +20,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   useOfflineSync(valid);
   useEncuestadorProfilesSync(valid, username);
+  useSessionRoleSync(valid);
 
   if (!valid) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;

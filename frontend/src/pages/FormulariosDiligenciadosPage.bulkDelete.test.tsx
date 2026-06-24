@@ -58,13 +58,33 @@ const mocks = vi.hoisted(() => {
     }),
     eliminarFormularioDeDispositivo: vi.fn().mockResolvedValue(undefined),
     loadHiddenFormIds: vi.fn(async () => new Set<string>()),
+    refreshSessionFromServer: vi.fn(async () => true),
   };
 });
 
 vi.mock("@/store/useAuthStore", () => ({
-  useAuthStore: (
-    selector: (s: { username: string | null; role: "admin" | "editor" | "encuestador" }) => unknown,
-  ) => selector(mocks.authState),
+  useAuthStore: Object.assign(
+    (
+      selector: (s: {
+        username: string | null;
+        role: "admin" | "editor" | "encuestador";
+        refreshSessionFromServer: () => Promise<boolean>;
+        applyLoginResponse: (response: unknown) => Promise<void>;
+      }) => unknown,
+    ) =>
+      selector({
+        username: mocks.authState.username,
+        role: mocks.authState.role,
+        refreshSessionFromServer: mocks.refreshSessionFromServer,
+        applyLoginResponse: vi.fn(),
+      }),
+    {
+      getState: () => ({
+        role: mocks.authState.role,
+        refreshSessionFromServer: mocks.refreshSessionFromServer,
+      }),
+    },
+  ),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -117,6 +137,7 @@ describe("FormulariosDiligenciadosPage — borrado masivo", () => {
     vi.clearAllMocks();
     mocks.resetState();
     mocks.authState = { username: "tester", role: "admin" };
+    mocks.refreshSessionFromServer.mockResolvedValue(true);
     localStorage.setItem(ACCESS_TOKEN_KEY, "token-de-prueba");
     Object.defineProperty(navigator, "onLine", {
       configurable: true,

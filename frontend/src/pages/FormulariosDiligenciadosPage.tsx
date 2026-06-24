@@ -38,6 +38,7 @@ import {
 } from "@/services/formLocalDelete";
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { usePermissions } from "@/hooks/usePermissions";
+import { canDeleteForms } from "@/lib/permissions";
 import {
   buildFormValuesFromSnapshot,
   coalesceIdPerfilEncuestador,
@@ -102,7 +103,9 @@ function summaryToServerListItem(summary: FormSummaryItem): FormReadItem {
 
 export const FormulariosDiligenciadosPage = () => {
   const authUsername = useAuthStore((s) => s.username);
-  const { canDeleteForms } = usePermissions();
+  const refreshSessionFromServer = useAuthStore((s) => s.refreshSessionFromServer);
+  const applyLoginResponse = useAuthStore((s) => s.applyLoginResponse);
+  const { canDeleteForms: userCanDeleteForms } = usePermissions();
   const online = useConnectivityStatus();
   const navigate = useNavigate();
   const [rows, setRows] = useState<DisplayRow[]>([]);
@@ -178,6 +181,15 @@ export const FormulariosDiligenciadosPage = () => {
   >(null);
   const [eliminandoTodosFormularios, setEliminandoTodosFormularios] =
     useState(false);
+
+  const ensureCanDeleteForms = useCallback(async (): Promise<boolean> => {
+    await refreshSessionFromServer();
+    if (!canDeleteForms(useAuthStore.getState().role)) {
+      setEliminarError("No tenés permiso para eliminar formularios.");
+      return false;
+    }
+    return true;
+  }, [refreshSessionFromServer]);
 
   const precargaMap = useMemo(() => {
     const m = new Map<string, PrecargaForm>();
@@ -819,6 +831,9 @@ export const FormulariosDiligenciadosPage = () => {
       if (eliminandoPrecargaId === row.id_formulario) {
         return;
       }
+      if (!(await ensureCanDeleteForms())) {
+        return;
+      }
       if (!navigator.onLine) {
         setPrecargaError(
           "Necesitás conexión para eliminar la copia local de este formulario.",
@@ -858,11 +873,14 @@ export const FormulariosDiligenciadosPage = () => {
         setEliminandoPrecargaId(null);
       }
     },
-    [eliminandoPrecargaId, loadList, precargaMap, selectRow, selectedId],
+    [eliminandoPrecargaId, ensureCanDeleteForms, loadList, precargaMap, selectRow, selectedId],
   );
 
   const confirmarEliminarTodasPrecargas = useCallback(async () => {
     if (eliminandoTodasPrecargas || precargas.length === 0) {
+      return;
+    }
+    if (!(await ensureCanDeleteForms())) {
       return;
     }
     if (!navigator.onLine) {
@@ -900,6 +918,7 @@ export const FormulariosDiligenciadosPage = () => {
     }
   }, [
     eliminandoTodasPrecargas,
+    ensureCanDeleteForms,
     precargas.length,
     loadList,
     selectedId,
@@ -965,7 +984,7 @@ export const FormulariosDiligenciadosPage = () => {
     setDescargandoTodasFotos,
   });
 
-  const solicitarEliminar = useCallback((row: DisplayRow) => {
+  const solicitarEliminar = useCallback(async (row: DisplayRow) => {
     setEliminarError(null);
     setDeletePasswordError(null);
     if (!navigator.onLine) {
@@ -974,8 +993,11 @@ export const FormulariosDiligenciadosPage = () => {
       );
       return;
     }
+    if (!(await ensureCanDeleteForms())) {
+      return;
+    }
     setPendingDeleteRow(row);
-  }, []);
+  }, [ensureCanDeleteForms]);
 
   const ejecutarEliminacionConfirmada = useCallback(
     async (password: string) => {
@@ -996,10 +1018,6 @@ export const FormulariosDiligenciadosPage = () => {
         );
         return;
       }
-      const token =
-        typeof localStorage !== "undefined"
-          ? localStorage.getItem(ACCESS_TOKEN_KEY)
-          : null;
       if (!authUsername) {
         setDeletePasswordError(
           "No hay una sesión activa para validar contraseña.",
@@ -1007,11 +1025,20 @@ export const FormulariosDiligenciadosPage = () => {
         return;
       }
       try {
-        await loginApi(authUsername, pass);
+        const loginResponse = await loginApi(authUsername, pass);
+        await applyLoginResponse(loginResponse);
       } catch {
         setDeletePasswordError("Contraseña incorrecta.");
         return;
       }
+      if (!canDeleteForms(useAuthStore.getState().role)) {
+        setDeletePasswordError("No tenés permiso para eliminar formularios.");
+        return;
+      }
+      const token =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem(ACCESS_TOKEN_KEY)
+          : null;
       const puedeBorrarEnServidor = row.onServer && !!token;
       setEliminandoId(row.id_formulario);
       try {
@@ -1043,7 +1070,7 @@ export const FormulariosDiligenciadosPage = () => {
         setEliminandoId(null);
       }
     },
-    [authUsername, loadList, pendingDeleteRow, selectedId],
+    [applyLoginResponse, authUsername, loadList, pendingDeleteRow, selectedId],
   );
 
   const cancelarEliminacionPendiente = useCallback(() => {
@@ -1059,13 +1086,16 @@ export const FormulariosDiligenciadosPage = () => {
     [rowsMostrados],
   );
 
-  const solicitarEliminarTodosFormularios = useCallback(() => {
+  const solicitarEliminarTodosFormularios = useCallback(async () => {
     setEliminarError(null);
     setBulkDeletePasswordError(null);
     if (!navigator.onLine) {
       setEliminarError(
         "Solo podés eliminar formularios con conexión a internet.",
       );
+      return;
+    }
+    if (!(await ensureCanDeleteForms())) {
       return;
     }
     if (rowsMostrados.length === 0) {
@@ -1082,7 +1112,7 @@ export const FormulariosDiligenciadosPage = () => {
       return;
     }
     setModalEliminarTodosFormularios(true);
-  }, [hayFormulariosEnServidor, rowsMostrados.length]);
+  }, [ensureCanDeleteForms, hayFormulariosEnServidor, rowsMostrados.length]);
 
   const cancelarEliminarTodosFormularios = useCallback(() => {
     if (eliminandoTodosFormularios) {
@@ -1099,6 +1129,9 @@ export const FormulariosDiligenciadosPage = () => {
       const pass = password.trim();
       if (!isBulkDeleteAllPasswordValid(pass)) {
         setBulkDeletePasswordError("Contraseña incorrecta.");
+        return;
+      }
+      if (!(await ensureCanDeleteForms())) {
         return;
       }
       if (!navigator.onLine) {
@@ -1155,7 +1188,7 @@ export const FormulariosDiligenciadosPage = () => {
         setEliminandoTodosFormularios(false);
       }
     },
-    [loadList, rowsMostrados],
+    [ensureCanDeleteForms, loadList, rowsMostrados],
   );
 
   const deleteModalDescription: ReactNode = useMemo(() => {
@@ -1327,7 +1360,7 @@ export const FormulariosDiligenciadosPage = () => {
               </Button>
             </div>
             <div className="page-toolbar-actions">
-              {canDeleteForms ? (
+              {userCanDeleteForms ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -1386,7 +1419,7 @@ export const FormulariosDiligenciadosPage = () => {
                   ? "Descargando fotos…"
                   : "Fotos (todos)"}
               </Button>
-              {canDeleteForms ? (
+              {userCanDeleteForms ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -1605,7 +1638,7 @@ export const FormulariosDiligenciadosPage = () => {
                         {isOpen ? "Cerrar" : "Ver formulario"}
                       </span>
                     </button>
-                    {canDeleteForms ? (
+                    {userCanDeleteForms ? (
                       <Button
                         type="button"
                         variant="outline"
@@ -1675,7 +1708,7 @@ export const FormulariosDiligenciadosPage = () => {
                                         : "Precargar offline"}
                                     </Button>
                                   ) : null}
-                                  {canDeleteForms &&
+                                  {userCanDeleteForms &&
                                   online &&
                                   (precargaMap.has(row.id_formulario) ||
                                     row.historial) ? (
