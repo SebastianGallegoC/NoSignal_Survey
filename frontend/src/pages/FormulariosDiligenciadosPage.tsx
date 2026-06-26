@@ -46,15 +46,16 @@ import {
   getBeneficiarioDisplayName,
   getFechaReferenciaEnvio,
   getMissingBadgeForListRow,
-  getMunicipioDisplayValue,
   mapServerFotos,
   mergeFormsWithPrecargas,
   filterDisplayRowsWithPrecarga,
+  hasActiveDisplayRowFilters,
+  historialForServerFilteredMerge,
+  matchesDisplayRowFilters,
   normalizeTextoBusqueda,
+  precargasForServerFilteredMerge,
   rowsForOfflineAwareList,
   reconcileLocalStateWithTrustedServerList,
-  parseFiltroDiaFin,
-  parseFiltroDiaInicio,
   precargaToSnapshot,
   type DisplayRow,
 } from "@/services/formHistory";
@@ -222,6 +223,16 @@ export const FormulariosDiligenciadosPage = () => {
     [rowsMostrados],
   );
 
+  const displayFilters = useMemo(
+    () => ({
+      beneficiario: filtroBeneficiario,
+      municipio: filtroMunicipio,
+      desde: filtroDesde,
+      hasta: filtroHasta,
+    }),
+    [filtroBeneficiario, filtroMunicipio, filtroDesde, filtroHasta],
+  );
+
   const rowsFiltrados = useMemo(() => {
     const token =
       typeof localStorage !== "undefined"
@@ -231,42 +242,16 @@ export const FormulariosDiligenciadosPage = () => {
       typeof navigator !== "undefined" ? navigator.onLine : true;
     const serverFilteringActive =
       online && navOnline && !!token && !remoteError && remoteLoaded;
-    if (serverFilteringActive) {
-      return rowsMostrados;
-    }
-    const q = normalizeTextoBusqueda(filtroBeneficiario);
-    const inicio = filtroDesde ? parseFiltroDiaInicio(filtroDesde) : Number.NaN;
-    const fin = filtroHasta ? parseFiltroDiaFin(filtroHasta) : Number.NaN;
+
     return rowsMostrados.filter((r) => {
-      if (q) {
-        const nombre = normalizeTextoBusqueda(getBeneficiarioDisplayName(r));
-        if (!nombre.includes(q)) {
-          return false;
-        }
+      if (serverFilteringActive && r.onServer) {
+        return true;
       }
-      if (filtroMunicipio && getMunicipioDisplayValue(r) !== filtroMunicipio) {
-        return false;
-      }
-      if (!Number.isNaN(inicio) || !Number.isNaN(fin)) {
-        const ref = getFechaReferenciaEnvio(r);
-        if (Number.isNaN(ref)) {
-          return false;
-        }
-        if (!Number.isNaN(inicio) && ref < inicio) {
-          return false;
-        }
-        if (!Number.isNaN(fin) && ref > fin) {
-          return false;
-        }
-      }
-      return true;
+      return matchesDisplayRowFilters(r, displayFilters);
     });
   }, [
     rowsMostrados,
-    filtroBeneficiario,
-    filtroMunicipio,
-    filtroDesde,
-    filtroHasta,
+    displayFilters,
     online,
     remoteError,
     remoteLoaded,
@@ -410,11 +395,12 @@ export const FormulariosDiligenciadosPage = () => {
       return mergedOffline;
     }
 
-    const hasServerFilters =
-      !!filtroBeneficiario.trim() ||
-      !!filtroMunicipio.trim() ||
-      !!filtroDesde.trim() ||
-      !!filtroHasta.trim();
+    const hasServerFilters = hasActiveDisplayRowFilters({
+      beneficiario: filtroBeneficiario,
+      municipio: filtroMunicipio,
+      desde: filtroDesde,
+      hasta: filtroHasta,
+    });
     let historialBase = historialLocal;
     let precargasBase = precargasLocal;
     if (!append && !hasServerFilters && totalServerItems <= visibleServerItems.length) {
@@ -444,10 +430,16 @@ export const FormulariosDiligenciadosPage = () => {
     serverItemsRef.current = visibleServerItems;
     serverOffsetRef.current = visibleServerItems.length;
     setPrecargas(precargasBase);
+    const historialMerge = hasServerFilters
+      ? historialForServerFilteredMerge(historialBase)
+      : historialBase;
+    const precargasMerge = hasServerFilters
+      ? precargasForServerFilteredMerge(precargasBase, historialBase)
+      : precargasBase;
     const merged = mergeFormsWithPrecargas(
       visibleServerItems,
-      historialBase,
-      precargasBase,
+      historialMerge,
+      precargasMerge,
     );
     setRows(merged);
     setRemoteLoaded(true);

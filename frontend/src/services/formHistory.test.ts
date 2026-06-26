@@ -17,6 +17,8 @@ import {
   resolveGpsForExport,
   mapServerFotos,
   mergeFormsWithPrecargas,
+  matchesDisplayRowFilters,
+  historialForServerFilteredMerge,
   normalizeTextoBusqueda,
   reconcileLocalStateWithTrustedServerList,
   rowsForOfflineAwareList,
@@ -730,5 +732,91 @@ describe("getMissingBadgeForListRow", () => {
     const label = getMissingBadgeForListRow(row, { queued });
     expect(label).not.toBeNull();
     expect(label).not.toBe("Faltan 0 campos");
+  });
+});
+
+describe("filtros de listado diligenciados", () => {
+  const serverRow = (
+    id: string,
+    datos: Record<string, string>,
+    fechaHora: string,
+  ): DisplayRow => ({
+    id_formulario: id,
+    onServer: true,
+    server: {
+      id_formulario: id,
+      fecha_hora: fechaHora,
+      fecha_actualizacion: fechaHora,
+      latitud: 0,
+      longitud: 0,
+      precision: null,
+      datos_formulario: datos,
+      fotos: [],
+    },
+  });
+
+  it("matchesDisplayRowFilters filtra por municipio en filas locales", () => {
+    const row: DisplayRow = {
+      id_formulario: "local-1",
+      onServer: false,
+      historial: {
+        id_formulario: "local-1",
+        fecha_hora: "2026-03-01T00:00:00Z",
+        estado: "PENDIENTE",
+        datos_formulario: {
+          municipio: "Cúcuta",
+          nombres_apellidos_encuestado: "Ana",
+        },
+      },
+    };
+    expect(
+      matchesDisplayRowFilters(row, { municipio: "Cúcuta" }),
+    ).toBe(true);
+    expect(
+      matchesDisplayRowFilters(row, { municipio: "Medellín" }),
+    ).toBe(false);
+  });
+
+  it("historialForServerFilteredMerge excluye ENVIADO al filtrar en servidor", () => {
+    const historial: HistorialForm[] = [
+      {
+        id_formulario: "synced",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        estado: "ENVIADO",
+        datos_formulario: {},
+      },
+      {
+        id_formulario: "pending",
+        fecha_hora: "2026-01-02T00:00:00Z",
+        estado: "PENDIENTE",
+        datos_formulario: {},
+      },
+    ];
+    const out = historialForServerFilteredMerge(historial);
+    expect(out.map((h) => h.id_formulario)).toEqual(["pending"]);
+  });
+
+  it("merge con filtros de servidor no muestra ENVIADO local ausente del resultado", () => {
+    const historial: HistorialForm[] = [
+      {
+        id_formulario: "otro-municipio",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        estado: "ENVIADO",
+        datos_formulario: { municipio: "Medellín" },
+      },
+    ];
+    const server = serverRow(
+      "cucuta-1",
+      { municipio: "Cúcuta", nombres_apellidos_encuestado: "Luis" },
+      "2026-02-01T12:00:00Z",
+    );
+    const merged = mergeFormsWithPrecargas(
+      [server.server!],
+      historialForServerFilteredMerge(historial),
+      [],
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.id_formulario).toBe("cucuta-1");
+    expect(merged[0]?.onServer).toBe(true);
   });
 });

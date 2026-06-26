@@ -485,6 +485,86 @@ export function parseFiltroDiaFin(isoDay: string): number {
   return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
 }
 
+export type DisplayRowFilterCriteria = {
+  beneficiario?: string;
+  municipio?: string;
+  desde?: string;
+  hasta?: string;
+};
+
+export function hasActiveDisplayRowFilters(
+  filters: DisplayRowFilterCriteria,
+): boolean {
+  return (
+    !!filters.beneficiario?.trim() ||
+    !!filters.municipio?.trim() ||
+    !!filters.desde?.trim() ||
+    !!filters.hasta?.trim()
+  );
+}
+
+/** Filtro de listado (nombre, municipio, fecha de envío) para filas locales o modo offline. */
+export function matchesDisplayRowFilters(
+  row: DisplayRow,
+  filters: DisplayRowFilterCriteria,
+): boolean {
+  const q = normalizeTextoBusqueda(filters.beneficiario ?? "");
+  if (q) {
+    const nombre = normalizeTextoBusqueda(getBeneficiarioDisplayName(row));
+    if (!nombre.includes(q)) {
+      return false;
+    }
+  }
+  const municipio = filters.municipio?.trim() ?? "";
+  if (municipio && getMunicipioDisplayValue(row) !== municipio) {
+    return false;
+  }
+  const inicio = filters.desde ? parseFiltroDiaInicio(filters.desde) : Number.NaN;
+  const fin = filters.hasta ? parseFiltroDiaFin(filters.hasta) : Number.NaN;
+  if (!Number.isNaN(inicio) || !Number.isNaN(fin)) {
+    const ref = getFechaReferenciaEnvio(row);
+    if (Number.isNaN(ref)) {
+      return false;
+    }
+    if (!Number.isNaN(inicio) && ref < inicio) {
+      return false;
+    }
+    if (!Number.isNaN(fin) && ref > fin) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Con filtros activos en el servidor, no mezclar historial ENVIADO ausente del resultado:
+ * esos formularios están en BD pero no coinciden con el filtro (no son «solo este equipo»).
+ */
+export function historialForServerFilteredMerge(
+  historial: HistorialForm[],
+): HistorialForm[] {
+  return historial.filter(
+    (h) => h.estado === "PENDIENTE" || h.estado === "ERROR",
+  );
+}
+
+/** Precargas de formularios ya sincronizados (ENVIADO) no deben aparecer si el filtro las excluye. */
+export function precargasForServerFilteredMerge(
+  precargas: PrecargaForm[],
+  historial: HistorialForm[],
+): PrecargaForm[] {
+  const historialById = new Map(
+    historial.map((h) => [h.id_formulario, h] as const),
+  );
+  return precargas.filter((p) => {
+    const h = historialById.get(p.id_formulario);
+    if (!h) {
+      return true;
+    }
+    return h.estado === "PENDIENTE" || h.estado === "ERROR";
+  });
+}
+
 /** Toma el primer id de perfil válido entre varias fuentes (servidor, historial, cola, etc.). */
 export function coalesceIdPerfilEncuestador(
   ...values: Array<number | null | undefined>
