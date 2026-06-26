@@ -496,6 +496,23 @@ export function collectMunicipiosFromRows(rows: DisplayRow[]): string[] {
   return [...seen].sort((a, b) => a.localeCompare(b, "es"));
 }
 
+/** Une listas de municipios sin duplicados, orden alfabético (es). */
+export function mergeSortedMunicipioOptions(...lists: string[][]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const list of lists) {
+    for (const raw of list) {
+      const municipio = raw.trim();
+      if (!municipio || seen.has(municipio)) {
+        continue;
+      }
+      seen.add(municipio);
+      out.push(municipio);
+    }
+  }
+  return out.sort((a, b) => a.localeCompare(b, "es"));
+}
+
 /** Normaliza texto para búsqueda insensible a mayúsculas y tildes. */
 export function normalizeTextoBusqueda(s: string): string {
   return s

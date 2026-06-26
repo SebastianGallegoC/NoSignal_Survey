@@ -91,6 +91,7 @@ vi.mock("@/services/api", () => ({
   searchFormsFromApi: mocks.searchFormsFromApi,
   fetchFormFromApi: mocks.fetchFormFromApi,
   deleteFormFromApi: mocks.deleteFormFromApi,
+  fetchFormStatsMunicipiosFromApi: vi.fn().mockResolvedValue([]),
   fetchFormPhotoDataUrl: vi.fn(),
   loginApi: vi.fn(),
 }));

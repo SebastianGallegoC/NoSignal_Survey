@@ -21,6 +21,7 @@ import {
   mergeFormsWithPrecargas,
   matchesDisplayRowFilters,
   historialForServerFilteredMerge,
+  mergeSortedMunicipioOptions,
   normalizeTextoBusqueda,
   reconcileLocalStateWithTrustedServerList,
   rowsForOfflineAwareList,
@@ -777,6 +778,12 @@ describe("filtros de listado diligenciados", () => {
     );
     const ref = getFechaReferenciaEnvio(row);
     expect(ref).toBe(new Date(2026, 5, 15, 0, 0, 0, 0).getTime());
+  });
+
+  it("mergeSortedMunicipioOptions une sin duplicados", () => {
+    expect(
+      mergeSortedMunicipioOptions(["Cúcuta", "Medellín"], ["Medellín", "Bogotá"]),
+    ).toEqual(["Bogotá", "Cúcuta", "Medellín"]);
   });
 
   it("matchesDisplayRowFilters filtra por fecha_visita", () => {

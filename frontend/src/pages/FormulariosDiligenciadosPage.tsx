@@ -24,6 +24,7 @@ import {
   deleteFormFromApi,
   fetchFormFromApi,
   fetchFormPhotoDataUrl,
+  fetchFormStatsMunicipiosFromApi,
   loginApi,
   searchFormsFromApi,
   type FormReadItem,
@@ -49,11 +50,11 @@ import {
   getMissingBadgeForListRow,
   mapServerFotos,
   mergeFormsWithPrecargas,
+  mergeSortedMunicipioOptions,
   filterDisplayRowsWithPrecarga,
   hasActiveDisplayRowFilters,
   historialForServerFilteredMerge,
   matchesDisplayRowFilters,
-  normalizeTextoBusqueda,
   precargasForServerFilteredMerge,
   rowsForOfflineAwareList,
   reconcileLocalStateWithTrustedServerList,
@@ -115,6 +116,7 @@ export const FormulariosDiligenciadosPage = () => {
   const [filtroHasta, setFiltroHasta] = useState("");
   const [filtroBeneficiario, setFiltroBeneficiario] = useState("");
   const [filtroMunicipio, setFiltroMunicipio] = useState("");
+  const [municipioCatalog, setMunicipioCatalog] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -219,9 +221,38 @@ export const FormulariosDiligenciadosPage = () => {
     [rows, precargas, online],
   );
 
+  const refreshMunicipioCatalogFromRows = useCallback((merged: DisplayRow[]) => {
+    const fromRows = collectMunicipiosFromRows(merged);
+    if (fromRows.length === 0) {
+      return;
+    }
+    setMunicipioCatalog((prev) => mergeSortedMunicipioOptions(prev, fromRows));
+  }, []);
+
+  useEffect(() => {
+    const token =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem(ACCESS_TOKEN_KEY)
+        : null;
+    if (!online || !token) {
+      return;
+    }
+    void fetchFormStatsMunicipiosFromApi()
+      .then((list) => {
+        if (list.length > 0) {
+          setMunicipioCatalog((prev) => mergeSortedMunicipioOptions(prev, list));
+        }
+      })
+      .catch(() => undefined);
+  }, [online]);
+
   const municipioOptions = useMemo(
-    () => collectMunicipiosFromRows(rowsMostrados),
-    [rowsMostrados],
+    () =>
+      mergeSortedMunicipioOptions(
+        municipioCatalog,
+        filtroMunicipio.trim() ? [filtroMunicipio.trim()] : [],
+      ),
+    [municipioCatalog, filtroMunicipio],
   );
 
   const displayFilters = useMemo(
@@ -328,6 +359,7 @@ export const FormulariosDiligenciadosPage = () => {
         precargasLocal,
       );
       setRows(mergedLocal);
+      refreshMunicipioCatalogFromRows(mergedLocal);
       if (append) {
         setLoadingMore(false);
       }
@@ -390,6 +422,7 @@ export const FormulariosDiligenciadosPage = () => {
         precargasLocal,
       );
       setRows(mergedOffline);
+      refreshMunicipioCatalogFromRows(mergedOffline);
       if (append) {
         setLoadingMore(false);
       }
@@ -443,6 +476,7 @@ export const FormulariosDiligenciadosPage = () => {
       precargasMerge,
     );
     setRows(merged);
+    refreshMunicipioCatalogFromRows(merged);
     setRemoteLoaded(true);
     if (append) {
       setLoadingMore(false);
@@ -454,6 +488,7 @@ export const FormulariosDiligenciadosPage = () => {
     filtroHasta,
     filtroMunicipio,
     navigate,
+    refreshMunicipioCatalogFromRows,
   ]);
 
   useEffect(() => {
@@ -1274,6 +1309,8 @@ export const FormulariosDiligenciadosPage = () => {
     [hayFormulariosEnServidor],
   );
 
+  const hasActiveFilters = hasActiveDisplayRowFilters(displayFilters);
+
   return (
     <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top,_#e2f2ee_0,_#f6f7f5_45%,_#f6f7f5_100%)] px-3 py-6 text-slate-900 sm:px-4 sm:py-10">
       <div className="mx-auto w-full min-w-0 max-w-5xl overflow-x-clip">
@@ -1460,46 +1497,41 @@ export const FormulariosDiligenciadosPage = () => {
           online={online}
         />
 
-        {rowsMostrados.length > 0 ? (
-          <FiltersPanel
-            filtroBeneficiario={filtroBeneficiario}
-            filtroMunicipio={filtroMunicipio}
-            filtroDesde={filtroDesde}
-            filtroHasta={filtroHasta}
-            municipioOptions={municipioOptions}
-            onChangeBeneficiario={setFiltroBeneficiario}
-            onChangeMunicipio={setFiltroMunicipio}
-            onChangeDesde={setFiltroDesde}
-            onChangeHasta={setFiltroHasta}
-            onClear={() => {
-              setFiltroDesde("");
-              setFiltroHasta("");
-              setFiltroBeneficiario("");
-              setFiltroMunicipio("");
-            }}
-            rowsTotal={rowsMostrados.length}
-            rowsFiltered={rowsFiltrados.length}
-            hasActiveFilters={
-              !!(
-                filtroDesde ||
-                filtroHasta ||
-                filtroMunicipio ||
-                normalizeTextoBusqueda(filtroBeneficiario)
-              )
-            }
-          />
-        ) : null}
+        <FiltersPanel
+          filtroBeneficiario={filtroBeneficiario}
+          filtroMunicipio={filtroMunicipio}
+          filtroDesde={filtroDesde}
+          filtroHasta={filtroHasta}
+          municipioOptions={municipioOptions}
+          onChangeBeneficiario={setFiltroBeneficiario}
+          onChangeMunicipio={setFiltroMunicipio}
+          onChangeDesde={setFiltroDesde}
+          onChangeHasta={setFiltroHasta}
+          onClear={() => {
+            setFiltroDesde("");
+            setFiltroHasta("");
+            setFiltroBeneficiario("");
+            setFiltroMunicipio("");
+          }}
+          rowsTotal={rowsMostrados.length}
+          rowsFiltered={rowsFiltrados.length}
+          hasActiveFilters={hasActiveFilters}
+        />
 
-        {rowsMostrados.length === 0 ? (
+        {rowsFiltrados.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white/90 p-6 text-sm text-slate-600 shadow-sm">
-            No hay registros en el historial local ni en el servidor (con tu
-            sesión actual).
-          </div>
-        ) : rowsFiltrados.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-6 text-sm text-slate-600 shadow-sm">
-            Ningún registro coincide con los filtros (nombre del encuestado,
-            municipio o rango de fechas). Prueba otros criterios o usa «Limpiar
-            filtros».
+            {hasActiveFilters ? (
+              <>
+                Ningún registro coincide con los filtros (nombre del encuestado,
+                municipio o rango de fechas). Prueba otros criterios o usa
+                «Limpiar filtros».
+              </>
+            ) : (
+              <>
+                No hay registros en el historial local ni en el servidor (con tu
+                sesión actual).
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-2 sm:space-y-3">
