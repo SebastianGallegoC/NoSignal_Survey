@@ -1,0 +1,5 @@
+# Placeholder: el pack PMTiles real se genera en CI o despliegue.
+# Ver docs/mapas-offline-cens.md
+#
+# Mientras no exista cens-influencia.pmtiles, la app usa el fallback
+# de coordenadas hasta que la descarga en segundo plano reciba un 404.

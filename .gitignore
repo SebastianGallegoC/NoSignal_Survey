@@ -44,8 +44,10 @@ frontend/coverage/
 .cursor/*.log
 .cursor/debug-*
 
-# --- Backups locales (pg_dump / uploads); no versionar dumps ---
-/backups/
+# --- Mapas offline (artefactos grandes; generar con maps/build-cens-pack.ps1) ---
+maps-build/
+frontend/public/maps/*.pmtiles
+
 
 # --- Traefik / ACME ---
 letsencrypt/acme.json

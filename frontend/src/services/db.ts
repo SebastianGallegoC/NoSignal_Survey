@@ -3,6 +3,7 @@ import Dexie, { type Table } from 'dexie';
 import type { RegistroFotoSlot } from '@/config/registroFotografico';
 import type { UserRole } from '@/lib/permissions';
 import { stripGmsKeysFromDatos } from '@/lib/stripGmsFromDatos';
+import type { OfflineMapPackMeta } from '@/types/offlineMapPack';
 
 export type SyncStatus = 'PENDIENTE' | 'SINCRONIZANDO' | 'ERROR';
 
@@ -101,6 +102,7 @@ export class NoSignalDB extends Dexie {
   formulariosOcultos!: Table<FormularioOculto>;
   sesionLocal!: Table<SesionLocalRow>;
   encuestadorProfilesCache!: Table<EncuestadorProfileCacheRow>;
+  offlineMapPackMeta!: Table<OfflineMapPackMeta>;
 
   constructor() {
     super('NoSignalSurveyDB');
@@ -167,6 +169,15 @@ export class NoSignalDB extends Dexie {
       formulariosOcultos: '&id_formulario',
       sesionLocal: 'id',
       encuestadorProfilesCache: '&id, username, habilitado, updated_at',
+    });
+    this.version(10).stores({
+      formularios: '&id_formulario, estado_sincronizacion, fecha_hora',
+      historialFormularios: '&id_formulario, estado, fecha_hora',
+      precargas: '&id_formulario, fecha_precarga',
+      formulariosOcultos: '&id_formulario',
+      sesionLocal: 'id',
+      encuestadorProfilesCache: '&id, username, habilitado, updated_at',
+      offlineMapPackMeta: '&packId, version, downloadedAt',
     });
   }
 }

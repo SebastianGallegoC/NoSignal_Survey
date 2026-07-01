@@ -1,6 +1,11 @@
 import { createRoot } from "react-dom/client";
 import { act } from "react";
 import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/components/map/LocationPreviewMap", () => ({
+  LocationPreviewMap: () => <div data-testid="location-preview-map" />,
+}));
+
 import { FormularioOverviewPanel } from "../FormularioOverviewPanel";
 
 const defaultProps = {
@@ -12,7 +17,6 @@ const defaultProps = {
   onSolicitarGps: vi.fn(),
   modoCoordenadas: "automatico" as const,
   onChangeModoCoordenadas: vi.fn(),
-  buildMapUrl: (lat: number, lon: number) => `https://map/${lat},${lon}`,
   buildExternalMapUrl: (lat: number, lon: number) =>
     `https://osm/${lat},${lon}`,
 };
@@ -47,7 +51,7 @@ describe("FormularioOverviewPanel", () => {
     container.remove();
   });
 
-  it("en modo Manual no muestra Tomar ubicación ni iframe del mapa", async () => {
+  it("en modo Manual no muestra Tomar ubicación pero sí mapa si hay coordenadas", async () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -66,7 +70,8 @@ describe("FormularioOverviewPanel", () => {
         b.textContent?.includes("Tomar ubicación"),
       ),
     ).toBe(false);
-    expect(container.querySelector("iframe")).toBeNull();
+    expect(container.querySelector('[data-testid="location-preview-map"]')).not
+      .toBeNull();
     act(() => {
       root.unmount();
     });

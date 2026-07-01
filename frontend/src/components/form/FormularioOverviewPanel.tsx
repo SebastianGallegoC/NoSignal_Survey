@@ -1,16 +1,28 @@
+import { lazy, Suspense } from "react";
+
 import { Button } from "@/components/ui/button";
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
+
+const LocationPreviewMap = lazy(async () => {
+  const mod = await import("@/components/map/LocationPreviewMap");
+  return { default: mod.LocationPreviewMap };
+});
+
+type GpsPoint = {
+  latitud: number;
+  longitud: number;
+  precision: number;
+};
 
 type Props = {
   estado: "idle" | "buscando" | "ok" | "error";
   progreso: string | null;
-  gps: { latitud: number; longitud: number; precision: number } | null;
+  gps: GpsPoint | null;
   error: string | null;
   cargando: boolean;
   onSolicitarGps: () => void;
   modoCoordenadas: "automatico" | "manual";
   onChangeModoCoordenadas: (modo: "automatico" | "manual") => void;
-  buildMapUrl: (lat: number, lon: number) => string;
   buildExternalMapUrl: (lat: number, lon: number) => string;
 };
 
@@ -23,7 +35,6 @@ export const FormularioOverviewPanel = ({
   onSolicitarGps,
   modoCoordenadas,
   onChangeModoCoordenadas,
-  buildMapUrl,
   buildExternalMapUrl,
 }: Props) => {
   const isGps = modoCoordenadas === "automatico";
@@ -108,45 +119,18 @@ export const FormularioOverviewPanel = ({
           : "Agregue las coordenadas en los campos del formulario."}
       </p>
 
-      {isGps && gps ? (
+      {gps ? (
         <div className="mt-4 overflow-hidden rounded-xl border border-teal-100 bg-slate-50">
           <div className="h-48 overflow-hidden sm:h-56">
-            {isOnline ? (
-              <iframe
-                title="Mapa de ubicación capturada"
-                className="h-[calc(100%+36px)] w-full"
-                src={buildMapUrl(gps.latitud, gps.longitud)}
-                loading="lazy"
-                style={{ marginBottom: "-36px" }}
-              />
-            ) : (
-              <div className="flex h-48 w-full items-center justify-center bg-slate-100 sm:h-56">
-                <div className="text-center px-4">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="96"
-                    height="96"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#0f766e"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mx-auto mb-2"
-                  >
-                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z" />
-                    <circle cx="12" cy="10" r="2" />
-                  </svg>
-                  <div className="text-sm font-medium text-slate-700">
-                    Sin conexión: mapa no disponible.
-                  </div>
-                  <div className="mt-1 text-xs text-slate-600">
-                    Lat: {gps.latitud.toFixed(6)} · Lon:{" "}
-                    {gps.longitud.toFixed(6)}
-                  </div>
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                  Cargando mapa…
                 </div>
-              </div>
-            )}
+              }
+            >
+              <LocationPreviewMap gps={gps} className="h-48 sm:h-56" />
+            </Suspense>
           </div>
           <div className="px-3 py-2 text-xs text-slate-700">
             Lat: {gps.latitud.toFixed(6)} · Lon: {gps.longitud.toFixed(6)} ·

@@ -43,7 +43,7 @@ import type { FotoForm } from "@/services/db";
 import { randomUuid } from "@/lib/randomUuid";
 import { useAuthStore } from "@/store/useAuthStore";
 import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/formFields";
-import { buildExternalMapUrl, buildMapUrl } from "@/pages/formulario/mapUtils";
+import { buildExternalMapUrl } from "@/pages/formulario/mapUtils";
 import { applyCuentaConCocinaToFormValues, isCuentaConCocinaOtroSelection } from "@/lib/cuentaConCocina";
 import {
   applyDatosEncuestadoToFormValues,
@@ -612,7 +612,6 @@ export const FormularioPage = () => {
             }
             setModoCoordenadas(m);
           }}
-          buildMapUrl={buildMapUrl}
           buildExternalMapUrl={buildExternalMapUrl}
         />
 

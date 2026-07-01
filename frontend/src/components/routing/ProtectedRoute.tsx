@@ -1,6 +1,7 @@
 import { type ReactNode, useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
+import { useCensOfflineMapSync } from '@/hooks/useCensOfflineMapSync';
 import { useEncuestadorProfilesSync } from '@/hooks/useEncuestadorProfilesSync';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useSessionRoleSync } from '@/hooks/useSessionRoleSync';
@@ -19,6 +20,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const valid = useMemo(() => isAccessTokenValid(token), [token]);
 
   useOfflineSync(valid);
+  useCensOfflineMapSync(valid);
   useEncuestadorProfilesSync(valid, username);
   useSessionRoleSync(valid);
 

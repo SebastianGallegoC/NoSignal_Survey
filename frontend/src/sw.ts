@@ -110,6 +110,24 @@ registerRoute(
   }),
 );
 
+// Mapas offline CENS (PMTiles + manifiesto del mismo origen).
+registerRoute(
+  ({ url }) =>
+    url.origin === self.location.origin &&
+    url.pathname.startsWith('/maps/'),
+  new CacheFirst({
+    cacheName: 'cens-offline-maps-v1',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 8,
+        maxAgeSeconds: 90 * 24 * 60 * 60,
+        purgeOnQuotaError: true,
+      }),
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+    ],
+  }),
+);
+
 // Tile server caching (OpenStreetMap): cache-first with expiration.
 // Esto permite que tiles visitados previamente estén disponibles offline.
 registerRoute(

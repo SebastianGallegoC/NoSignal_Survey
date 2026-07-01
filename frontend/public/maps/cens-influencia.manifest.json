@@ -1,0 +1,8 @@
+{
+  "packId": "cens-influencia",
+  "version": "2026.06.2",
+  "pmtilesUrl": "/maps/cens-influencia.pmtiles",
+  "byteLength": 87544720,
+  "bbox": [-74.05, 6.75, -72.0, 9.35],
+  "attribution": "© OpenStreetMap contributors · OpenMapTiles · CENS"
+}
